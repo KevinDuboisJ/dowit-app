@@ -1,0 +1,150 @@
+.table{
+    @apply overflow-hidden border-0 bg-white;
+    .table-header {
+        @apply font-medium text-current border-t border-b border-slate-200 bg-transparent;
+        .table-headers {
+            .table-col {
+                @apply bg-transparent border-r-0;
+                &:hover {
+                    @apply bg-slate-100;
+                }
+                .table-col-content {
+                    @apply px-5 py-3;
+                    .table-col-title {
+                        @apply pr-0;
+                    }
+                    .table-arrow {
+                        top: -3px;
+                        border-left-width: 5px;
+                        border-right-width: 5px;
+                        @apply bottom-0 my-auto;
+                    }
+                }
+                &.table-sortable[aria-sort="none"]
+                    .table-col-content
+                    .table-arrow {
+                    border-bottom-color: #cbd5e0;
+                }
+            }
+        }
+    }
+    .table-row {
+        @apply border-b border-slate-200;
+        &:hover,
+        &.table-row-even:hover {
+            @apply bg-slate-200;
+        }
+
+        &.table-row-even {
+            @apply bg-slate-100;
+        }
+
+        .table-cell {
+            @apply border-r-0 px-5 py-3;
+            &.table-row-handle {
+                @apply px-0;
+            }
+            .table-responsive-collapse-toggle {
+                @apply w-4 h-4 -mr-5 bg-slate-400 rounded-full;
+            }
+        }
+
+        .table-responsive-collapse {
+            @apply p-3 border-slate-200 border-b-0;
+            td {
+                @apply p-2;
+                strong {
+                    @apply font-medium;
+                }
+            }
+        }
+
+        &.table-group-level-0 {
+            cursor: default;
+            .table-group-toggle {
+                cursor: pointer;
+            }
+        }
+    }
+    .table-footer {
+        @apply bg-transparent border-t-0 p-0 mt-2;
+        @include media-breakpoint-down(md) {
+            @apply whitespace-normal;
+        }
+        .table-paginator {
+            @apply flex items-center;
+            @include media-breakpoint-down(md) {
+                @apply block text-left;
+            }
+            > label {
+                @apply font-normal text-slate-700;
+            }
+            .table-page-size {
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgb(74, 85, 104)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-chevron-down'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+                background-size: 15px;
+                background-position: center right 0.6rem;
+                @apply py-2 pl-3 pr-8 ml-2 mr-auto rounded-md appearance-none bg-white border-slate-200 bg-no-repeat;
+                @include media-breakpoint-down(md) {
+                    @apply mr-3;
+                }
+            }
+            .table-page {
+                min-width: 40px;
+                @apply btn font-normal inline-flex items-center justify-center border-transparent text-slate-700;
+                @include media-breakpoint-down(sm) {
+                    @apply mr-0 px-1;
+                }
+                &:hover {
+                    @apply bg-slate-200 text-slate-700;
+                }
+                &.active {
+                    @apply bg-slate-100 font-medium;
+                    &:hover {
+                        @apply bg-slate-100;
+                    }
+                }
+                &[data-page="first"],
+                &[data-page="prev"],
+                &[data-page="next"],
+                &[data-page="last"] {
+                    @apply w-5 text-transparent;
+                }
+                &[data-page="first"] {
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' stroke='%232d3748' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round' class='css-i6dzq1'%3E%3Cpolyline points='11 17 6 12 11 7'%3E%3C/polyline%3E%3Cpolyline points='18 17 13 12 18 7'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-size: 50%;
+                    @apply bg-center bg-no-repeat;
+                }
+                &[data-page="prev"] {
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' stroke='%232d3748' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round' class='css-i6dzq1'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-size: 45%;
+                    @apply bg-center bg-no-repeat;
+                }
+                &[data-page="next"] {
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' stroke='%232d3748' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round' class='css-i6dzq1'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-size: 45%;
+                    @apply bg-center bg-no-repeat;
+                }
+                &[data-page="last"] {
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' stroke='%232d3748' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round' class='css-i6dzq1'%3E%3Cpolyline points='13 17 18 12 13 7'%3E%3C/polyline%3E%3Cpolyline points='6 17 11 12 6 7'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-size: 50%;
+                    @apply bg-center bg-no-repeat;
+                }
+            }
+        }
+    }
+    .table-tableHolder .table-placeholder span {
+        @apply text-slate-500 font-normal text-sm;
+    }
+    .table-loader {
+        background: #ffffffbd;
+        .table-loader-msg {
+            @apply font-normal text-base bg-transparent;
+            &.table-loading {
+                @apply border-0 text-slate-700;
+            }
+            &.table-error {
+                @apply border-0 text-danger;
+            }
+        }
+    }
+}

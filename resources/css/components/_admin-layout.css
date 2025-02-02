@@ -1,0 +1,55 @@
+@keyframes login {
+    from {
+        opacity: 0;
+        top:0;
+    }
+    to {
+        opacity: 1;
+        top: -76px;
+    }
+  }
+
+  @keyframes notificationsDropdown {
+    from {
+       
+        opacity: 0;
+        top: 0px;
+    }
+    to {
+        opacity: 1;
+        top: -180px;
+    }
+  }
+
+.showLogin {
+    opacity: 1;
+    transition: all 0.5s;
+    animation-name: login;
+    animation-duration: 0.25s;
+}
+
+footer a.activeForm {
+    font-weight: 500!important;
+    border-top: .1875rem solid #008e91!important;
+    cursor: default!important;
+}
+
+footer a {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-bottom: .1875rem solid transparent;
+    border-top: .1875rem solid transparent;
+    transition: border 0.25s ease-out;
+}
+
+
+.showNotificationsDropdown {
+    z-index: 0;
+    position: absolute;
+    top: -450px;
+    opacity: 1;
+    transition: all 0.5s;
+    animation-name: notificationsDropdown;
+    animation-duration: 0.5s;
+}

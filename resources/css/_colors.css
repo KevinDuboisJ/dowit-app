@@ -1,0 +1,119 @@
+@layer base {
+  :root {
+    --color-primary: theme('colors.rgb.sky.950');
+    --color-secondary: theme('colors.rgb.slate.200');
+    --color-success: theme('colors.rgb.teal.600');
+    --color-info: theme('colors.rgb.cyan.500');
+    --color-warning: theme('colors.rgb.amber.500');
+    --color-pending: theme('colors.rgb.orange.600');
+    --color-danger: theme('colors.rgb.red.700');
+    --color-light: theme('colors.rgb.slate.100');
+    --color-dark: theme('colors.rgb.slate.800');
+    --color-slate-50: theme('colors.rgb.slate.50');
+    --color-slate-100: theme('colors.rgb.slate.100');
+    --color-slate-200: theme('colors.rgb.slate.200');
+    --color-slate-300: theme('colors.rgb.slate.300');
+    --color-slate-400: theme('colors.rgb.slate.400');
+    --color-slate-500: theme('colors.rgb.slate.500');
+    --color-slate-600: theme('colors.rgb.slate.600');
+    --color-slate-700: theme('colors.rgb.slate.700');
+    --color-slate-800: theme('colors.rgb.slate.800');
+    --color-slate-900: theme('colors.rgb.slate.900');
+
+    /* shadcn/ui */
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 70% 35.3%; 
+    --destructive-foreground: 210 40% 98%;
+    --ring: 215 20.2% 65.1%;
+    --radius: 0.5rem;
+
+    /* Theme */
+    --app-background: theme('colors.rgb.neutral.100');
+    --app-background-secondary: theme('colors.rgb.neutral.50');
+  }
+
+  /* Default dark-mode colors */
+  .dark {
+    --color-primary: 44 85 197;
+    --color-slate-500: theme('colors.rgb.slate.400');
+    --color-darkmode-50: 87 103 132;
+    --color-darkmode-100: 74 90 121;
+    --color-darkmode-200: 65 81 114;
+    --color-darkmode-300: 53 69 103;
+    --color-darkmode-400: 48 61 93;
+    --color-darkmode-500: 41 53 82;
+    --color-darkmode-600: 40 51 78;
+    --color-darkmode-700: 35 45 69;
+    --color-darkmode-800: 27 37 59;
+    --color-darkmode-900: 15 23 42;
+
+    /* shadcn/ui */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 216 34% 17%;
+    --radius: 0.5rem;
+  }
+
+  /* Theme 1 colors */
+  .theme-1 {
+    --color-primary: theme('colors.rgb.blue.800');
+    --color-secondary: theme('colors.rgb.slate.200');
+    --color-success: theme('colors.rgb.teal.600');
+    --color-info: theme('colors.rgb.cyan.500');
+    --color-warning: theme('colors.rgb.amber.500');
+    --color-pending: theme('colors.rgb.orange.500');
+    --color-danger: theme('colors.rgb.red.700');
+    --color-light: theme('colors.rgb.slate.100');
+    --color-dark: theme('colors.rgb.slate.800');
+    &.dark {
+      --color-primary: theme('colors.rgb.blue.600');
+    }
+  }
+
+  /* Theme 2 colors */
+  .theme-2 {
+    --color-primary: 45 60 90;
+    --color-secondary: theme('colors.rgb.slate.200');
+    --color-success: theme('colors.rgb.teal.600');
+    --color-info: theme('colors.rgb.cyan.500');
+    --color-warning: theme('colors.rgb.amber.500');
+    --color-pending: theme('colors.rgb.orange.500');
+    --color-danger: theme('colors.rgb.red.700');
+    --color-light: theme('colors.rgb.slate.100');
+    --color-dark: theme('colors.rgb.slate.800');
+    &.dark {
+      --color-primary: 44 85 197;
+    }
+  }
+}

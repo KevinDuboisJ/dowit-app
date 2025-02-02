@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    
+    /* Basic Options */
+    "target": "es5",                           // Specifies the JavaScript version to output (ES5 for compatibility).
+    "module": "commonjs",                      // Sets the module system for imports/exports (CommonJS is Node-compatible).
+
+    /* Strict Type-Checking Options */
+    "strict": true,                            // Enables strict type-checking options (recommended).
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",                // Determines how modules are found and resolved (Node's resolution algorithm).
+
+    /* Experimental Options */
+    "esModuleInterop": true,                   // Allows default imports from CommonJS modules.
+    "skipLibCheck": true,                      // Skips type checking of all declaration files (.d.ts) for faster builds.
+    "forceConsistentCasingInFileNames": true,   // Ensures file casing consistency across platforms.
+    
+    "baseUrl": "./", 
+      "paths": { 
+        "@/*": ["resources/js/src/*"],
+        "@images/*": ["resources/images/*"],
+        "@css/*": ["resources/css/*"],
+        "@json/*": ["resources/json/*"],
+      }
+  },
+  "include": ["src"],                          // Specifies the folder containing source files.
+  "exclude": ["node_modules"]                  // Excludes the node_modules folder.
+}
+  

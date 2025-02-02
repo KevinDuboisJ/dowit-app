@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\User;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
+use App\Filament\Resources\TeamResource;
+use Filament\Tables\Actions\Action;
+use App\Traits\HasParentResource;
+use Filament\Tables\Contracts\HasTable;
+
+class TeamUserResource extends Resource
+{
+    use HasParentResource;
+
+    protected static ?string $model = User::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $modelLabel = 'Gebruiker';
+
+    protected static ?string $pluralModelLabel = 'Gebruikers';
+
+    public static string $parentResource = TeamResource::class;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    public static function getRecordTitle(?Model $record): string|null|Htmlable
+    {
+        return $record->title;
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                TextInput::make('password')
+                    ->label('PIN code')
+                    ->password()
+                    ->required()
+                    ->rule(['integer', 'digits_between:4,8'])
+                    ->revealable()
+
+            ]);
+    }
+
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('firstname')
+                    ->label('Voornaam')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('lastname')
+                    ->label('Achternaam')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('username')
+                    ->label('Gebruikersnaam')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('email')
+                    ->label('E-mail')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('teams.name')
+                    ->label('Teams')
+                    ->limit(5)
+                    ->sortable(),
+                TextColumn::make('last_login')
+                    ->label('Laatste aanmelding')
+                    ->datetime('d/m/Y H:m:s')
+                    ->sortable(),
+            ])
+            ->filters([
+                //
+            ])
+            ->actions([
+                Action::make('removeFromTeam')
+                    ->label('Verwijderen uit team')
+                    ->requiresConfirmation()
+                    ->action(function (Model $record, HasTable $livewire) {
+
+                        // Get the team ID from the 
+                        $teamId = $livewire->parent->id; // or however you're passing the team ID
+    
+                        // Detach the user from the team
+                        $record->teams()->detach($teamId);
+                    })
+                    ->color('danger')
+                    ->icon('heroicon-o-trash')
+            ])
+            ->bulkActions([]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListUsers::route('/'),
+        ];
+    }
+}

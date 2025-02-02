@@ -1,0 +1,38 @@
+:root {
+  --font-base-size: 16px; /* Default font size */
+
+  input:focus {
+    @apply ring-1 ring-ring outline-none;
+  }
+
+  select:focus {
+    @apply ring-1 ring-ring outline-none;
+  }
+
+  * {
+    @apply focus-visible:outline-none;
+  }
+}
+
+html {
+  @apply h-full text-slate-500 h-screen;
+  &.dark {
+    @apply bg-darkmode-700 from-darkmode-800 via-darkmode-800/70;
+    body {
+      @apply text-slate-300;
+      *,
+      ::before,
+      ::after {
+        @apply border-white/5;
+      }
+    }
+  }
+  body {
+    font-size: var(--font-base-size);
+    @apply bg-background text-foreground h-full antialiased font-roboto text-slate-700 h-screen;
+
+    #app {
+      @apply h-screen;
+    }
+  }
+}
