@@ -122,7 +122,7 @@ class TaskPlannerService
         // Assign task to teams based on assignment rules
         TaskAssignmentService::assignTaskToTeams($task);
 
-        broadcast(new BroadcastEvent($task, 'task_created'));
+        broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
       });
     } catch (Exception $e) {
       log::info('triggerTask exception: ' . $e->getMessage());
@@ -133,13 +133,19 @@ class TaskPlannerService
   {
     switch ($taskPlanner->action) {
       case TaskPlannerAction::Replace:
-        $latestTask = $taskPlanner->tasks()->latest()->first();
+        $latestTask = $taskPlanner->tasks()
+          ->whereNotIn('status_id', [
+            TaskStatus::Completed->value,
+            TaskStatus::Replaced->value
+          ])
+          ->latest()
+          ->first();
 
         if ($latestTask) {
           $latestTask->status_id = TaskStatus::Replaced->value;
+          $latestTask->addComment('Taak is vervangen');
           $latestTask->save();
         }
-
         break;
     }
   }
@@ -198,10 +204,11 @@ class TaskPlannerService
   {
     // User assignations
     $users = $taskPlanner->assignments['users'] ?? null;
-    if ($users) {
 
+    if ($users) {
+      
       $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? null;
-      $task->assignedUsers()->attach($users);
+      $task->assignees()->attach($users);
 
       if ($oneTimeOcurrence) {
         $taskPlanner->assignments = null;

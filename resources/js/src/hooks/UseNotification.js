@@ -1,7 +1,7 @@
 import {useState, useEffect, useCallback, useRef} from 'react'
 import {router} from '@inertiajs/react'
 
-const UseNotification = (url, notifications, socket) => {
+const useNotification = (url, notifications, socket) => {
   const isInitialMount = useRef(true)
   const [fetchedData, setFetchedData] = useState({
     notificationsSocket: notifications || [],

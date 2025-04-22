@@ -16,8 +16,4 @@
             @apply px-3;
         }
     }
-    &:before {
-        content: "";
-        @apply w-full h-px block;
-    }
 }

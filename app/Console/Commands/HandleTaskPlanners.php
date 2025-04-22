@@ -22,7 +22,7 @@ class HandleTaskPlanners extends Command
             if (!$plannedTasks->isEmpty()) {
                 foreach ($plannedTasks as $task) {
                     $task->activate();
-                    broadcast(new BroadcastEvent($task, 'task_created'));
+                    broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
                 }
             }
 

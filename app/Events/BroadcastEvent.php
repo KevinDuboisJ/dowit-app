@@ -11,7 +11,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Task;
 use App\Models\Comment;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class BroadcastEvent implements ShouldBroadcastNow
 {
@@ -19,15 +21,17 @@ class BroadcastEvent implements ShouldBroadcastNow
 
     private Task|Comment  $model;
     private string $eventType;
+    private string $source;
     private array $extraKeys;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Task|Comment $model, $eventType, $extraKeys = [])
+    public function __construct(Task|Comment $model, $eventType, $source, $extraKeys = [])
     {
         $this->model = $model;
         $this->eventType = $eventType;
+        $this->source = $source;
         $this->extraKeys = $extraKeys;
     }
 
@@ -43,7 +47,8 @@ class BroadcastEvent implements ShouldBroadcastNow
         if ($this->model instanceof Task) {
             $channels = array_merge(
                 $this->model->teams->map(fn($team) => new PrivateChannel("team.{$team->id}"))->toArray(),
-                $this->model->assignedUsers->map(fn($user) => new PrivateChannel("user.{$user->id}"))->toArray()
+                $this->model->assignees->map(fn($user) => new PrivateChannel("user.{$user->id}"))->toArray(),
+                !empty($this->extraKeys['usersToUnassign']) ? array_map(fn($userId) => new PrivateChannel("user.{$userId}"), $this->extraKeys['usersToUnassign']) : [] // Broadcast to users that were unassigned to remove the task from their list
             );
         }
 
@@ -66,7 +71,15 @@ class BroadcastEvent implements ShouldBroadcastNow
 
     public function broadcastWith()
     {
-        $payload = ['type' => $this->eventType, 'timestamp' => $this->model->updated_at->toIso8601ZuluString()]; // Add timestamp
+        $payload = [
+            'id' => Str::uuid(), // This makes sure every event has a unique id
+            'source' => $this->source, // This makes sure every event has a unique id
+            'type' => $this->eventType,
+            'timestamp' => $this->model->updated_at->toIso8601ZuluString(),
+            'data' => ['id' => $this->model->id],
+            'createdBy' => Auth::user()->id ?? config('app.system_team_id'),
+            // 'broadcasted_channels' => collect($this->broadcastOn())->map(fn($channel) => (string) $channel)->toArray(),
+        ]; 
 
         // Extract the values for the extra keys from $this->model
         // $extraData = array_intersect_key(
@@ -74,18 +87,18 @@ class BroadcastEvent implements ShouldBroadcastNow
         //     array_flip($this->extraKeys)
         // );
 
-        if ($this->model instanceof Task) {
+        // if ($this->model instanceof Task) {
 
-            if ($this->eventType === 'task_created') {
-                $payload['data'] = ['id' => $this->model->id];
-                // $payload['data'] = $this->model->fresh(Task::getRelationships())->toArray();
-            }
+        //     if ($this->eventType === 'task_created') {
+        //         $payload['data'] = ['id' => $this->model->id];
+        //         // $payload['data'] = $this->model->fresh(Task::getRelationships())->toArray();
+        //     }
 
-            if ($this->eventType === 'task_updated') {
-                // Include the task ID and any other relevant data in the broadcast payload
-                $payload['data'] = ['id' => $this->model->id];
-            }
-        }
+        //     if ($this->eventType === 'task_updated') {
+        //         // Include the task ID and any other relevant data in the broadcast payload
+        //         $payload['data'] = ['id' => $this->model->id];
+        //     }
+        // }
 
         if ($this->model instanceof Comment) {
             // Include the task ID and any other relevant data in the broadcast payload

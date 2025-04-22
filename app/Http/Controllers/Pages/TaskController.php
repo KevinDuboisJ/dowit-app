@@ -114,7 +114,7 @@ class TaskController extends Controller
       if ($request->validated('assignTo')) {
         // Extract ids from array
         $ids = array_column($request->validated('assignTo'), 'value');
-        $task->assignedUsers()->sync($ids);
+        $task->assignees()->sync($ids);
       }
 
       TaskAssignmentService::assignTaskToTeams($task);
@@ -129,7 +129,7 @@ class TaskController extends Controller
       $task->load(Task::getRelationships());
 
       if ($task->is_active) {
-        broadcast(new BroadcastEvent($task, 'task_created'));
+        broadcast(new BroadcastEvent($task, 'task_created', 'dashboard'));
       }
 
       return response()->json($task);
@@ -151,19 +151,20 @@ class TaskController extends Controller
     }
   }
 
-  public function update(UpdateTaskRequest $request, Task $task)
+  public function update(UpdateTaskRequest $request, TaskService $taskService, Task $task)
   {
     try {
       $result = $this->taskService->updateTask($task, $request->validated());
+      $tasks = $taskService->fetchAndCombineTasks($request);
 
       if (isset($result['conflict'])) {
         return response()->json([
           'message' => $result['message'],
-          'latestData' => $result['latestData'],
+          'data' => $result['latestData'],
         ], 409);
       }
 
-      return response()->json($result['task']);
+      return response()->json(['data' => $tasks, 'updatedTask' => $result['task']]);
 
     } catch (\Exception $e) {
       logger()->error('Task update failed', ['error' => $e->getMessage()]);

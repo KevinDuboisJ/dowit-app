@@ -6,42 +6,12 @@ When to udpate the user UI
 // This is the test,
 TO-DO's
   1. Change icons in filament.
-  19. define the task types with Natascha
-  25. What if 12 are assigned to a task how does it look in the task tabulator. i need to add ...
-  26. If you remove yourself from a task and you are the only one assigned the permission are not synced and i cant still update the task.
-  27. What if task has a team where user doesnt belong to or no teams, but still an admin assigned him to the task, and he removes afterwards his assignation.
-  29. Improve speed of task update like Collega nodig button takes time to change.
-  30. When changing something in task detail it shouldnt rerender the fields that can change because else when chaing and opening again the modal selection list is closes
-  31. when adding comment update ui && show order by creation date in DESC
-  32. RichText editor is showing a red line when writing in the commentaar toevoegen from activity of a task.
-  33. Fix Activity and assignment forms to use the ajaxDebounce function implemented in Task TAB
-  34. when a toaster is showed during the use of a Sheet it doesnt allow interaction, probably due to event point set to none somewhere
-  35. create enum for observe event type for broadcast, so it is used same on the whole application.
-  37. A task start_date_time what i have to filter always on so i need to add in taskplanner the current run_at to the start_date_time
   38. Set mobile variable to somewhere global?
-  39. make from devounce ajax a function for use everywhere
-  40. A admin can se historiek tasks, add extra filter.
-  42. Activity show live icon
-  43. When scrolling up, move next tab.
-  44. Open document in a iframe
+  19. define the task types with Natascha
   48. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.
-
-  50. If im not asigned more to task it can happen that task has to disapear from dashboard that doesnt happen at the time. to simulate assign user to a task where he is not in the team.
-  52. Toegewezen if it has more than 4 pictures it gets trimmed.
   53. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
- 
-  55. add x to delete to select instead of using null value like 'Geen selectie'
-  56. Move scrollbar to right edge in sheets.
-  57. try catch apart for broadcast in case it fails it doesnt trigger the catch of udpate or store as user still has fallbacks like polling to get new data. Maybe use message queuee to guarantee delivery? investigate
-  58. How to know if assignees have been removed in the comment instead assigned
-  59. Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
-  60. in tablet widt the scroll vertical doesnt work
-  61. Adjust the filters so it is evident a flter is activated.
-  62. Add comment of replacement when a task is skipped.
-  63. when clicked on the first task of niet aan mij toegewezen. the group order changes
-  64. Fix photo flickering on UI updated
-  65. Fix variable for dowittest call for websocket on dashboard and fix the toewijzing section for mobile
-  66. Super ADMIn can select from all the teams.
+  59. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
+  60. Replace tippy.js with floatingUI
 
 Questions.
   1. How can i know if a patient left a room?

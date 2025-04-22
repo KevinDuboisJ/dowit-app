@@ -1,18 +1,20 @@
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { useState } from 'react'
 import background from '@images/login-bg2.png'
 import UserIcon from '@/components/svg/UserIcon'
 import PasswordIcon from '@/components/svg/PasswordIcon'
-import Tooltip from '@/components/tooltip/Tooltip'
+import { Tooltip } from '@/components/tooltip'
 import Logo from "@images/logo.png";
 
 const Login = ({ users, errors }) => {
+
+  const { flash } = usePage().props
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
   function handleSubmit(e) {
     e.preventDefault()
-    router.post('/login', { username, password }, { only: ['errors'] })
+    router.post('/login', { username, password }, { only: ['errors', 'flash'] })
   }
 
   return (
@@ -23,14 +25,18 @@ const Login = ({ users, errors }) => {
 
         <div className='w-full p-1 z-10 '>
           <form className='flex flex-col' onSubmit={handleSubmit}>
-            <h1 className='font-light leading-6'>Aanmelden<Tooltip name='loginUser' placement='right' /></h1>
+            <h1 className='font-light leading-6'>Aanmelden<Tooltip name='loginUser' placement='bottom' /></h1>
             <h2 className='font-bold text-xl'> {import.meta.env.VITE_APP_NAME} </h2>
 
             <div className='flex flex-col space-y-4 mt-3'>
               <IconDataListInput value={username} Icon={UserIcon} type='text' placeholder='Gebruikersnaam' onChange={e => setUsername(e.target.value)} errors={errors} users={users} />
               <IconInput value={password} Icon={PasswordIcon} type='password' placeholder='Wachtwoord' onChange={e => setPassword(e.target.value)} errors={errors} />
               <button className='font-light p-3 border rounded-md bg-[#3e6da9] text-white' type='submit'>Aanmelden</button>
-              {errors['wrongCredentials'] && <i className='text-xs text-red-600 text-center'>{errors['wrongCredentials']}</i>}
+              {(flash.message || errors?.wrongCredentials) &&
+                <i className='text-xs text-red-600 text-center'>
+                  {flash.message || errors?.wrongCredentials}
+                </i>
+              }
 
 
             </div>

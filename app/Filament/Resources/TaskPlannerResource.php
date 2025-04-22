@@ -37,6 +37,7 @@ use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Placeholder;
 use App\Services\TaskAssignmentService;
 use Illuminate\Support\HtmlString;
+use Filament\Forms\Components\Group;
 
 class TaskPlannerResource extends Resource
 {
@@ -57,7 +58,7 @@ class TaskPlannerResource extends Resource
         $now = Carbon::now()->format('Y-m-d H:i:s');
 
         return $form->schema([
-            
+
             Section::make([
                 TextInput::make('name')
                     ->label('Naam')
@@ -79,7 +80,8 @@ class TaskPlannerResource extends Resource
                         }
 
                         return $now;
-                    }),
+                    })
+                    ->native(false),
 
                 Textarea::make('description')
                     ->label('Omschrijving')
@@ -96,16 +98,23 @@ class TaskPlannerResource extends Resource
                 Select::make('campus_id')
                     ->label('Campus')
                     ->relationship('campus', 'name')
-                    ->required()
-                    ->live(),
+                    ->required(),
 
                 Select::make('space_id')
                     ->label('locatie')
                     ->native(false)
                     ->relationship('space', 'name')
-                    ->getOptionLabelFromRecordUsing(fn(Space $record) => "{$record->name} ({$record->_spccode})")
                     ->searchable(['name', '_spccode'])
-                    ->preload()
+                    ->getSearchResultsUsing(function (string $search) {
+                        return Space::query()
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('_spccode', 'like', "%{$search}%")
+                            ->limit(50)
+                            ->get()
+                            ->mapWithKeys(fn($space) => [
+                                $space->id => "{$space->name} ({$space->_spccode})",
+                            ]);
+                    })
                     ->required()
                     ->live(),
 
@@ -113,14 +122,23 @@ class TaskPlannerResource extends Resource
                     ->label('Bestemmingslocatie')
                     ->native(false)
                     ->relationship('spaceTo', 'name')
-                    ->getOptionLabelFromRecordUsing(fn(Space $record) => "{$record->name} ({$record->_spccode})")
                     ->searchable(['name', '_spccode'])
+                    ->getSearchResultsUsing(function (string $search) {
+                        return Space::query()
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('_spccode', 'like', "%{$search}%")
+                            ->limit(50)
+                            ->get()
+                            ->mapWithKeys(fn($space) => [
+                                $space->id => "{$space->name} ({$space->_spccode})",
+                            ]);
+                    })
                     ->required()
                     ->visible(
-                        fn(Get $get): bool => $get('task_type_id') === '3'
+                        fn(Get $get): bool => $get('task_type_id') === '1'
                     ),
 
-                Section::make([
+                Grid::make()->schema([
                     Select::make('frequency')
                         ->label('Frequentie')
                         ->options(TaskPlannerFrequency::class)
@@ -132,7 +150,7 @@ class TaskPlannerResource extends Resource
                             ->getChildComponentContainer()
                             ->fill()),
 
-                    Grid::make()
+                    Group::make()
                         ->schema(fn(Get $get): array => match ($get('frequency')) {
                             TaskPlannerFrequency::SpecificDays->name => [
                                 Select::make('interval')
@@ -140,92 +158,105 @@ class TaskPlannerResource extends Resource
                                     ->options(DaysOfWeek::class)
                                     ->multiple()
                                     ->required()
+                                    ->columnSpan(1), // Zorgen dat het maar 1 kolom inneemt
                             ],
 
                             TaskPlannerFrequency::Weekly->name => [
                                 Select::make('interval')
                                     ->label('Dag')
                                     ->options(DaysOfWeek::class)
-                                    ->required(),
+                                    ->required()
+                                    ->columnSpan(1),
                             ],
 
                             TaskPlannerFrequency::EachXDay->name => [
                                 TextInput::make('interval')
                                     ->label('Interval')
                                     ->numeric()
-                                    ->required(),
+                                    ->required()
+                                    ->columnSpan(1),
                             ],
+
                             default => [],
                         })
                         ->key('dynamicFields'),
-                ]),
-
-                // TextInput doesn't automatically convert an array to a string, unlike the TextColumn. To Solve this i use formatStateUsing
-                Select::make('on_holiday')
-                    ->label('Feestdagen')
-                    ->options(ApplyOnHoliday::class)
-                    ->default(ApplyOnHoliday::No->name)
-                    ->required(),
-
-                Select::make('action')
-                    ->label('Actie')
-                    ->options(TaskPlannerAction::class)
-                    ->default(TaskPlannerAction::Add->name)
-                    ->selectablePlaceholder(false)
-                    ->required(),
+                ])->columns(2),
 
                 Textarea::make('comment')
-                    ->label('commentaar')
+                    ->columnSpan(6)
+                    ->placeholder('Typ hier uw commentaar...')
                     ->nullable()
-                    ->rows(1)
+                    ->rows(2)
                     ->columnSpanFull(),
 
-                Toggle::make('is_active')
-                    ->label('Actief')
-                    ->required(),
+                // TextInput doesn't automatically convert an array to a string, unlike the TextColumn. To Solve this i use formatStateUsing
+
 
             ])->columnSpan(6)->columns(2),
-            Section::make([
 
-                select::make('assignments.users')
-                    ->label('Toewijzing')
-                    ->getSearchResultsUsing(fn(string $search): array => User::where('firstname', 'like', "{$search}%")->excludeSystemUser()->orWhere('lastname', 'like', "{$search}%")->limit(50)->get()->pluck('full_name', 'id')->toArray())
-                    ->getOptionLabelsUsing(fn(array $values): array => User::whereIn('id', $values)->get()->pluck('full_name', 'id')->toArray())
-                    ->multiple()
-                    ->placeholder('Wijs persoon toe')
-                    ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Enkel personen uit teams waartoe de gebruiker die de taakplanner invult behoort, kunnen toegewezen worden.'),
+            Group::make()->schema([
+                Section::make([
 
-                Checkbox::make('assignments.one_time_recurrence')
-                    ->label(new HtmlString('<span class="text-sm opacity-70">Eenmalige toewijzing</span>'))
-                    ->helperText(new HtmlString('<div class="pb-4 border-b"><span class="text-xs/5 text-gray-500">Als dit is aangevinkt, worden de geselecteerde personen alleen aan de volgende taak toegewezen</span></div>'))
-                    ->default(false)
-                    ->extraAttributes(['class' => 'custom-checkbox-label']),
+                    select::make('assignments.users')
+                        ->label('Toewijzing')
+                        ->getSearchResultsUsing(fn(string $search): array => User::where('firstname', 'like', "{$search}%")->excludeSystemUser()->orWhere('lastname', 'like', "{$search}%")->limit(50)->get()->pluck('full_name', 'id')->toArray())
+                        ->getOptionLabelsUsing(fn(array $values): array => User::whereIn('id', $values)->get()->pluck('full_name', 'id')->toArray())
+                        ->multiple()
+                        ->placeholder('Wijs persoon toe')
+                        ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Enkel personen uit teams waartoe de gebruiker die de taakplanner invult behoort, kunnen toegewezen worden.'),
 
-                Placeholder::make('Teams')
-                    ->content(function (Get $get): HtmlString {
+                    Checkbox::make('assignments.one_time_recurrence')
+                        ->label(new HtmlString('<span class="text-sm opacity-70">Eenmalige toewijzing</span>'))
+                        ->helperText(new HtmlString('<div class="pb-4 border-b"><span class="text-xs/5 text-gray-500">Als dit is aangevinkt, worden de geselecteerde personen alleen aan de volgende taak toegewezen</span></div>'))
+                        ->default(false)
+                        ->extraAttributes(['class' => 'custom-checkbox-label']),
 
-                        $string = '<ul role="list" class="space-y-2 divide-y divide-gray-100">';
-                        $teams = TaskAssignmentService::getTeamsMatchingAssignmentRules(new Task([
-                            'campus_id' => $get('campus_id') ?? null,
-                            'task_type_id' => $get('task_type_id') ?? null,
-                            'space_id' => $get('space_id') ?? null,
-                            'space_to_id' => $get('space_to_id') ?? null,
-                        ]));
+                    Placeholder::make('Teams')
+                        ->content(function (Get $get): HtmlString {
 
-                        foreach ($teams as $team) {
-                            $string .= '
+                            $string = '<ul role="list" class="space-y-2 divide-y divide-gray-100">';
+                            $teams = TaskAssignmentService::getTeamsMatchingAssignmentRules(new Task([
+                                'campus_id' => $get('campus_id') ?? null,
+                                'task_type_id' => $get('task_type_id') ?? null,
+                                'space_id' => $get('space_id') ?? null,
+                                'space_to_id' => $get('space_to_id') ?? null,
+                            ]));
+
+                            foreach ($teams as $team) {
+                                $string .= '
                                 <li class="flex justify-between gap-x-6">
                                     <div class="flex min-w-0 gap-x-4">
                                         <p class="text-sm/5 text-gray-500">• ' . $team->name . '</p>
                                     </div>
                                 </li>';
-                        }
-                        $string .= '</ul>';
-                        return new HtmlString($string);
-                    })
-                    ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Dit toont de teams waaraan deze taakplanner de taak zal toewijzen op basis van de huidige taaktoewijzingsregels'),
+                            }
+                            $string .= '</ul>';
+                            return new HtmlString($string);
+                        })
+                        ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Dit toont de teams waaraan deze taakplanner de taak zal toewijzen op basis van de huidige taaktoewijzingsregels'),
 
-            ])->columnSpan(2),
+                ]),
+
+                Section::make([
+                    Select::make('on_holiday')
+                        ->label('Feestdagen')
+                        ->options(ApplyOnHoliday::class)
+                        ->default(ApplyOnHoliday::No->name)
+                        ->required(),
+
+                    Select::make('action')
+                        ->label('Actie')
+                        ->options(TaskPlannerAction::class)
+                        ->default(TaskPlannerAction::Add->name)
+                        ->selectablePlaceholder(false)
+                        ->required(),
+
+                    Toggle::make('is_active')
+                        ->label('Actief')
+                        ->required(),
+
+                ]),
+            ])->columnSpan(2)
 
         ])->columns(8);
     }
@@ -297,7 +328,6 @@ class TaskPlannerResource extends Resource
             ])
             ->defaultSort('next_run_at', 'asc')
             ->defaultSort('is_active', 'desc');
-
     }
 
     public static function getRelations(): array

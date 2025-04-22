@@ -18,7 +18,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  RichText,
   RichTextEditor,
   Switch,
   Select,
@@ -62,7 +61,7 @@ const FormSchema = z.object({
   comment: z.string().optional(),
 })
 
-export function TaskForm({ task, handleRowUpdate, setActiveTab }) {
+export function TaskForm({ task, handleTaskUpdate, handleTasksRecon, setActiveTab }) {
 
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -93,21 +92,27 @@ export function TaskForm({ task, handleRowUpdate, setActiveTab }) {
         toast.warning(message);
       }
     })
-
+    
     setLoading(true);
-
+    
     updateTask(changedFields, task, {
 
-      onSuccess: ({ updatedRow }) => {
+      onSuccess: ({data}) => {
         setActiveTab('details')
+        handleTasksRecon(data);
         form.resetField('usersToAssign');
-        handleRowUpdate(updatedRow); // Reapply backend response to ensure consistency
-        setComment('<p></p>');
+        // setComment('<p></p>');
         toast.success('De gegevens zijn bijgewerkt')
       },
 
+      onError: ({status, data}) => {
+        if (status === 409) {
+          console.log(data);
+          handleTaskUpdate(data.data);
+        }
+      },
+
       onComplete: () => { setLoading(false) },
-      onError: ({ originalRow }) => { handleRowUpdate(originalRow) }
     })
   };
 
@@ -148,10 +153,10 @@ export function TaskForm({ task, handleRowUpdate, setActiveTab }) {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <AvatarStackRemovable avatars={task?.assigned_users} onValueChange={(selectedUserId) => {
+                    <AvatarStackRemovable avatars={task?.assignees} onValueChange={(selectedUserId) => {
 
-                      // Check if the selected user id indeed exist in the assigned_users as a safe mechanism
-                      if (task?.assigned_users.some((obj) => obj.id === selectedUserId)) {
+                      // Check if the selected user id indeed exist in the assignees as a safe mechanism
+                      if (task?.assignees.some((obj) => obj.id === selectedUserId)) {
                         const updatedValue = [...(field.value || []), selectedUserId];
                         field.onChange(updatedValue);
                       }
@@ -232,9 +237,8 @@ export function TaskForm({ task, handleRowUpdate, setActiveTab }) {
                 <FormItem>
                   <FormLabel className='text-sm'>Commentaar toevoegen</FormLabel>
                   <FormControl>
-                    <RichText>
                       <RichTextEditor
-                        className='h-32 bg-white text-xs'
+                        className='text-sm h-32 bg-white'
                         onUpdate={(value) => {
                           field.onChange(value); // Updates form state when MultiSelect changes
                         }}
@@ -242,15 +246,13 @@ export function TaskForm({ task, handleRowUpdate, setActiveTab }) {
                         readonly={!task.capabilities.can_update}
 
                       />
-                    </RichText>
-
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="ml-auto">
-              {loading ? <Loader width={128} height={128} className='relative top-[-50px] left-[60px]' /> : <Button type="submit">Opslaan</Button>}
+              {loading ? <Loader width={96} height={96} className='relative top-[-50px] left-[60px]' /> : <Button type="submit">Opslaan</Button>}
             </div>
 
           </form>
@@ -317,12 +319,12 @@ const DataRow = ({ task }) => {
 };
 
 // Debounced function for backend updates
-const debouncedBackendUpdate = debounce(async (field, value, task, handleRowUpdate) => {
+const debouncedBackendUpdate = debounce(async (field, value, task, handleTaskUpdate) => {
 
   const originalTask = { ...task };
 
   // Optimistically update the UI
-  handleRowUpdate({ ...task, [field]: value });
+  handleTaskUpdate({ ...task, [field]: value });
 
   try {
     const response = await axios.post(`/task/${task.id}/update`, {
@@ -332,15 +334,15 @@ const debouncedBackendUpdate = debounce(async (field, value, task, handleRowUpda
     console.log(response.data)
     if (response.status === 200) {
       // Reapply backend response to ensure consistency
-      handleRowUpdate(response.data);
+      handleTaskUpdate(response.data);
     }
   } catch (error) {
     // Revert to the original state if the update fails
-    handleRowUpdate(originalTask);
+    handleTaskUpdate(originalTask);
 
     if (error.response && error.response.status === 409) {
       toast.error(error.response.data.message, { duration: 6000 });
-      handleRowUpdate(error.response.data.latestData);
+      handleTaskUpdate(error.response.data.latestData);
     } else {
       console.error(error);
       toast.error('A network error occurred. Please try again.');

@@ -1,18 +1,24 @@
 import React from 'react';
+import DOMPurify from "dompurify";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react'
 import { cn } from '@/utils'
+
 import {
   Heroicon,
-  Card
+  Card,
 } from '@/base-components'
 
-export const RichText = ({ children, className }) => (
-  <Card className={cn('rounded shadow-xs bg-transparent', className)}> 
-    {children}
-  </Card>
-)
+
+export const RichText = ({ text, className }) => {
+
+  text = text?.trim() ? DOMPurify.sanitize(text, { USE_PROFILES: { html: true } }) : '';
+
+  return (
+    <div className={cn(className)} dangerouslySetInnerHTML={{ __html: text }}></div>
+  )
+}
 
 export const RichTextEditor = ({ value, onUpdate, className, readonly = false }) => {
 
@@ -50,15 +56,15 @@ export const RichTextEditor = ({ value, onUpdate, className, readonly = false })
   }
 
   return (
-    <>
+    <Card className='rounded shadow-xs bg-transparent'>
       {!readonly && <RichTextToolbar editor={editor} />}
-      <EditorContent editor={editor} />
-    </>
+      <EditorContent editor={editor} spellCheck={false}/>
+    </Card>
   );
 };
 
 const RichTextToolbar = ({ editor }) => (
-  <div className='px-2 bg-neutral-100 rounded border-b border-gray-100 shadow-none'>
+  <div className='flex p-1 bg-neutral-100 rounded border-b border-gray-100 shadow-none'>
     <button
       type="button"
       onClick={() => editor.chain().focus().toggleBold().run()}

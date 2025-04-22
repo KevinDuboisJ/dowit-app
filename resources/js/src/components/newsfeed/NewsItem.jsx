@@ -1,7 +1,7 @@
 import { format, parseISO, isToday } from 'date-fns'
 import { nl } from "date-fns/locale";
 import { cn } from '@/utils'
-import { Badge, Avatar, AvatarImage, AvatarFallback, RichText, RichTextEditor } from "@/base-components"
+import { Badge, Avatar, AvatarImage, AvatarFallback, RichText } from "@/base-components"
 import { __, getVariant } from '@/stores';
 
 export const NewsItem = ({ newsItem }) => {
@@ -36,14 +36,9 @@ export const NewsItem = ({ newsItem }) => {
     after:content-[''] after:absolute after:z-10 after:left-[-10px] after:top-[5px] after:w-0 after:h-0 after:border-r-[10px] after:border-r-neutral-200 after:border-t-[10px] after:border-t-transparent after:border-b-[10px] after:border-b-transparent">
 
           <span className="block">{newsItem?.task_id ? newsItem.task.name : 'Mededeling'}</span>
-          {newsItem.content?.length > 0 && <RichText className='w-full border-none rounded-none shadow-none'>
-            <RichTextEditor
-              className='min-h-4 h-full w-full text-slate-500 p-0 border-none rounded-md text-gray-700 resize-none overflow-hidden
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none'
-              value={newsItem.content}
-              readonly={true}
-            />
-          </RichText>}
+          {newsItem.content?.length > 0 &&
+            <RichText text={newsItem.content} className='text-gray-700'/>
+          }
 
           {newsItem?.status && (
             <div className="mt-2">

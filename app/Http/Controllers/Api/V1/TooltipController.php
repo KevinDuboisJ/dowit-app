@@ -10,13 +10,13 @@ class TooltipController extends Controller
 {
 
   //HANDLE TOOLTIP TEXT FROM DB
-  public function getTooltip(Request $request)
+  public function find(Request $request)
   {
+    $text = 'Geen informatie beschikbaar';
+
     if ($request->get('name'))
       $text = DB::select('SELECT text FROM tooltips WHERE name = ?', [$request->get('name')])[0];
 
-    return response()->json([
-      'text' => $text
-    ]);
+    return response()->json(['text' => $text]);
   }
 }

@@ -10,14 +10,12 @@ import {
   Lucide,
   Heroicon,
   Tippy,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
   Separator,
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  AvatarStack,
 } from '@/base-components';
 
 import {
@@ -26,10 +24,9 @@ import {
   TaskSheet,
 } from '@/components';
 
+export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate, lastUpdatedTaskRef, filters, setFilters }) => {
 
-export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleRowUpdate, lastUpdatedTaskRef, filterBarRef }) => {
-
-  const { announcements, settings, user, teams, statuses } = usePage().props;
+  const { announcements, settings, user } = usePage().props;
   const { loading, setLoading, Loader } = useLoader();
   const todoTasksContainer = useRef();
   const openTasksContainer = useRef();
@@ -59,24 +56,12 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
     const priority = getPriority(task.created_at, task.priority, settings.TASK_PRIORITY.value);
     const statusColor = `text-${getColor(task.status.name)}`;
 
-    const AssignedUsers = () => {
-
-      if (task.assigned_users === "{{loading}}") return <Loader />;
-
-      return task.assigned_users.map((user) => (
-        <Avatar key={user.id} className="w-8 h-8 inline-block mr-2">
-          <AvatarImage src={user.image_path} alt={user.lastname} />
-          <AvatarFallback>{user.lastname.charAt(0)}</AvatarFallback>
-        </Avatar>
-      ));
-    };
-
     return (
       <div key={task.id} className='flex'>
 
         <div style={{ backgroundColor: priority.color }}
           className="flex w-[32px] shadow-[3px_0_4px_rgba(0,0,0,0.2)] border-r border-r-black/10 transform transform transition duration-150 active:translate-x-1 cursor-pointer"
-          onClick={() => setSheetState({ open: true, task: task })}>
+          onClick={() => setSheetState({ open: true, taskId: task.id })}>
         </div>
         <div
           className='w-full bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm p-4 w-80 rounded-tl-none rounded-bl-none '
@@ -147,13 +132,14 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
                 <Lottie className="w-5 h-5 mr-2 cursor-help" animationData={helpAnimation} />
               </Tippy>}
 
-              <AssignedUsers />
+              <AvatarStack avatars={task.assignees} />
+
             </div>
 
             {/* Action buttons */}
             <div className="flex items-center ml-auto space-x-2">
-              <TaskActionButton task={task} user={user} handleRowUpdate={handleRowUpdate} />
-              <Heroicon className='cursor-pointer w-5 h-5' icon="EllipsisVertical" onClick={() => setSheetState({ open: true, task: task })} />
+              <TaskActionButton task={task} user={user} handleTaskUpdate={handleTaskUpdate} handleTasksRecon={handleTasksRecon} />
+              <Heroicon className='cursor-pointer w-5 h-5' icon="EllipsisVertical" onClick={() => setSheetState({ open: true, taskId: task.id })} />
             </div>
           </div>
 
@@ -170,9 +156,10 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
           <AccordionContent className='p-1 py-2'>
 
             <FilterBar
-              filterBarRef={filterBarRef}
-              handleFilter={(filters) => {
+              defaultFilters={filters}
+              handleFilters={(filters) => {
                 setLoading(true)
+                setFilters(filters)
                 router.get('/', { filters: filters }, {
                   only: ['tasks'],
                   queryStringArrayFormat: 'indices',
@@ -186,8 +173,6 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
                   }
                 });
               }}
-              statuses={statuses}
-              teams={teams}
             />
 
 

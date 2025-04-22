@@ -227,9 +227,12 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar, 
         return $this->teams()->first();
     }
 
-
     public function getTeams()
     {
+        if ($this->isSuperAdmin()) {
+            return Team::all();
+        }
+
         return $this->teams()->get();
     }
 

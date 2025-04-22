@@ -5,7 +5,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator
+  Separator,
+  Loader,
 } from '@/base-components';
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { router } from '@inertiajs/react'
@@ -115,76 +116,76 @@ const Newsfeed = ({ newsfeed: initNewsfeed, teammates, statuses, teams }) => {
   }
 
   return (
-    <>
-      <div className='flex mb-2 shrink-0 items-center flex-nowrap col-span-12 fadeInUp'>
+    <div className='flex flex-col h-full'>
+      <div className='flex mb-2 items-center flex-nowrap col-span-12 fadeInUp'>
         <h2 className='text-lg font-medium justify-start'>Newsfeed</h2>
       </div>
-      <div className='flex flex-col h-full min-h-0 fadeInUp box p-4'>
-        <div className='flex flex-col fadeInUp min-h-0 gap-y-2'>
-          <div className='flex items-center space-x-2'>
-            <Select onValueChange={(e) => {
-              handleSearch('user_id', '=', e)
-            }}
-              defaultValue={null}
-            >
-              <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
-                <SelectValue placeholder='Medewerkers' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={null}>Medewerker</SelectItem>
-                {teammates.map(member => (
-                  <SelectItem key={member.id} value={member.id}>{`${member.firstname} ${member.lastname}`}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className='flex flex-col h-full min-h-0 fadeInUp box p-3 gap-y-2'>
+        <div className='flex items-center space-x-2'>
+          <Select onValueChange={(e) => {
+            handleSearch('user_id', '=', e)
+          }}
+            defaultValue={null}
+          >
+            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+              <SelectValue placeholder='Medewerkers' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Medewerker</SelectItem>
+              {teammates.map(member => (
+                <SelectItem key={member.id} value={member.id}>{`${member.firstname} ${member.lastname}`}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Select onValueChange={(e) => {
-              handleSearch('teams.id', '=', e)
-            }}>
-              <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
-                <SelectValue placeholder='Team' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={null}>Team</SelectItem>
-                {teams.map(team => (
-                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select onValueChange={(e) => {
+            handleSearch('teams.id', '=', e)
+          }}>
+            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+              <SelectValue placeholder='Team' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Team</SelectItem>
+              {teams.map(team => (
+                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Select onValueChange={(e) => {
-              handleSearch('status_id', '=', e)
-            }}>
-              <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
-                <SelectValue placeholder='Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={null}>Status</SelectItem>
-                {statuses.map(status => (
-                  <SelectItem key={status.id} value={status.id}>{__(status.name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select onValueChange={(e) => {
+            handleSearch('status_id', '=', e)
+          }}>
+            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+              <SelectValue placeholder='Status' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Status</SelectItem>
+              {statuses.map(status => (
+                <SelectItem key={status.id} value={status.id}>{__(status.name)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <Separator className=''/>
+        <Separator/>
 
-          <div className='flex flex-col h-full shrink-0 overflow-auto'>
+        <div className='flex flex-col h-full overflow-auto'>
 
-            {newsfeed.map((item, index) => (
-              <div key={item.id} ref={newsfeed.length === index + 1 ? lastNewsItemElementRef : null} >
-                <NewsItem newsItem={item} />
-              </div>
-            )
-            )}
+          {newsfeed.map((item, index) => (
+            <div key={item.id} ref={newsfeed.length === index + 1 ? lastNewsItemElementRef : null} >
+              <NewsItem newsItem={item} />
+            </div>
+          )
+          )}
 
-            {newsfeed.length === 0 && <p>Geen gegevens om weer te geven</p>}
-            {loading && <p>Loading...</p>}
+          {newsfeed.length === 0 && <p>Geen gegevens om weer te geven</p>}
+          
+          {loading && <div className='flex w-full intems-center justify-center'><Loader width={96} height={96}/></div>}
 
-          </div>
-        </div >
+        </div>
+
       </div>
-    </>
+    </div>
   )
 }
 

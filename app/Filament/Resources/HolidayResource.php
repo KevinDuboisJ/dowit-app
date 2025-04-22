@@ -39,7 +39,8 @@ class HolidayResource extends Resource
                 TextInput::make('name')
                     ->required(),
                 DatePicker::make('date')
-                    ->required(),
+                    ->required()
+                    ->native(false),
             ]);
     }
 

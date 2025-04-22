@@ -2,223 +2,109 @@ import React, {
   useEffect,
   useRef,
   useState,
-  useMemo,
   useCallback,
 } from 'react';
-import axios from 'axios';
-import { router, usePoll } from '@inertiajs/react';
-import { createPortal } from 'react-dom';
 
-import { useIsMobile } from '@/hooks';
-import { inertiaResourceSync, getRecord } from '@/hooks';
+import { usePoll, router } from '@inertiajs/react';
 import { __ } from '@/stores';
 import { cn } from '@/utils';
 
-import { Sheet, SheetContent } from '@/base-components';
 import {
-  TaskDetail,
+  useTask,
+  useIsMobile,
+  useWebSocket,
+  useFilter,
+  useLoader,
+  inertiaResourceSync,
+} from '@/hooks';
+
+import {
+  TaskOverviewSheet,
   AnnouncementSheet,
   TaskSheet,
-  TaskTabulator,
   TaskMobileView,
-  AnnouncementFeed,
   FilterBar,
+  TaskTable
 } from '@/components';
 
 const Dashboard = ({
-  user: initialUser,
-  teams,
-  tasks: initialTasks,
-  settings,
-  statuses,
-  announcements,
+  tasks: initTasks
 }) => {
-  const [tasks, setTasks] = useState(initialTasks);
-  const [user, setUser] = useState(initialUser);
-  const [sheetState, setSheetState] = useState({ open: false, task: {} });
-  const [placeholderAnnouncements, setPlaceholderAnnouncements] = useState(null);
-  const { isMobile, hasTransitionedToMobile } = useIsMobile();
-  const lastUpdatedTaskRef = useRef(null);
-  const tabulatorRef = useRef(null);
-  const filterBarRef = useRef({
-    getFilters: () => null,
-    resetFilters: () => null,
-  })
 
-  // Poll every 5 minutes (300000 ms)
+  const { filters, filtersRef } = useFilter({
+    defaultValues: {
+      assignedTo: { field: 'assignedTo', type: 'like', value: null },
+      status_id: { field: 'status_id', type: '=', value: null },
+      team_id: { field: 'team_id', type: '=', value: null }
+    },
+    options: { filterFromUrlParams: true }
+  })
+  const { tasks, setTasks, mergeTasks, todoTasks, openTasks, setPagination } = useTask(initTasks, filters.get());
+  const { newEvent } = useWebSocket();
+  const [sheetState, setSheetState] = useState({ open: false, task: null });
+  const { isMobile } = useIsMobile();
+  const { loading, setLoading, Loader } = useLoader();
+  const lastUpdatedTaskRef = useRef(null);
+
+  // Poll every 5 minutes as a fallback for WebSockets (300000 ms)
   usePoll(300000, {
     onSuccess: ({ props }) => {
-      setTasks(props.tasks);
+      setTasks(props.tasks.data);
     },
   });
 
-  // Determines whether a broadcast event should be processed
-  const shouldProcessEvent = useCallback((event, lastTask) => {
-    const { data, timestamp } = event;
-    return (
-      !lastTask ||
-      lastTask.id !== data.id ||
-      new Date(timestamp) > new Date(lastTask.updated_at)
-    );
-  }, []);
+  // Handle WebSocket events dynamically
+  useEffect(() => {
 
-  // Sync announcements by triggering a resource update
-  const syncAnnouncements = useCallback(() => {
-    inertiaResourceSync(['announcements']);
-  }, []);
+    if (!newEvent) return;
 
-  // Handle task creation and update events
-  const processEvent = useCallback(
-    async (event, onCreate, onUpdate, onSync) => {
-      const { type, data } = event;
-      if (!shouldProcessEvent(event, lastUpdatedTaskRef.current)) {
-        return;
-      }
+    if (newEvent.type === "task_created" || newEvent.type === "task_updated") {
+      inertiaResourceSync(['tasks'], {
+        onSuccess: ({ tasks }) => { handleTasksRecon(tasks); }
+      });
+    }
 
-      console.log(`Event for task ${data.id}:`, event);
+    // THIS WAS THE ORIGINAL CODE BEFORE  DOING IT VIA INERTIA RESOURCE SYNC
+    // if (newEvent.type === "task_created") {
+    //   getRecord({ url: `tasks/${newEvent.data.id}` }).then((newTask) => {
+    //     setTasks((prevTasks) => [newTask, ...prevTasks]);
+    //   });
+    // }
 
-      if (type === 'task_created') {
-        const task = await getRecord({ url: `tasks/${data.id}` });
-        onCreate(task);
-      }
+    // if (newEvent.type === "task_updated") {
+    //   getRecord({ url: `tasks/${newEvent.data.id}` }).then((updatedTask) => {
+    //     setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+    //   });
+    // }
 
-      if (type === 'task_updated') {
-        const task = await getRecord({ url: `tasks/${data.id}` });
-        onUpdate(task);
-      }
 
-      if (
-        type === 'comment_created' ||
-        type === 'comment_updated' ||
-        type === 'announcement_created'
-      ) {
-        onSync();
-      }
-    },
-    [shouldProcessEvent]
-  );
+    if (newEvent.type === "announcement_created") {
+      inertiaResourceSync(['announcements']);
+    }
 
-  // Update state when a new task is created
-  const handleRowCreate = useCallback((newTask) => {
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      data: [...prevTasks.data, newTask],
-    }));
-  }, []);
+  }, [newEvent]);
 
-  // Update state when a task is updated
-  const handleRowUpdate = useCallback((updatedTask, options = {}) => {
+  const handleTaskUpdate = useCallback((updatedTask, options = {}) => {
     const { scroll = false } = options;
     lastUpdatedTaskRef.current = updatedTask;
-    // Optionally save scroll information if needed:
-    // lastUpdatedTaskRef.current.scroll = scroll;
+    lastUpdatedTaskRef.scroll = scroll;
 
     setTasks((prevTasks) => {
-      const index = prevTasks.data.findIndex(
-        (task) => task.id === updatedTask.id
-      );
-      if (index === -1) {
-        return prevTasks;
-      }
-      const newData = [...prevTasks.data];
+      const index = prevTasks.findIndex((task) => task.id === updatedTask.id);
+      if (index === -1) return prevTasks;
+      const newData = [...prevTasks];
       newData[index] = updatedTask;
-      return { ...prevTasks, data: newData };
+      return newData;
     });
 
-    setSheetState((prevState) => ({
-      ...prevState,
-      task: {
-        ...prevState.task,
-        ...updatedTask,
-        action: '',
-      },
-    }));
-  }, []);
+  });
 
-  // Establish WebSocket connections for the current user and their teams
-  const connectWebSocket = useCallback(
-    (currentUser) => {
-      if (!currentUser?.id) return;
+  const handleTasksRecon = useCallback((data) => {
+    const { data: tasks, ...rest } = data;
+    setPagination(rest);
+    mergeTasks(tasks);
 
-      try {
-        // Listen for broadcasts to the authenticated user
-        window.Echo.private(`user.${currentUser.id}`).listen(
-          'BroadcastEvent',
-          async (event) => {
-            await processEvent(
-              event,
-              handleRowCreate,
-              handleRowUpdate,
-              syncAnnouncements
-            );
-          }
-        );
-
-        // Listen on each team channel
-        currentUser.teams.forEach((team) => {
-          window.Echo.private(`team.${team.id}`).listen(
-            'BroadcastEvent',
-            async (event) => {
-              await processEvent(
-                event,
-                handleRowCreate,
-                handleRowUpdate,
-                syncAnnouncements
-              );
-            }
-          );
-        });
-      } catch (error) {
-        console.error('Error in WebSocket connection:', error);
-      }
-    },
-    [processEvent, handleRowCreate, handleRowUpdate, syncAnnouncements]
-  );
-
-  // Reconnect the WebSocket (with a dummy request to keep the connection alive)
-  const reconnectWebSocket = useCallback(async () => {
-    try {
-      await axios.get(import.meta.env.VITE_APP_URL, { mode: 'no-cors' });
-    } catch (error) {
-      // Silently handle the error
-    }
-    connectWebSocket(user);
-  }, [connectWebSocket, user]);
-
-  // Set up WebSocket connections on mount and clean them up on unmount
-  useEffect(() => {
-    reconnectWebSocket();
-
-    return () => {
-      if (user?.id) {
-        window.Echo.leave(`user.${user.id}`);
-      }
-      user?.teams?.forEach((team) => {
-        window.Echo.leave(`team.${team.id}`);
-      });
-    };
-  }, [user, reconnectWebSocket]);
-
-  // Compute the two sets of tasks: one for tasks assigned to the current user and one for others
-  const [todoTasks, openTasks] = useMemo(() => {
-    const tasksData = tasks?.data || [];
-    const todo = [];
-    const open = [];
-    const filters = filterBarRef.current.getFilters()
-    tasksData.forEach((task) => {
-      // Exclude tasks marked as "Completed"
-      if (task.status.name === 'Completed' && filters.status_id.value !== 'Completed') return;
-
-      if (task.capabilities.isAssignedToCurrentUser) {
-        todo.push(task);
-      } else {
-        open.push(task);
-      }
-
-    });
-
-    return [todo, open];
-  }, [tasks]);
+  }, [sheetState]);
 
   // Toggle the state of the Sheet (side-panel)
   const handleSheetClose = useCallback(() => {
@@ -227,6 +113,7 @@ const Dashboard = ({
       open: !prevState.open,
     }));
   }, []);
+
 
   return (
     <>
@@ -237,59 +124,70 @@ const Dashboard = ({
         )}
       >
         {isMobile ? (
+
           <TaskMobileView
             todoTasks={todoTasks}
             openTasks={openTasks}
             setTasks={setTasks}
-            handleRowUpdate={handleRowUpdate}
+            handleTasksRecon={handleTasksRecon}
+            handleTaskUpdate={handleTaskUpdate}
             setSheetState={setSheetState}
             lastUpdatedTaskRef={lastUpdatedTaskRef}
-            filterBarRef={filterBarRef}
+            filters={filters.get()}
           />
+
         ) : (
           <>
             <div className="flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3">
               <FilterBar
-                filterBarRef={filterBarRef}
-                statuses={statuses}
-                teams={teams}
-                handleFilter={(filters) =>
-                  tabulatorRef.current?.setFilter(filters)
-                }
+                defaultValues={filtersRef}
+                onApplyFilters={({ activeFilters }) => {
+                  console.log(activeFilters)
+                  setLoading(true)
+                  router.get('/', { filters: activeFilters }, {
+                    only: ['tasks'],
+                    queryStringArrayFormat: 'indices',
+                    preserveState: true,
+                    onSuccess: ({ props }) => {
+                      setTasks(props.tasks.data);
+                      setLoading(false)
+                    },
+                    onError: (error) => {
+                      console.log(error)
+                    }
+                  });
+                }}
               />
               <div className="ml-auto space-x-2">
                 <AnnouncementSheet />
                 <TaskSheet />
               </div>
             </div>
-            <TaskTabulator
-              tabulatorRef={tabulatorRef}
-              tasks={[...todoTasks, ...openTasks]}
+            {/* Loading Overlay */}
+            {loading && (
+              <div className="absolute inset-0 flex justify-center items-center bg-gray-100 bg-opacity-50 z-30 transition-opacity duration-300">
+                <Loader width={150} height={150} className="z-40" />
+              </div>
+            )}
+            <TaskTable
+              tasks={tasks}
               setTasks={setTasks}
               setSheetState={setSheetState}
-              handleRowUpdate={handleRowUpdate}
-              announcements={announcements}
-              setPlaceholderAnnouncements={setPlaceholderAnnouncements}
-              settings={settings}
+              handleTasksRecon={handleTasksRecon}
+              handleTaskUpdate={handleTaskUpdate}
             />
           </>
         )}
-        {placeholderAnnouncements &&
-          createPortal(
-            <AnnouncementFeed announcements={announcements} />,
-            placeholderAnnouncements
-          )}
       </div>
 
-      <Sheet open={sheetState.open} onOpenChange={handleSheetClose}>
-        <SheetContent className="p-0 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md">
-          <TaskDetail
-            task={sheetState.task}
-            handleRowUpdate={handleRowUpdate}
-            handleSheetClose={handleSheetClose}
-          />
-        </SheetContent>
-      </Sheet>
+      <TaskOverviewSheet
+        sheetState={sheetState}
+        setSheetState={setSheetState}
+        tasks={tasks}
+        handleTasksRecon={handleTasksRecon}
+        handleTaskUpdate={handleTaskUpdate}
+        handleSheetClose={handleSheetClose}
+      />
     </>
   );
 };

@@ -23,7 +23,7 @@ class NewsfeedController extends Controller
 
     $newsfeed = Comment::with([
       'user',
-      'task' => fn($query) => $query->with(['assignedUsers']),
+      'task' => fn($query) => $query->with(['assignees']),
       'status' => fn($query) => $query->select('id', 'name')
     ])
       ->when(!Helper::containsFilter($filters, 'user_id') && !Helper::containsFilter($filters, 'team_id'), function ($query) use ($user) {

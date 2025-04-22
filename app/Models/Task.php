@@ -23,8 +23,8 @@ class Task extends Model
     {
         parent::boot();
 
-        // Listen for the `attached` event on the assignedUsers relationship
-        Event::listen('eloquent.attached: App\\Models\\Task.assignedUsers', function ($task, $ids, $attributes) {
+        // Listen for the `attached` event on the assignees relationship
+        Event::listen('eloquent.attached: App\\Models\\Task.assignees', function ($task, $ids, $attributes) {
             logger('Attached: ' . implode(',', $ids) . ' to Task ' . $task->id);
         });
     }
@@ -43,7 +43,7 @@ class Task extends Model
     {
         $query->where(function ($query) {
             $query->where('start_date_time', '<=', carbon::now())
-            ->where('is_active', true);
+                ->where('is_active', true);
         });
     }
 
@@ -61,15 +61,22 @@ class Task extends Model
     {
         $user = Auth::user();
 
-        $query->whereHas('teams', function ($teamQuery) use ($user) {
+        // If the user is super admin, don't constrain the query.
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
 
-            $teamQuery->whereIn('teams.id', $user->teams->pluck('id'));
+        // Otherwise, restrict to teams the user belongs to using getTeams().
+        $teamIds = $user->getTeams()->pluck('id');
+
+        return $query->whereHas('teams', function ($teamQuery) use ($teamIds) {
+            $teamQuery->whereIn('teams.id', $teamIds);
         });
     }
 
     public function scopeByNotAssigned($query)
     {
-        $query->whereDoesntHave('assignedUsers', function ($userQuery) {
+        $query->whereDoesntHave('assignees', function ($userQuery) {
             $userQuery->where('users.id', Auth::id());
         });
     }
@@ -78,7 +85,7 @@ class Task extends Model
     {
         $user = Auth::user();
 
-        $query->whereHas('assignedUsers', function ($userQuery) use ($user) {
+        $query->whereHas('assignees', function ($userQuery) use ($user) {
             $userQuery->where('users.id', $user->id);
         });
     }
@@ -119,7 +126,7 @@ class Task extends Model
         return $this->belongsToMany(Team::class, 'task_team');
     }
 
-    public function assignedUsers()
+    public function assignees()
     {
         return $this->belongsToMany(User::class, 'task_user');
     }
@@ -149,19 +156,32 @@ class Task extends Model
             'taskType' => fn($query) => $query->with(['documents']),
             'space',
             'comments' => fn($query) => $query->with(['user', 'status' => fn($query) => $query->select('id', 'name')]),
-            'assignedUsers',
+            'assignees',
             'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
         ];
     }
 
     public function assignUsers(array $userIds)
     {
-        $this->assignedUsers()->syncWithoutDetaching($userIds);
+        $this->assignees()->syncWithoutDetaching($userIds);
     }
 
     public function unassignUsers(array $userIds)
     {
-        $this->assignedUsers()->detach($userIds);
+        $this->assignees()->detach($userIds);
+    }
+
+    public function addComment(string $comment, ?array $metadata = null): Comment
+    {
+        $comment = $this->comments()->create([
+            'user_id' => Auth::id() ?? config('app.system_user_id'),
+            'status_id' => $this->isDirty('status_id') ? $this->status_id : null,
+            'needs_help' => $this->isDirty('needs_help') ? $this->needs_help : null,
+            'content' => $comment ?? '',
+            'metadata' => !empty($metadata) ? $metadata : null,
+        ]);
+
+        return $comment;
     }
 
     // public function firstComment()

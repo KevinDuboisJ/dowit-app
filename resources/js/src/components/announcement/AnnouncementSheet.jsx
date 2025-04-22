@@ -1,3 +1,18 @@
+import React, { useState } from 'react'
+import { toast } from 'sonner'
+import axios from "axios";
+import { CalendarIcon } from 'lucide-react'
+// import { DateRange } from 'react-day-picker'
+import { cn } from '@/utils'
+import { format, addDays, parseISO } from 'date-fns';
+import { nlBE } from "date-fns/locale";
+import { __, getVariant } from '@/stores';
+import { router } from '@inertiajs/react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { useAxiosFetchByInput } from '@/hooks'
+
 import {
   Sheet,
   SheetTrigger,
@@ -14,30 +29,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  RichText,
   RichTextEditor,
   Popover,
   PopoverContent,
   PopoverTrigger,
   Calendar,
   MultiSelect,
-  Separator,
+  ScrollArea,
 } from '@/base-components';
-
-import { toast } from 'sonner'
-import axios from "axios";
-import { CalendarIcon } from 'lucide-react'
-// import { DateRange } from 'react-day-picker'
-import { cn } from '@/utils'
-import { format, addDays, parseISO } from 'date-fns';
-import { nlBE } from "date-fns/locale";
-import { useState } from 'react'
-import { __, getVariant } from '@/stores';
-import { router } from '@inertiajs/react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { useAxiosFetchByInput } from '@/hooks'
 
 
 const FormSchema = z
@@ -89,13 +88,54 @@ const FormSchema = z
   );
 
 
-export const AnnouncementSheet = () => {
+export const AnnouncementSheet = React.memo(() => {
 
   const [sheetState, setSheetState] = useState(false);
 
   const handleSheetClose = () => {
     setSheetState((prevState) => (!prevState));
   }
+
+  return (
+    <Sheet open={sheetState} onOpenChange={handleSheetClose}>
+      <SheetTrigger asChild>
+        <Button type='submit' className='w-full xl:w-auto' size={'sm'}>
+          <Heroicon icon='ChatBubbleLeftEllipsis' /> Nieuwe Mededeling
+        </Button>
+      </SheetTrigger>
+      <SheetContent className='flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md'>
+        <SheetHeader className='text-left flex flex-col items-center bg-white p-3 py-5 space-y-3 border-b shrink-0'>
+          <div className='flex w-full py-2'>
+            {/* First Column */}
+            <div className='flex flex-wrap self-start'>
+
+              {/* Custom Close Button */}
+              <button
+                onClick={handleSheetClose}
+                className='h-6 focus:outline-none focus:ring-0 focus-visible-ring-0'
+              >
+                <Heroicon icon='ChevronLeft' className="w-5 stroke-[2.6px]" />
+              </button>
+
+            </div>
+            <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
+              <SheetTitle>Mededeling aanmaken</SheetTitle>
+              <SheetDescription className='mt-0'>Plaats een mededeling voor bepaalde gebruiker(s) of team(s)</SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea className="h-full p-2">
+          <CreateAnnouncementForm />
+        </ScrollArea>
+
+      </SheetContent>
+    </Sheet>
+  )
+})
+
+
+const CreateAnnouncementForm = () => {
 
   const form = useForm({
     resolver: zodResolver(FormSchema),
@@ -146,167 +186,133 @@ export const AnnouncementSheet = () => {
   }
 
   return (
-    <Sheet open={sheetState} onOpenChange={handleSheetClose}>
-      <SheetTrigger asChild>
-        <Button type='submit' className='w-full xl:w-auto' size={'sm'}>
-          <Heroicon icon='ChatBubbleLeftEllipsis' /> Nieuwe Mededeling
-        </Button>
-      </SheetTrigger>
-      <SheetContent className='p-3 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md'>
-        <SheetHeader className='text-left'>
-          <div className='flex w-full py-2'>
-            {/* First Column */}
-            <div className='flex flex-wrap self-start'>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className='p-4 space-y-4'>
 
-              {/* Custom Close Button */}
-              <button
-                onClick={handleSheetClose}
-                className='h-6 focus:outline-none focus:ring-0 focus-visible-ring-0'
-              >
-                <Heroicon icon='ChevronLeft' className="w-5 stroke-[2.6px]" />
-              </button>
+        <FormField
+          control={form.control}
+          name='selectedUsers'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gebruikers</FormLabel>
+              <FormControl>
+                <MultiSelect
+                  options={users}
+                  onValueChange={(selected) => {
+                    field.onChange(selected); // Updates form state when MultiSelect changes
+                  }}
+                  selectedValues={field.value} // Uses form's field value as the selected value
+                  placeholder='Wijs persoon toe'
+                  animation={2}
+                  handleInputOnChange={fetchUserList}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            </div>
-            <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
-              <SheetTitle>Mededeling aanmaken</SheetTitle>
-              <SheetDescription className='mt-0'>Plaats een mededeling voor bepaalde gebruiker(s) of team(s)</SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
+        <FormField
+          control={form.control}
+          name='selectedTeams'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Teams</FormLabel>
+              <FormControl>
+                <MultiSelect
+                  options={teams}
+                  onValueChange={(selected) => {
+                    field.onChange(selected); // Updates form state when MultiSelect changes
+                  }}
+                  selectedValues={field.value} // Uses form's field value as the selected value
+                  placeholder='Wijs teams toe'
+                  animation={2}
+                  handleInputOnChange={fetchTeamList}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Separator className='bg-slate-200/60 dark:bg-darkmode-400' />
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='p-4 space-y-4'>
+        <FormField
+          control={form.control}
+          name='date'
+          render={({ field }) => (
+            <FormItem className='flex flex-col'>
+              <FormLabel>Datum</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-[300px] justify-start text-left font-normal",
+                      !field.value && "text-muted-foreground"
+                    )}
+                    size={'sm'}
+                  >
+                    <CalendarIcon className='text-xs text-slate-500 font-normal' />
+                    {field.value?.from ? (
+                      field.value.to ? (
+                        <>
+                          {format(new Date(field.value.from), "LLL dd, y", { locale: nlBE })} -{" "}
+                          {format(new Date(field.value.to), "LLL dd, y", { locale: nlBE })}
+                        </>
+                      ) : (
+                        format(new Date(field.value.from), "LLL dd, y")
+                      )
+                    ) : (
+                      <span className='text-xs text-slate-500 font-normal'>Kies een datum</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={field.value?.from}
+                    selected={field.value}
+                    onSelect={(e) => {
+                      field.onChange(e);
+                    }}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
 
-            <FormField
-              control={form.control}
-              name='selectedUsers'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gebruikers</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={users}
-                      onValueChange={(selected) => {
-                        field.onChange(selected); // Updates form state when MultiSelect changes
-                      }}
-                      selectedValues={field.value} // Uses form's field value as the selected value
-                      placeholder='Wijs persoon toe'
-                      animation={2}
-                      handleInputOnChange={fetchUserList}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormDescription>
+                Datum wordt gebruikt om te bepalen wanneer de mededeling zichtbaar zal zijn
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name='selectedTeams'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teams</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={teams}
-                      onValueChange={(selected) => {
-                        field.onChange(selected); // Updates form state when MultiSelect changes
-                      }}
-                      selectedValues={field.value} // Uses form's field value as the selected value
-                      placeholder='Wijs teams toe'
-                      animation={2}
-                      handleInputOnChange={fetchTeamList}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormField
+          control={form.control}
+          name='announcement'
+          render={({ field }) => (
 
-            <FormField
-              control={form.control}
-              name='date'
-              render={({ field }) => (
-                <FormItem className='flex flex-col'>
-                  <FormLabel>Datum</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                          "w-[300px] justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                        size={'sm'}
-                      >
-                        <CalendarIcon className='text-xs text-slate-500 font-normal' />
-                        {field.value?.from ? (
-                          field.value.to ? (
-                            <>
-                              {format(new Date(field.value.from), "LLL dd, y", { locale: nlBE })} -{" "}
-                              {format(new Date(field.value.to), "LLL dd, y", { locale: nlBE })}
-                            </>
-                          ) : (
-                            format(new Date(field.value.from), "LLL dd, y")
-                          )
-                        ) : (
-                          <span className='text-xs text-slate-500 font-normal'>Kies een datum</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={field.value?.from}
-                        selected={field.value}
-                        onSelect={(e) => {
-                          field.onChange(e);
-                        }}
-                        numberOfMonths={2}
-                      />
-                    </PopoverContent>
-                  </Popover>
-
-                  <FormDescription>
-                    Datum wordt gebruikt om te bepalen wanneer de mededeling zichtbaar zal zijn
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='announcement'
-              render={({ field }) => (
-
-                <FormItem>
-                  <FormLabel>Mededeling</FormLabel>
-                  <FormControl>
-
-                    <RichText>
-                      <RichTextEditor
-                        className='h-32 bg-white'
-                        onUpdate={(value) => {
-                          field.onChange(value); // Updates form state when MultiSelect changes
-                        }}
-                        value={field.value}
-                      />
-                    </RichText>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className='text-right'>
-              <Button type='submit'>Aanmaken</Button>
-            </div>
-          </form>
-        </Form>
-      </SheetContent>
-    </Sheet>
+            <FormItem>
+              <FormLabel>Mededeling</FormLabel>
+              <FormControl>
+                <RichTextEditor
+                  className='text-sm h-32 bg-white'
+                  onUpdate={(value) => {
+                    field.onChange(value); // Updates form state when MultiSelect changes
+                  }}
+                  value={field.value}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className='text-right'>
+          <Button type='submit'>Aanmaken</Button>
+        </div>
+      </form>
+    </Form>
   )
 }

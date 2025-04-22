@@ -5,7 +5,6 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from "@inertiajs/react"
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import Layout from '@/layouts/Layout.jsx'
-import { RecoilRoot } from "recoil";
 
 
 createInertiaApp({
@@ -17,7 +16,7 @@ createInertiaApp({
   },
 
   setup({ el, App, props }) {
-    return createRoot(el).render(<RecoilRoot><App {...props} /></RecoilRoot>)
+    return createRoot(el).render(<App {...props} />)
   },
 
   progress: {

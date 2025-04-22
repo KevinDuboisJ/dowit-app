@@ -1,3 +1,17 @@
+import React, { useEffect } from 'react'
+import { toast } from 'sonner'
+import { CalendarIcon } from 'lucide-react'
+import { cn } from '@/utils'
+import { format, isBefore, startOfToday } from 'date-fns';
+import { nlBE } from 'date-fns/locale';
+import { __ } from '@/stores';
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useWatch } from 'react-hook-form'
+import { z } from 'zod'
+import { useInertiaFetchList, useAxiosFetchByInput } from '@/hooks'
+import axios from "axios";
+import { useState } from "react";
+
 import {
   Sheet,
   SheetTrigger,
@@ -29,21 +43,6 @@ import {
   Autocomplete,
   Separator
 } from '@/base-components';
-
-import { toast } from 'sonner'
-import { CalendarIcon } from 'lucide-react'
-// import { DateRange } from 'react-day-picker'
-import { cn } from '@/utils'
-import { format, isBefore, startOfToday } from 'date-fns';
-import { nlBE } from 'date-fns/locale';
-import { useEffect } from 'react'
-import { __ } from '@/stores';
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm, useWatch } from 'react-hook-form'
-import { z } from 'zod'
-import { useInertiaFetchList, useAxiosFetchByInput } from '@/hooks'
-import axios from "axios";
-import { useState } from "react";
 
 const FormSchema = z.object({
   name: z.string().min(1, ('Naam is verplicht')), // Required string with a custom error message
@@ -123,7 +122,7 @@ const FormSchema = z.object({
   );
 
 
-export const TaskSheet = () => {
+export const TaskSheet = React.memo(() => {
 
   const [sheetState, setSheetState] = useState(false);
 
@@ -132,15 +131,16 @@ export const TaskSheet = () => {
   }
 
   return (
-    <Sheet open={sheetState} onOpenChange={handleSheetClose}>
+    <Sheet open={sheetState} onOpenChange={handleSheetClose} >
       <SheetTrigger asChild>
         <Button type='submit' className='w-full xl:w-auto' size={'sm'}>
           <Heroicon icon='Plus' /> Nieuwe Taak
         </Button>
       </SheetTrigger>
 
-      <SheetContent className='p-3 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md'>
-        <SheetHeader className='text-left'>
+      <SheetContent className='flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md'>
+
+        <SheetHeader className='text-left flex flex-col items-center bg-white p-3 py-5 space-y-3 border-b shrink-0'>
           <div className='flex w-full py-2'>
             {/* First Column */}
             <div className='flex flex-wrap self-start'>
@@ -162,15 +162,13 @@ export const TaskSheet = () => {
           </div>
         </SheetHeader>
 
-        <Separator className='bg-slate-200/60 dark:bg-darkmode-400' />
-
-        <ScrollArea className="h-full pb-8">
+        <ScrollArea className="h-full p-2 pb-8">
           <CreateTaskForm />
         </ScrollArea>
       </SheetContent>
     </Sheet>
   )
-}
+})
 
 const CreateTaskForm = () => {
 
@@ -208,7 +206,7 @@ const CreateTaskForm = () => {
   });
 
   async function onSubmit(data) {
-    
+
     const formValues = { ...form.getValues() }
     const cleanData = { ...data }
 
@@ -330,23 +328,32 @@ const CreateTaskForm = () => {
           <div className="flex flex-wrap w-full gap-4"> {/* Container with flex styling */}
             <FormField
               control={form.control}
-              name='taskType'
-              render={({ field }) => (
-                <FormItem className='grow'>
-                  <FormLabel>Taaktype</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className='text-xs text-slate-500 bg-white'>
-                        <SelectValue placeholder='Selecteer taaktype' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <CreateSelectOptions rows={taskTypes} />
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              name="taskType"
+              render={({ field }) => {
+
+                return (
+                  <FormItem className="grow">
+                    <FormLabel>Taaktype</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger
+                          value={field.value}
+                          onClear={() => {
+                            field.onChange("")
+                          }}
+                          className="text-xs text-slate-500 bg-white"
+                        >
+                          <SelectValue placeholder="Selecteer taaktype" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <CreateSelectOptions rows={taskTypes} />
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
             />
 
             <FormField
@@ -357,8 +364,14 @@ const CreateTaskForm = () => {
                   <FormLabel>Campus</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className='text-xs text-slate-500 bg-white'>
-                        <SelectValue placeholder='Selecteer campus' />
+                      <SelectTrigger
+                        value={field.value}
+                        onClear={() => {
+                          field.onChange("")
+                        }}
+                        className="text-xs text-slate-500 bg-white"
+                      >
+                        <SelectValue placeholder="Selecteer campus" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

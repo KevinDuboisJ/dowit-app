@@ -137,12 +137,16 @@ export const useInertiaFetchListReload = ({ only, data, method = 'post' }) => {
   return { list, fetchList };
 };
 
-export const inertiaResourceSync = (resource) => {
-  // Fetch updated task data
+export const inertiaResourceSync = (resource, options = {}) => {
+
+  const { onSuccess } = options;
+
   router.reload({
     only: resource,
-    onError: (error) => console.error("Error fetching announcements:", error),
+    onSuccess: (response) => onSuccess?.(response.props),
+    onError: (error) => console.error("Error from inertiaResourceSync:", error),
   });
+
 }
 
 export const useFetchList = ({ url, payload = {}, method = "post", eager = false }) => {
@@ -202,64 +206,61 @@ export const getRecord = async ({ url }) => {
   }
 };
 
+// Global counter to track update requests.
+let currentUpdateSequence = 0;
+
 export const updateTask = async (values, row, options = {}) => {
-
   const { onBefore, onSuccess, onComplete, onError } = options;
-  const originalRow = { ...row };
-  //const updatedAtISOString = format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX", { timeZone: 'Europe/Paris' });
-  const updatedAtISOString = new Date().toISOString();
+  const updatedAtISOString = new Date().toISOString().split(".")[0] + "Z";
 
-  // Optimistically update the UI
-  if (onBefore) {
+  // Increment the counter and capture the sequence for this request.
+  currentUpdateSequence++;
+  const thisRequestSequence = currentUpdateSequence;
 
-    await onBefore({
-      originalRow: originalRow,
-      updatedAt: updatedAtISOString,
-    });
-  }
-  // console.log('delayed started')
-  // await delay(7000);
-  // console.log('delayed ended')
+  // Optimistic UI update
+  onBefore?.({
+    original: row,
+    updatedAt: updatedAtISOString,
+  });
 
   try {
-    const response = await axios.post(
-      `/task/${originalRow.id}/update`,
-      {
-        ...values,
-        beforeUpdateAt: originalRow.updated_at, // Include the task updated_at before it was updated
-        updated_at: updatedAtISOString,
-      }
-    );
+    const response = await axios.post(`/task/${row.id}/update`, {
+      ...values,
+      beforeUpdateAt: row.updated_at,
+      updated_at: updatedAtISOString,
+    });
 
-    if (response.status === 200) {
-      // Use the callback to update the row
-      if (onSuccess) onSuccess({ updatedRow: response.data });
-      if (onComplete) onComplete(true);
-    }
-
-  } catch (error) {
-    
-    if (onComplete) onComplete(false);
-    console.error("Error response:", error.response); // Debugging
-
-    // Revert to the original state if the update fails
-    if (onError) onError({ originalRow: originalRow });
-
-    if (error.response) {
-      if (error.response.status === 422) {
-        console.log("Validation Errors:", error.response.data.errors); // Debug
-        toast.error(error.response.data.message, { duration: 6000 });
-      } else if (error.response.status === 409) {
-        toast.error(error.response.data.message, { duration: 6000 });
-        if (onRowUpdate) onRowUpdate(error.response.data.latestData);
-      } else {
-        toast.error("Er is een netwerkfout opgetreden. Probeer het alstublieft opnieuw");
-      }
+    // Only apply the response if this is the latest request.
+    if (thisRequestSequence === currentUpdateSequence && response.status === 200) {
+      onSuccess?.(response.data);
     } else {
-      console.error("Request failed but no response received:", error);
-      toast.error("Er is een onbekende fout opgetreden. Controleer uw netwerkverbinding.");
+      console.log("Stale response ignored");
     }
+  } catch (error) {
+    if (thisRequestSequence !== currentUpdateSequence) {
+      // Ignore error from an outdated request.
+      console.log("Stale error ignored");
+    } else {
+      console.error("Task Update Error:", error);
+      onError?.({ original: row, ...error?.response });
 
-
+      if (!error.response) {
+        toast.error("Netwerkfout. Controleer uw verbinding.");
+      } else {
+        const { status, data } = error.response;
+        if (status === 422) {
+          console.log("Validation Errors:", data.errors);
+          toast.error(data.message, { duration: 6000 });
+        } else if (status === 409) {
+          toast.error(data.message, { duration: 6000 });
+        } else {
+          toast.error("Er is een fout opgetreden. Probeer opnieuw.");
+        }
+      }
+    }
+  } finally {
+    if (thisRequestSequence === currentUpdateSequence) {
+      onComplete?.(true);
+    }
   }
 };

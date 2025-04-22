@@ -1,12 +1,11 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { usePage, router } from '@inertiajs/react';
-import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { __, getColor } from '@/stores';
+import { __ } from '@/stores';
 import { format, parseISO } from 'date-fns';
 import helpAnimation from '@json/animation-help.json';
-import tippy from 'tippy.js';
-import { default as lottie } from 'lottie-web';
+import Lottie from "lottie-react";
+import { reactFormatter } from '@/utils'
 import {
   Tabulator,
   ResponsiveLayoutModule,
@@ -20,107 +19,76 @@ import {
   SortModule,
   FilterModule,
   InteractionModule,
-  MutatorModule
+  MutatorModule,
 } from 'tabulator-tables';
 
-import { Loader, AvatarStack } from '@/base-components';
+import {
+  Loader,
+  AvatarStack,
+  Tippy,
+} from '@/base-components';
 import { TaskActionButton, getPriority } from '@/components';
 
-/* Helper cell components rendered via React */
 
-// Renders the “priority” cell.
-const PriorityCell = ({ row, settings }) => {
-  const cellRef = useRef(null);
+// Priority Cell
+const PriorityCell = ({ cell, settings }) => {
+  const row = cell._cell.row.data;
 
-  useEffect(() => {
-    if (cellRef.current) {
-      const button = cellRef.current.querySelector('[data-tippy-content]');
-      if (button) {
-        tippy(button, {
-          content: button.getAttribute('data-tippy-content'),
-        });
-      }
-    }
-  }, []);
-
-  const priority = getPriority(row.created_at, row.priority, settings.TASK_PRIORITY.value);
   return (
-    <div className="flex flex-col w-full" ref={cellRef}>
-      <div
-        data-tippy-content={priority.state}
-        style={{ backgroundColor: priority.color }}
-        className="whitespace-nowrap w-4 h-4 mx-auto rounded-full"
-      />
-    </div>
+    <Tippy className="cursor-help" content={getPriority(row.created_at, row.priority, settings.TASK_PRIORITY.value).state}>
+      <div className="flex flex-col w-full">
+        <div
+          className="whitespace-nowrap w-4 h-4 mx-auto rounded-full"
+          style={{ backgroundColor: getPriority(row.created_at, row.priority, settings.TASK_PRIORITY.value).color }}
+        />
+      </div>
+    </Tippy>
   );
 };
 
-// Renders the “status” cell.
-const StatusCell = ({ row }) => {
-  const cellRef = useRef(null);
+// Status Cell
+const StatusCell = ({ cell }) => {
+  const row = cell._cell.row.data;
 
-  useEffect(() => {
-    if (cellRef.current) {
-      const button = cellRef.current.querySelector('[data-tippy-content]');
-      if (button) {
-        tippy(button, {
-          content: button.getAttribute('data-tippy-content'),
-          offset: [30, 25],
-        });
-        const animationContainer = button.querySelector('[data-lottie]');
-        if (animationContainer) {
-          lottie.loadAnimation({
-            container: animationContainer,
-            renderer: 'svg',
-            loop: true,
-            autoplay: true,
-            animationData: helpAnimation,
-          });
-        }
-      }
-    }
-  }, []);
-
-  const value = row.status.name;
-  const colorClass = `text-${getColor(value)}`;
   return (
-    <span ref={cellRef} className={`whitespace-nowrap text-xs ${colorClass}`}>
-      {row.needs_help && !row.capabilities.isAssignedToCurrentUser && (
-        <button data-tippy-content="Hulp gevraagd">
-          <div
-            className="absolute top-1 left-0 w-5 h-5 mr-2 cursor-help"
-            data-lottie="true"
-          ></div>
-        </button>
-      )}
-      {__(value)}
-    </span>
+    <Tippy content='Hulp gevraagd' options={{ allowHTML: true }}>
+      <span className={`whitespace-nowrap text-xs text-${row.status.color}`}>
+        {row.needs_help && !row.capabilities.isAssignedToCurrentUser && (
+          <Lottie className="absolute top-0 left-1 w-6 h-6 mr-2 cursor-help" animationData={helpAnimation} loop={true} autoplay={true} />
+        )}
+        {__(row.status.name)}
+      </span>
+    </Tippy>
   );
 };
 
-// Renders the “assigned users” cell.
-const AssignedCell = ({ value }) => {
-  return value === '{{loading}}' ? <Loader /> : <AvatarStack users={value} />;
-};
+// Assigned Users Cell
+const AssignedCell = ({ cell }) => {
+  const value = cell._cell.getValue();
+  return value === <AvatarStack avatars={value} />;
+}
 
-// Renders the “action” cell.
-const ActionCell = ({ task, user, handleRowUpdate }) => {
-  return <TaskActionButton task={task} user={user} handleRowUpdate={handleRowUpdate} />;
-};
+const Action = ({ cell, user, handleTaskUpdate }) => {
+  const row = cell._cell.row.data;
+  return <TaskActionButton task={row} user={user} handleTaskUpdate={handleTaskUpdate} />;
+}
+
 
 /* Main Tabulator Component */
 export const TaskTabulator = ({
   tabulatorRef,
   tasks,
   setTasks,
-  handleRowUpdate,
+  handleTaskUpdate,
   setSheetState,
   setPlaceholderAnnouncements,
   settings,
 }) => {
+
   const { user } = usePage().props;
   const tableRef = useRef();
-  console.log('test')
+  const reactRoots = useRef(new Map()); // Store React roots for cleanup
+
   // Initializes Tabulator with our configuration.
   const initTabulator = () => {
     Tabulator.registerModule([
@@ -139,6 +107,8 @@ export const TaskTabulator = ({
     ]);
 
     tabulatorRef.current = new Tabulator(tableRef.current, {
+      data: tasks,
+
       groupBy: (data) => {
         const assigned = data.capabilities?.isAssignedToCurrentUser;
         return assigned === true || assigned === 'true'
@@ -150,15 +120,41 @@ export const TaskTabulator = ({
         const label = parts.length > 1 ? parts[1] : value;
         return `<span class="tabulator-group-content">${label}<span class="tabulator-group-info">${count}</span></span>`;
       },
-      data: tasks,
-      height: '100%',
+      groupUpdateOnCellEdit:true,
+      
+      minHeight: '650',
       width: '100%',
       rowHeight: 58,
       dataLoaderLoading: renderToString(<Loader />),
       layout: 'fitDataFill',
       placeholder: 'Geen overeenkomende records gevonden',
       headerHozAlign: 'left',
-
+      ajaxLoader:false,
+      ajaxURL: import.meta.env.VITE_APP_URL,
+      ajaxRequestFunc: (url, config, params) =>
+        new Promise((resolve, reject) => {
+          router.get(
+            url,
+            {
+              page: params.page,
+              size: params.size,
+              filters: params.filter,
+              sorters: params.sort,
+            },
+            {
+              only: ['tasks'],
+              queryStringArrayFormat: 'indices',
+              preserveState: true,
+              onSuccess: ({ props }) => {
+                setTasks(props.tasks.data);
+                resolve(props.tasks.data);
+              },
+              onError: (error) => {
+                reject(error);
+              },
+            }
+          );
+        }),
       filterMode: 'remote',
       sortMode: 'remote',
       columns: [
@@ -170,14 +166,7 @@ export const TaskTabulator = ({
           maxWidth: '40px',
           vertAlign: 'middle',
           hozAlign: 'center',
-          formatter: (cell, _params, onRendered) => {
-            const row = cell.getRow().getData();
-            const container = document.createElement('div');
-            createRoot(container).render(
-              <PriorityCell row={row} settings={settings} />
-            );
-            return container;
-          },
+          formatter: reactFormatter(<PriorityCell settings={settings} />),
         },
         {
           title: 'Collega nodig',
@@ -190,12 +179,7 @@ export const TaskTabulator = ({
           field: 'status.name',
           width: '120',
           vertAlign: 'middle',
-          formatter: (cell) => {
-            const row = cell.getRow().getData();
-            const container = document.createElement('div');
-            createRoot(container).render(<StatusCell row={row} />);
-            return container;
-          },
+          formatter: reactFormatter(<StatusCell />),
         },
         {
           title: 'Tijd',
@@ -241,21 +225,12 @@ export const TaskTabulator = ({
         },
         {
           title: 'Toegewezen',
-          field: 'assigned_users',
+          field: 'assignees',
           minWidth: '130',
           vertAlign: 'middle',
           headerSort: false,
           mutateLink: 'action',
-          formatter: (cell) => {
-            const value = cell.getValue();
-            const container = document.createElement('div');
-            container.classList.add('flex', 'items-center');
-            createRoot(container).render(<AssignedCell value={value} />);
-            return container;
-          },
-          cellClick: (e) => {
-            e.stopPropagation();
-          },
+          formatter: reactFormatter(<AssignedCell />),
         },
         {
           title: 'Recente commentaar',
@@ -275,19 +250,19 @@ export const TaskTabulator = ({
           minWidth: '120',
           vertAlign: 'middle',
           headerSort: false,
-          formatter: (cell) => {
-            const rowData = cell.getRow().getData();
-            const container = document.createElement('div');
-            createRoot(container).render(
-              <ActionCell
-                task={rowData}
-                user={user}
-                handleRowUpdate={handleRowUpdate}
-              />
-            );
-            return container;
-          },
+          formatter: reactFormatter(<Action user={user} handleTaskUpdate={handleTaskUpdate} />),
+
         },
+        {
+          title: "Assigned",
+          field: "capabilities.isAssignedToUser",
+          visible: false, // Hide column from UI
+          sorter: (a, b) => {
+            let valA = a ? 1 : 0;
+            let valB = b ? 1 : 0;
+            return valA - valB;
+          }
+        }
       ],
     });
   };
@@ -311,6 +286,7 @@ export const TaskTabulator = ({
     };
 
     const handleTableBuilt = () => {
+
       const tableEl = tabulatorRef.current.element;
       let placeholder = tableEl.querySelector('.announcement-placeholder');
       if (!placeholder) {
@@ -337,6 +313,7 @@ export const TaskTabulator = ({
       tabulatorRef.current.on('rowClick', handleRowClick);
       tabulatorRef.current.on('tableBuilt', handleTableBuilt);
       tabulatorRef.current.on('dataLoadError', handleDataLoadError);
+
     }
 
     // Cleanup on unmount.
@@ -347,10 +324,20 @@ export const TaskTabulator = ({
         tabulatorRef.current.off('dataLoadError', handleDataLoadError);
         tabulatorRef.current.destroy();
       }
+      // cleanUpReactComponents();
       window.removeEventListener('resize', handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
+
+
+  useEffect(() => {
+    if (tabulatorRef.current) {
+      tabulatorRef.current.replaceData(tasks);
+    }
+  }, [tasks]);
+
+
 
   return (
     <div className="overflow-auto">

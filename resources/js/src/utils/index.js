@@ -8,3 +8,4 @@ export * from "./numbers";
 export * from "./objects";
 export * from "./texts";
 export * from "./validations";
+export * from "./tabulator";

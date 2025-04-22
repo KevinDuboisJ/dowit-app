@@ -1,2 +1,6 @@
+export * from './TaskOverview'
+export * from './TaskDetails'
+export * from './TaskForm'
+export * from './TaskActivity'
 export * from './TaskSheet'
-export * from './TaskFeed'
+export * from './TaskOverviewSheet'

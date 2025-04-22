@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::create('task_chains', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('task_planner_id');
-            $table->string('test');
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('trigger_event');
+            $table->string('trigger_source'); // You can cast this as enum in the model if needed
+            $table->json('conditions')->nullable();
+            $table->foreignId('created_task_type_id')->constrained('task_types')->onDelete('cascade');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

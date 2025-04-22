@@ -13,53 +13,39 @@ import {
   Heroicon
 } from '@/base-components';
 
-export const FilterBar = ({ filterBarRef, handleFilter, statuses, teams }) => {
-  const { url } = usePage();
-  const filtersRef = useRef(getFiltersFromUrlParams(url));
+export const FilterBar = ({ defaultValues = {}, onApplyFilters }) => {
+  const { statuses, teams } = usePage().props;
+  const filtersRef = defaultValues;
 
-  // Expose ref only if provided
-  if (filterBarRef) {
-    filterBarRef.current = {
-      getFilters: () => filtersRef.current,
-      resetFilters: () => {
-        Object.keys(filtersRef.current).forEach((key) => {
-          filtersRef.current[key].value = null;
-        });
-      },
-    };
-  }
-
-  const updateFilter = (key, value) => {
-    filtersRef.current[key].value = value;
-  };
-
-  const onFilter = () => {
+  const onFilters = () => {
     const activeFilters = Object.values(filtersRef.current).filter(filter => filter.value);
-    handleFilter(activeFilters);
+    onApplyFilters({ activeFilters, filtersRef });
   };
+
+  const isActive = (field) => filtersRef.current[field]?.value;
 
   return (
-
-    <div className='flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3 xl:gap-x-3'>
-      {/* Input for User */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onFilter();
-        }}
-      >
-        <Input
-          defaultValue={filtersRef.current.assignedTo.value || ''}
-          className="xl:items-center bg-white"
-          type="text"
-          placeholder="Gebruiker"
-          onChange={(e) => updateFilter('assignedTo', e.target.value)}
-        />
-      </form>
+    <form
+      className='flex z-40 flex-col xl:min-w-[600px] xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3 xl:gap-x-3'
+      onSubmit={(e) => {
+        e.preventDefault();
+        onFilters();
+      }}
+    >
+      <Input
+        defaultValue={filtersRef.current.assignedTo.value || ''}
+        className={cn("xl:items-center bg-white", isActive('assignedTo') && 'bg-[rgb(233,240,255,0.65)]')}
+        type="text"
+        placeholder="Gebruiker"
+        onChange={(e) => filtersRef.current.assignedTo.value = e.target.value}
+      />
 
       {/* Status Filter */}
-      <Select onValueChange={(value) => updateFilter('status_id', value)} defaultValue={filtersRef.current.status_id.value || ''}>
-        <SelectTrigger className="xl:w-[180px] bg-white text-xs text-slate-500">
+      <Select
+        onValueChange={(value) => filtersRef.current.status_id.value = value}
+        defaultValue={filtersRef.current.status_id.value || ''}
+      >
+        <SelectTrigger className={cn("bg-white text-xs text-slate-500", isActive('status_id') && 'bg-[rgb(233,240,255,0.65)]')}>
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -73,53 +59,27 @@ export const FilterBar = ({ filterBarRef, handleFilter, statuses, teams }) => {
       </Select>
 
       {/* Team Filter */}
-      <Select onValueChange={(value) => updateFilter('team_id', value)} defaultValue={filtersRef.current.team_id.value || ''}>
-        <SelectTrigger className="xl:w-[180px] bg-white text-xs text-slate-500">
+      <Select
+        onValueChange={(value) => filtersRef.current.team_id.value = value}
+        defaultValue={String(filtersRef.current.team_id.value || '')}
+      >
+        <SelectTrigger className={cn("bg-white text-xs text-slate-500", isActive('team_id') && 'bg-[rgb(233,240,255,0.65)]')}>
           <SelectValue placeholder="Team" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={null}>Team</SelectItem>
-          {teams.map((team) => (
-            <SelectItem key={team.value} value={team.value}>
-              {team.label}
+          {teams.map(team => (
+            <SelectItem key={team.id} value={String(team.id)}>
+              {team.name}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
       {/* Search Button */}
-      <Button type="submit" className="w-full xl:w-auto" size="sm" onClick={onFilter}>
+      <Button type="submit" className="w-full xl:w-auto" size="sm">
         <Heroicon icon="MagnifyingGlass" /> Zoeken
       </Button>
-    </div>
+    </form>
   );
-};
-
-/**
- * Parses the filters from URL parameters
- */
-const getFiltersFromUrlParams = (url) => {
-  const params = new URLSearchParams(url);
-  const filters = {
-    assignedTo: { field: "assignedTo", type: "like", value: null },
-    status_id: { field: "status_id", type: "=", value: null },
-    team_id: { field: "team_id", type: "=", value: null }
-  };
-
-  let currentKey = null;
-
-  params.forEach((value, key) => {
-    const match = key.match(/^\/?\??filters\[(\d+)]\[(\w+)]$/);
-    if (match) {
-      const [, index, property] = match;
-      if (index === '0' && property === 'field') {
-        currentKey = value;
-      }
-      if (currentKey) {
-        filters[currentKey][property] = value;
-      }
-    }
-  });
-
-  return filters;
 };

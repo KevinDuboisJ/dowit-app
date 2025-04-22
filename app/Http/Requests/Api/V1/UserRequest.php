@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Exception;
 
 class UserRequest extends FormRequest
 {
@@ -22,23 +21,18 @@ class UserRequest extends FormRequest
      */
     public function rules()
     {
-        $rules = [
-            'firstname' => 'required|string',  // Required for both create and update
-            'lastname' => 'required|string',   // Required for both create and update
-            'username' => 'required|string|unique:users,username',
+        return [
+            'firstname' => 'required|string',
+            'lastname' => 'required|string',
+            'username' => 'required|string',
             'email' => 'nullable|email',
             'department_id' => 'required|integer|min:1|max:65535',
             'profession_id' => 'required|integer|min:1|max:65535',
             'object_sid' => 'nullable|string',
             'image_path' => 'nullable|string',
-            'edb_id' => 'string',
+            'edb_id' => 'required|integer',
             'is_active' => 'boolean',
         ];
-
-        // Check if we are updating by checking the route parameter
-        if (request()->routeIs('users.edbid.update')) {
-            $rules['username'] = 'required|string|unique:users,username,' .  $this->get("edb_id") . ',edb_id';
-        }
 
         return $rules;
     }

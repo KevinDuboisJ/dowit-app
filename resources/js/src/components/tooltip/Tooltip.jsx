@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect, useLayoutEffect} from 'react'
 import TooltipBox from './TooltipBox'
-import tooltipIcon from '@images/tooltip-question-mark.svg'
+import tooltipIcon from '@images/tooltip.svg'
 
 const getPosition = (parent, tooltip, placement, space) => {
   const elRect = parent.getBoundingClientRect()
@@ -23,7 +23,7 @@ const getPosition = (parent, tooltip, placement, space) => {
   }
 }
 
-const Tooltip = ({
+export const Tooltip = ({
   name = null,
   children = false,
   placement = 'left',
@@ -38,7 +38,7 @@ const Tooltip = ({
   const [parent, setParent] = useState()
 
   async function getTooltipText() {
-    const response = await fetch('/api/tooltip?name='+name, {
+    const response = await fetch('/api/v1/tooltip?name='+name, {
       headers: {
         'Content-type': 'application/json',
         'Accept': 'application/json',
@@ -115,5 +115,3 @@ const Tooltip = ({
     </div>
   )
 }
-
-export default Tooltip

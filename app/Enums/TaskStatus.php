@@ -4,14 +4,14 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum TaskStatus: string implements HasLabel
+enum TaskStatus: int implements HasLabel
 {
-    case Added = '1';
-    case Replaced = '2';
-    case InProgress = '4';
-    case WaitingForSomeone = '5';
-    case Completed = '6';
-    case Skipped = '12';
+    case Added = 1;
+    case Replaced = 2;
+    case InProgress = 4;
+    case WaitingForSomeone = 5;
+    case Completed = 6;
+    case Skipped = 12;
 
     public function getLabel(): ?string
     {

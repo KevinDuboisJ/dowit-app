@@ -16,7 +16,7 @@ import {
 import { updateTask } from '@/hooks';
 
 
-export const TaskActionButton = ({ task, user, handleRowUpdate }) => {
+export const TaskActionButton = ({ task, user, handleTasksRecon, handleTaskUpdate }) => {
   let buttonText = null;
   let variant = null;
   let icon = null; // <Heroicon className="w-2 h-2" icon='Check' />;
@@ -24,31 +24,31 @@ export const TaskActionButton = ({ task, user, handleRowUpdate }) => {
   let alertDialogAction = '';
   let actionCallback = null;
 
-  if (task.status.name == 'Added' && !task.capabilities.isAssignedToCurrentUser && task.assigned_users.length === 0) {
+  if (task.status.name == 'Added' && !task.capabilities.isAssignedToCurrentUser && task.assignees.length === 0) {
 
     alertDialogDescription = 'Met dit bevestig je dat je deze taak aan jezelf toewijst';
     alertDialogAction = 'Starten';
     buttonText = 'Starten';
     variant = 'secondary';
     actionCallback = () => updateTask({ usersToAssign: [user.id], status: 'InProgress' }, task, {
-      onBefore: ({ originalRow, updatedAt }) => {
+      onBefore: ({ original, updatedAt }) => {
         // Optimistically update the UI
-        handleRowUpdate({
-          ...originalRow,
+        handleTaskUpdate({
+          ...original,
           updated_at: updatedAt,
-          assigned_users: '{{loading}}',
+          assignees: '{{loading}}',
           status: {
-            ...originalRow.status,
+            ...original.status,
             name: 'InProgress',
           },
           capabilities: {
-            ...originalRow.capabilities,
+            ...original.capabilities,
             isAssignedToCurrentUser: true
           },
         }, { scroll: true });
       },
-      onSuccess: ({ updatedRow }) => handleRowUpdate(updatedRow),
-      onError: ({ originalRow }) => handleRowUpdate(originalRow)
+      onSuccess: ({ data }) => handleTasksRecon(data),
+      onError: ({ original }) => handleTaskUpdate(original)
     });
   }
 
@@ -58,20 +58,19 @@ export const TaskActionButton = ({ task, user, handleRowUpdate }) => {
     buttonText = 'Afhandelen';
     variant = 'success';
     actionCallback = () => updateTask({ status: 'Completed' }, task, {
-      onBefore: ({ originalRow, updatedAt }) => {
-
+      onBefore: ({ original, updatedAt }) => {
         // Optimistically update the UI
-        handleRowUpdate({
-          ...originalRow,
+        handleTaskUpdate({
+          ...original,
           updated_at: updatedAt,
           status: {
-            ...originalRow.status,
+            ...original.status,
             name: 'Completed',
           },
         });
       },
-      onSuccess: ({ updatedRow }) => handleRowUpdate(updatedRow),
-      onError: ({ originalRow }) => handleRowUpdate(originalRow)
+      onSuccess: ({ data }) => handleTasksRecon(data),
+      onError: ({ original }) => handleTaskUpdate(original)
     }
     );
 
@@ -84,8 +83,8 @@ export const TaskActionButton = ({ task, user, handleRowUpdate }) => {
     buttonText = 'Helpen';
     variant = 'success';
     actionCallback = () => updateTask({ usersToAssign: [user.id], needs_help: false }, task, {
-      onSuccess: ({ updatedRow }) => handleRowUpdate(updatedRow),
-      onError: ({ originalRow }) => handleRowUpdate(originalRow)
+      onSuccess: ({ data }) => handleTasksRecon(data),
+      onError: ({ original }) => handleTaskUpdate(original)
     });
 
   }

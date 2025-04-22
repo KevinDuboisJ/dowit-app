@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\Api\V1\UserRequest;
 use App\Services\TeamService;
 use Illuminate\Support\Facades\DB;
 
@@ -16,11 +16,22 @@ class UserController extends Controller
         // The request is already validated at this point
         $validatedData = $userRequest->validated();
 
+        // Check if a user with the same username but a different edb_id exists
+        $existingUser = User::where('username', $validatedData['username'])->first();
+
+        if ($existingUser && $existingUser->edb_id !== $validatedData['edb_id']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Username already exists for another edb_id.',
+            ], 409); // 409 Conflict response
+        }
+
+        // Begin transaction
         $user = DB::transaction(function () use ($validatedData, $teamService) {
             // Create or update the user
             $user = User::updateOrCreate(
                 ['edb_id' => $validatedData['edb_id']],
-                $validatedData
+                array_merge($validatedData, ['is_active' => 1]) // Ensure is_active = 1
             );
 
             // Assign user to the correct teams
@@ -29,21 +40,15 @@ class UserController extends Controller
             return $user;
         });
 
-        if ($user->wasRecentlyCreated) {
-            // Return successfull response
-            return response()->json([
-                'status' => 'updateOrCreate success',
-                'message' => 'User created successfully',
-                'data' => $user,
-            ], 200);
-        } else {
-            // Return successfull response
-            return response()->json([
-                'status' => 'updateOrCreate success',
-                'message' => 'User updated successfully',
-                'data' => $user,
-            ], 200);
-        }
+        // Determine response message
+        $message = $user->wasRecentlyCreated ? 'User created successfully' : 'User updated successfully';
+
+        // Return success response
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'data' => $user,
+        ], 200);
     }
 
     public function updateByEdbId(UserRequest $userRequest, TeamService $teamService, User $user)
