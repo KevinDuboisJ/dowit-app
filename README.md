@@ -1,11 +1,40 @@
 
+
+
+Thing to do in production when pulling new version.
+1. Change the user_id column to created_by in task_planners, teams, task(create it here)
+2. php artisan migrate:refresh --path=/database/migrations/*.php (all the mgirations file from 2025_04_24_143556 until today) 
+3. add assets json to task_planners
+4. Add icon column to tasktype and tag
+5. Add tag json column to task_assignment_rules and created_by
+6. Add deleted_at to assets, taskplanner, teams, TaskAssignmentRule, Ketens, feestdagen en rollen
+
+
+• The hintIcon tooltip hides on click and escapes HTML, so a custom component is used to allow HTML and custom behavior.
+
+Behavior and flow
+Teams behaviour:
+ 1. Records are visible for the creator.
+ 2. Records are visible for the teams who are assigned to the resource(for TaskAssignment for example is the teams for which the TaskAssignmentRule wil apply)
+ 3. An user can remove a team from a record even if they dont belong to it but only add from his own teams.
+
+
+If a user belongs to both Bewaking and Schoonmaak CA, and there is a shared assignment rule for both, then when the user creates a task planner that complies with those rules, the task will be assigned to Bewaking and Schoonmaak CA
+Schoonmaak CA admin can see that record and see to what teams it applies to, even if they do not belong to that team. But only a user that belongs to all the assigned teams can edit it.
+
+
+ 
+
 When to udpate the user UI
   1. A task can be replaced or added by the task planner
   2. a User updates the task
 
 // This is the test,
 TO-DO's
+  IMPORTANT: MAKE comments and task creation with richt text editor.
   1. Change icons in filament.
+  2. Clicking the help icon on taskplanner for exampler shows a border around but doesnt display the help text.
+  3. Create tabel with proposed teams with the task planner
   38. Set mobile variable to somewhere global?
   19. define the task types with Natascha
   48. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.

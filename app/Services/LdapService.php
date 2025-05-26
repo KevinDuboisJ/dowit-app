@@ -19,7 +19,7 @@ class LdapService
   public function bind(string $samAccountName, string $password)
   {
     $us_ldap_logon = config('database.ldap.ldap_domain_prefix') . "\\" . $samAccountName;
-    $bind = @ldap_bind($this->ldap, $us_ldap_logon, $password);
+    $bind = ldap_bind($this->ldap, $us_ldap_logon, $password);
 
     if (!$bind) {
       throw new AuthenticationException('Verkeerde inloggegevens');

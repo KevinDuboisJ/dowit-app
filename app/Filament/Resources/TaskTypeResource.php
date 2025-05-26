@@ -8,7 +8,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use App\Filament\Clusters\TaskConfigurator;
+use Guava\FilamentIconPicker\Forms\IconPicker;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 
@@ -16,7 +17,7 @@ class TaskTypeResource extends Resource
 {
     protected static ?string $model = TaskType::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-square-2-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-swatch';
 
     protected static ?string $modelLabel = 'Taaktype';
 
@@ -31,7 +32,22 @@ class TaskTypeResource extends Resource
         return $form
             ->schema([
                 TextInput::make('name')
-                ->label('Naam'), 
+                ->label('Naam'),
+
+                IconPicker::make('icon')
+                ->label('Icoon')
+                ->placeholder('Selecteren')
+                ->sets(['taskicons'])
+                ->cacheable(false)
+                ->preload()
+                ->itemTemplate(fn($component, $icon) => view('filament.components.icon-picker', [
+                    'statePath' => $component->getStatePath(),
+                    'icon' => $icon,
+                ])->render())
+                ->extraAttributes([
+                    'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
+                ])
+                ->columns(3)
             ]);
     }
 
@@ -40,7 +56,13 @@ class TaskTypeResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                ->label('Naam'),
+                ->label('Naam')
+                ->width('300px'),
+
+                IconColumn::make('icon')
+                    ->label('Icoon')
+                    ->view('filament.components.icon-picker-column')
+
             ])
             ->filters([
                 //
@@ -50,7 +72,7 @@ class TaskTypeResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    // Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

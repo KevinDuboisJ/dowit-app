@@ -4,21 +4,71 @@ namespace App\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Auth\AuthenticationException;
+use App\Models\Team;
+use App\Models\User;
 
 trait HasTeams
 {
+    /**
+     * Global scope: if the authenticated user is NOT super_admin,
+     * only return records linked to their teams.
+     */
+    public static function bootHasTeams(): void
+    {
+        static::addGlobalScope('team_access', function (Builder $query) {
+            if (static::class === User::class) {
+                return;
+            }
 
-  public static function getEloquentQuery(): Builder
-  {
-    $query = parent::getEloquentQuery();
+            $user = Auth::user();
 
-    // Check if the authenticated user has the SUPER_ADMIN role && apply the byUserTeams scope if the user is not a SUPER_ADMIN
-    $user = Auth::user();
+            if (! $user || $user->isSuperAdmin()) {
+                return;
+            }
 
-    if ($user->hasRole('SUPER_ADMIN')) {
-      return $query;
+            /** @var self $model */
+            $model = new static;
+            $model->scopeByOwnOrBelongsToUserTeams($query, $user);
+        });
     }
 
-    return $query->byUserTeams();
-  }
+    /**
+     * The `teams` pivot relationship.
+     */
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class);
+    }
+
+    public function scopeByOwnOrBelongsToUserTeams(Builder $query, User $user): Builder
+    {
+        return $query->where(function ($q) use ($user) {
+            $this->scopeByCreator($q, $user)
+                ->orWhere(function ($q2) use ($user) {
+                    $this->scopeByBelongsToTeamIds($q2, $user->teams->pluck('id')->toArray());
+                });
+        });
+    }
+
+    public function scopeByCreator(Builder $query, User $user): Builder
+    {
+        return $query->where('created_by', $user->id);
+    }
+
+    public function scopeByBelongsToTeamIds(Builder $query, array $teamIds): Builder
+    {
+        // No team IDs → short-circuit to an always-false where clause. If the given array is empty, this will match no records
+        if (count($teamIds) === 0) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        $query->whereHas('teams', function ($query) use ($teamIds) {
+            $query->whereIn('team_id', $teamIds);
+        });
+
+        return $query;
+    }
+
 }

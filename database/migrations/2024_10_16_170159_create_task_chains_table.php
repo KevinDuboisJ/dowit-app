@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('created_task_type_id')->constrained('task_types')->onDelete('cascade');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

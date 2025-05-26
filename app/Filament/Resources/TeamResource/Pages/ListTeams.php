@@ -12,19 +12,13 @@ use Illuminate\Support\Facades\Auth;
 
 class ListTeams extends ListRecords
 {
-    use HasTeams;
     protected static string $resource = TeamResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
             Actions\CreateAction::make()
-                ->createAnother(false)
-                ->mutateFormDataUsing(function (array $data) {
-
-                    $data['user_id'] = Auth::id();
-                    return $data;
-                }),
+                ->createAnother(false),
         ];
     }
 

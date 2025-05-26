@@ -7,7 +7,6 @@
   scroll-margin-top: 8rem;
 }
 
-
 /* Add indentation for nested teams*/
 .fi-ta-row.team-level-1 .fi-ta-text-item-label {
   
@@ -30,11 +29,9 @@
   @apply indent-12;
 }
 
-
 input:focus {
   transition: none;
 }
-
 
 .fi-fo-field-wrp.report-hidden-label > div.grid.gap-y-2 > div.flex.items-center {
     @apply hidden;
@@ -246,4 +243,31 @@ input:focus {
     display: inline-flex;
 }
 
+.fi-fo-field-wrp-hint, .fi-fo-field-wrp-hint-icon {
+    @apply outline-none;
+
+    svg path {
+        @apply pointer-events-none;
+    }
+}
+
+.tippy-box {
+    @apply !shadow-lg dark:!shadow dark:!shadow-slate-600 rounded-xl p-2 dark:bg-slate-800 ring-0 dark:ring-slate-50;
+
+    b {
+        @apply dark:text-white;
+    }
+
+    .tippy-content {
+        @apply text-gray-500 dark:text-slate-400 dark:bg-slate-800;
+    }
+}
+
+section {
+    @apply !py-0 !gap-y-6;
+}   
+
+.az-creator-field {
+    margin-top:-23px
+}
 

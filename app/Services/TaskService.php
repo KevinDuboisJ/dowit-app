@@ -166,7 +166,7 @@ class TaskService
     $teamTasks = Task::query()
       ->with($relationships)
       ->where(function ($query) {
-        $query->byUserTeams()
+        $query
           ->byNotAssigned()
           ->byActive();
       })

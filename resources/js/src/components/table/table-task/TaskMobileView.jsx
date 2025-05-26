@@ -24,7 +24,7 @@ import {
   TaskSheet,
 } from '@/components';
 
-export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate, lastUpdatedTaskRef, filters, setFilters }) => {
+export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate, lastUpdatedTaskRef, filtersRef, setFilters }) => {
 
   const { announcements, settings, user } = usePage().props;
   const { loading, setLoading, Loader } = useLoader();
@@ -156,7 +156,7 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
           <AccordionContent className='p-1 py-2'>
 
             <FilterBar
-              defaultFilters={filters}
+              filtersRef={filtersRef}
               handleFilters={(filters) => {
                 setLoading(true)
                 setFilters(filters)

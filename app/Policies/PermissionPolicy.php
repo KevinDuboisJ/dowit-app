@@ -11,10 +11,7 @@ class PermissionPolicy
     // Allow all actions for admins
     public function before(User $user)
     {
-        return $user->isSuperAdmin();
-
-        // Return null to allow the individual policy methods to be checked
-        return null;
+        return $user->isSuperAdmin() ? true : null;
     }
 
     /**

@@ -92,15 +92,18 @@ export const AvatarStackRemovable = ({ avatars: initialAvatars, onValueChange = 
 
 export const AvatarStackWrap = ({ children }) => {
   return (
-    <div className="flex flex-col px-3 py-1">
+    <div className="flex flex-col">
       {children}
     </div>
   )
 }
 
-export const AvatarStackHeader = ({ title = '' }) => {
+export const AvatarStackHeader = ({ title = '', icon = null }) => {
   return (
-    <span className="text-xs text-slate-500 font-medium">{title}</span>
+    <div className="flex items-center space-x-1 min-w-0 text-xs text-slate-500">
+      {icon}
+      <span>{title}</span>
+    </div>
   )
 }
 

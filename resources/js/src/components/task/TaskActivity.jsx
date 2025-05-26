@@ -19,7 +19,7 @@ export const TaskActivity = ({ comments }) => {
   return (
     <div className="h-full">
       <div className="flex flex-col gap-2 pt-0">
-        <div className="p-4 relative overflow-hidden">
+        <div className="p-4 py-2 relative overflow-hidden">
           {comments.map((comment, index) => (
             <Fragment key={comment.id}>
               <VerticalTimeline
@@ -94,7 +94,7 @@ const Icon = ({ activity }) => {
 };
 
 const UpdateBoxTitle = ({ activity }) => (
-  <p className="text-sm text-gray-500">
+  <p className="text-sm text-gray-600">
     {activity.needs_help ? 'Collega nodig' : 'Bewerking'}
   </p>
 );
@@ -137,7 +137,7 @@ const UpdateBox = ({ activity }) => {
           {filteredChanges.map(([key, value]) => (
             <div className="flex" key={key}>
               <p className="text-xs capitalize mr-1">{__(key)}: </p>
-              <p className="text-xs text-gray-800">
+              <p className="text-xs text-gray-600">
                 {key === 'needs_help' ? 'Nee' : __(value)}
               </p>
             </div>
@@ -148,10 +148,10 @@ const UpdateBox = ({ activity }) => {
           )}
 
           <div className="flex items-center space-x-1">
-            <p className="text-xs text-gray-800 font-medium">
+            <p className="text-xs text-gray-600 font-medium">
               {`${activity.user?.firstname} ${activity.user?.lastname}`}
             </p>
-            <p className="text-xs text-gray-500">- {formatDate(activity.created_at)}</p>
+            <p className="text-xs text-gray-600">- {formatDate(activity.created_at)}</p>
           </div>
         </div>
       </div>
@@ -161,7 +161,7 @@ const UpdateBox = ({ activity }) => {
 
 const TextBox = ({ activity }) => (
   <div className="relative mb-6 pl-8">
-    <p className="text-sm text-gray-500">{activity.content}</p>
+    <p className="text-sm text-gray-600">{activity.content}</p>
   </div>
 );
 
@@ -169,7 +169,7 @@ const MetaText = ({ id, title, keytitle, users }) => (
   <div className="flex flex-wrap">
     <p className="text-xs mr-1">{title || keytitle}</p>
     {users.map((assignee, index) => (
-      <p key={`${id}-${index}`} className="text-xs text-gray-800">
+      <p key={`${id}-${index}`} className="text-xs text-gray-600">
         {`${assignee}${index < users.length - 1 ? ', ' : ''}`}
       </p>
     ))}

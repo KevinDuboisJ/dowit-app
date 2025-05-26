@@ -14,7 +14,7 @@ import {
   Tippy,
 } from '@/base-components';
 
-import { TaskForm, TaskDetails } from '@/components';
+import { TaskForm, TaskDetails, TaskIcon } from '@/components';
 
 export const TaskOverview = ({ task, handleTaskUpdate, handleTasksRecon, handleSheetClose }) => {
   const canUpdateTask = task?.capabilities?.can_update;
@@ -63,22 +63,24 @@ export const TaskOverview = ({ task, handleTaskUpdate, handleTasksRecon, handleS
               onClick={handleSheetClose}
               className='h-6 focus:outline-none focus:ring-0 focus-visible-ring-0'
             >
-              <Heroicon icon='ChevronLeft' className="w-5 stroke-[2.6px]" />
+              <Heroicon icon='ChevronLeft' className="w-5 stroke-[2.5px]" />
             </button>
           </div>
           <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
-            <div className="text-lg font-semibold truncate text-wrap break-all">
-              {task.name}{' '}
-              <Badge className="h-7 w-24 py-1 px-2" variant={task.status.name}>
-                {__(task.status.name)}
-              </Badge>
+
+            <div className='flex items-center'>
+            <TaskIcon className='h-6 w-6' iconName={task.task_type.icon} /> <span>{task.task_type.name}</span>
+              {/* <span>→</span> */}
+             
             </div>
-            <div className="w-full">{task.task_type.name}</div>
+
+            <div className="w-full text-lg font-semibold truncate text-wrap break-all">{task.name}</div>
+
           </div>
           <div className='flex self-start'></div>
         </div>
-        <TabsList className='grid w-full bg-slate-50 grid-cols-2'>
-          <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-2'>
+          <TabsTrigger value="details" >Details</TabsTrigger>
           <Tippy
             content='Alleen toegestaan voor gebruikers die aan deze taak zijn toegewezen'
             placement='bottom'

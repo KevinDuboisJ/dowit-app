@@ -5,23 +5,69 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\User;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Collection;
+use App\Models\User;
+use App\Models\TaskAssignmentRule;
 use App\Models\Setting;
 use App\Models\SettingTeam;
+use App\Traits\HasCreator;
 
 class Team extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasCreator;
 
     protected $casts = [
         'autoassign_rules' => 'array'
     ];
 
-    public function scopeByUserTeams(Builder $query)
+    public function setAutoassignRulesAttribute($value)
+    {
+        $this->attributes['autoassign_rules'] = empty($value) ? null : json_encode($value);
+    }
+
+    public function parentTeam()
+    {
+        return $this->belongsTo(Team::class, 'parent_team_id');
+    }
+
+    public function subteams()
+    {
+        return $this->hasMany(Team::class, 'parent_team_id');
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'team_user')->where('users.id', '!=', '1')->withTimestamps();
+    }
+
+    public function taskTypes()
+    {
+        return $this->hasMany(TaskType::class);
+    }
+
+    public function tasks()
+    {
+        return $this->belongsToMany(Task::class, 'task_team');
+    }
+
+    public function taskAssignmentRules()
+    {
+        return $this->belongsToMany(TaskAssignmentRule::class);
+    }
+
+    public function settings()
+    {
+        return $this->belongsToMany(Setting::class, 'setting_team')
+            ->withTimestamps()
+            ->withPivot('value')
+            ->using(SettingTeam::class);
+    }
+
+    public function scopeByTeamsUserBelongsTo(Builder $query)
     {
         $user = Auth::user();
 
@@ -30,7 +76,7 @@ class Team extends Model
             $teamIds = $user->teams->pluck('id')->toArray();
 
             // Apply the filter based on the user's teams
-            $query->whereIn('id', $teamIds);
+            $query->whereIn('teams.id', $teamIds);
 
             return $query;
         }
@@ -95,44 +141,5 @@ class Team extends Model
                     ->where('setting_team.team_id', '=', $this->id); // `$this->id` is the current team ID
             })
             ->pluck('value', 'code');
-    }
-
-    public function setAutoassignRulesAttribute($value)
-    {
-        $this->attributes['autoassign_rules'] = empty($value) ? null : json_encode($value);
-    }
-
-    public function parentTeam()
-    {
-        return $this->belongsTo(Team::class, 'parent_team_id');
-    }
-
-    public function subteams()
-    {
-        return $this->hasMany(Team::class, 'parent_team_id');
-    }
-
-
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'team_user')->where('users.id', '!=', '1')->withTimestamps();
-    }
-
-    public function taskTypes()
-    {
-        return $this->hasMany(TaskType::class);
-    }
-
-    public function tasks()
-    {
-        return $this->belongsToMany(Task::class, 'task_team');
-    }
-
-    public function settings()
-    {
-        return $this->belongsToMany(Setting::class, 'setting_team')
-            ->withTimestamps()
-            ->withPivot('value')
-            ->using(SettingTeam::class);
     }
 }

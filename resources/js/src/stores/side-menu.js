@@ -17,8 +17,8 @@ const sideMenu = {
     },
     {
       icon: 'DocumentText',
-      title: 'Documenten',
-      pathname: '/documents'
+      title: 'Bestanden',
+      pathname: '/bestanden'
     },
     {
       type: 'title',

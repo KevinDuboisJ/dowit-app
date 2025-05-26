@@ -1,2 +1,2 @@
-export * from './table-document'
+export * from './table-asset'
 export * from './table-task'

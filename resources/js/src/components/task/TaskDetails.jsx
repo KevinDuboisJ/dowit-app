@@ -15,12 +15,15 @@ import {
   AvatarStackWrap,
   AvatarStackHeader,
   AvatarStack,
+  Badge
 } from '@/base-components';
 import {
   getPriority,
   TaskActivity,
+  TaskIcon,
   PriorityText,
 } from '@/components';
+
 
 export const TaskDetails = ({ task }) => {
 
@@ -40,100 +43,129 @@ export const TaskDetails = ({ task }) => {
   }, [task.comments]);
 
   return (
-    <TabsContent className='p-8 py-4 fadeInUp' value="details">
+    <TabsContent className='p-6 py-4 fadeInUp' value="details">
+      <div className="flex items-center space-x-2">
+        <Badge className="rounded-xl" variant={task.status.name}>
+          {__(task.status.name)}
+        </Badge>
 
-      <div className="space-y-3">
+        {task?.tags.map((tag) => (
+          <Badge key={tag.id} className='rounded-xl' style={{ backgroundColor: tag.bg_color }}>
+            <TaskIcon iconName={tag.icon} />{tag.name}
+          </Badge>
+        ))}
 
-        <InfoRow
-          icon={<Heroicon icon="Flag" className="w-4 h-4 text-slate-500" />}
-          label="Prioriteit:"
-          value={<PriorityText state={priorityObj.state} color={priorityObj.color} />}
-        />
+      </div>
 
-
-        <IconContext.Provider value={{ color: "black" }}>
+      <div className="space-y-5 my-2">
+        <div className="space-y-3 border rounded-lg p-4 bg-white shadow-xs dark:bg-darkmode-500 dark:border-darkmode-400">
           <InfoRow
-            icon={<HiHandRaised className="w-4 h-4 text-slate-500" />}
-            label="Collega nodig:"
-            value={task.needs_help ? 'Ja' : 'Nee'}
+            icon={<Heroicon icon="Flag" variant="solid" className="w-4 h-4 text-slate-400" />}
+            label="Prioriteit"
+            value={<PriorityText state={priorityObj.state} color={priorityObj.color} />}
           />
-        </IconContext.Provider>
 
-        <InfoRow
-          icon={<Heroicon icon="CalendarDays" className="w-4 h-4 text-slate-500" />}
-          label="Tijd:"
-          value={format(parseISO(task.start_date_time), "PP HH:mm")}
-        />
-
-        {task?.patient &&
           <InfoRow
-            icon={<Heroicon icon="UserCircle" className="w-4 h-4 text-slate-500" />}
-            label="Wie:"
-            value={`${task.patient.firstname} ${task.patient.lastname} (${task.patient.birthdate}) (${task.patient.gender}) - ${task.patient.room_id}, ${task.patient.bed_id}`}
+            icon={<Heroicon icon="CalendarDays" variant="solid" className="w-4 h-4 text-slate-400" />}
+            label="Tijd:"
+            value={format(parseISO(task.start_date_time), "PP HH:mm")}
           />
-        }
 
-        {task.space &&
-          <InfoRow
-            icon={<Heroicon icon="MapPin" className="w-4 h-4 text-slate-500" />}
-            label="Van:"
-            value={task.space.name}
-          />
-        }
-
-        {task?.spaceTo &&
-          <InfoRow
-            icon={<Lucide icon="Map" className="w-4 h-4 text-slate-500" />}
-            label="Naar:"
-            value={task.spaceTo.name}
-          />
-        }
-
-        <InfoRow
-          icon={<Lucide icon="Users" className="w-4 h-4 text-slate-500" />}
-          label="Teams:"
-          value={<TeamTag teams={task?.teams} />}
-        />
-
-        <AvatarStackWrap>
-          <AvatarStackHeader title='Toegewezen aan' />
-          <AvatarStack avatars={task.assignees} maxAvatars={16} className='w-10 h-10'/>
-        </AvatarStackWrap>
-
-        <DocumentList documents={task.task_type.documents} />
-
-        <Separator className='my-3 bg-slate-200/60 dark:bg-darkmode-400' />
-        <div className="flex text-base font-medium">
-          Historiek
-          {opacity > 0 && (
-            <Lottie
-              className="w-5 h-5 cursor-help"
-              title='Er is de afgelopen 5 dagen activiteit geweest'
-              animationData={fireAnimation}
-              loop={true}
-              style={{ opacity }}
+          {task?.patient &&
+            <InfoRow
+              icon={<Heroicon icon="UserCircle" variant="solid" className="w-4 h-4 text-slate-400" />}
+              label="Wie:"
+              value={`${task.patient.firstname} ${task.patient.lastname} (${task.patient.birthdate}) (${task.patient.gender}) - ${task.patient.room_id}, ${task.patient.bed_id}`}
             />
-          )}
-        </div>
-        <TaskActivity comments={task.comments} status={task.status.name} />
+          }
 
+          {task.space &&
+            <InfoRow
+              icon={<Heroicon icon="MapPin" variant="solid" className="w-4 h-4 text-slate-400" />}
+              label="Van:"
+              value={task.space.name}
+            />
+          }
+
+          {task?.spaceTo &&
+            <InfoRow
+              icon={<Heroicon icon="MapPin" variant="solid" className="w-4 h-4 text-slate-400" />}
+              label="Naar:"
+              value={task.spaceTo.name}
+            />
+          }
+
+          <InfoRow
+            icon={<Heroicon icon="UserGroup" variant="solid" className="w-4 h-4 text-slate-400" />}
+            label="Teams:"
+            value={<TeamTag teams={task?.teams} />}
+          />
+
+          <IconContext.Provider value={{ color: "94A3B8" }}>
+            <InfoRow
+              icon={<HiHandRaised className="w-4 h-4 text-slate-400" />}
+              label="Collega nodig:"
+              value={task.needs_help ? 'Ja' : 'Nee'}
+            />
+          </IconContext.Provider>
+
+          <Separator className='bg-slate-200/60 dark:bg-darkmode-400' />
+
+          {task.assignees.length > 0 ?
+            <AvatarStackWrap>
+              <AvatarStackHeader />
+              <AvatarStack avatars={task.assignees} maxAvatars={16} className='w-10 h-10' />
+            </AvatarStackWrap>
+
+            : <span className='text-xs font-medium italic'>Geen persoon toegewezen</span>
+          }
+
+        </div>
+
+
+        <div>
+          <div className="flex text-base font-medium">
+            Procedures
+          </div>
+
+          <AssetList assets={task.task_type.assets} />
+        </div>
+        <div>
+
+          <div className="flex text-base font-medium">
+            Historiek
+            {opacity > 0 && (
+              <Lottie
+                className="w-5 h-5 cursor-help"
+                title='Er is de afgelopen 5 dagen activiteit geweest'
+                animationData={fireAnimation}
+                loop={true}
+                style={{ opacity }}
+              />
+            )}
+          </div>
+
+          <TaskActivity comments={task.comments} status={task.status.name} />
+
+        </div>
       </div>
 
     </TabsContent>
   )
 }
 
-const InfoRow = ({ icon = null, label, value, minWidth = '110px', className, style }) => {
+const InfoRow = ({ icon = null, label, value, minWidth = '150px', className, style }) => {
   return (
-    <div style={style} className={cn('flex items-center text-gray-700', className)}>
+    <div style={style} className={cn('flex items-center text-gray-900', className)}>
       {/* Left Section: Icon + Label */}
       <div style={{ minWidth: minWidth }} className="flex items-center space-x-1 min-w-0">
         {icon}
         <span className="text-xs text-slate-500">{label}</span>
       </div>
 
+
       {/* Right Section: Value */}
-      {isValidElement(value) ? value : <span className="text-xs font-medium text-slate-500 text-ellipsis overflow-hidden whitespace-nowrap">{value}</span>}
+      {isValidElement(value) ? value : <span className="text-xs text-ellipsis overflow-hidden whitespace-nowrap">{value}</span>}
 
     </div>
   );
@@ -146,41 +178,41 @@ const TeamTag = ({ teams }) => {
 
   return (
     teams.length > 0 ? teams.map((team, index) => (
-      <span key={team.id} className={cn({ 'ml-0': index === 0, 'ml-2': index > 0 }, 'text-xs text-slate-500 font-medium rounded-sm border p-1 bg-gray-100')}>
+      <span key={team.id} className={cn({ 'ml-0': index === 0, 'ml-2': index > 0 }, 'text-xs text-gray-900 rounded-sm')}>
         {team.name}
       </span>
 
-    )) : <span className='text-xs text-slate-500 font-medium'>Deze taak is niet gekoppeld aan een team</span>
+    )) : <span className='text-xs font-medium'>Deze taak is niet gekoppeld aan een team</span>
   );
 };
 
-const DocumentList = ({ documents }) => {
-  // Ensure `documents` is always an array
-  documents = documents || [];
+const AssetList = ({ assets }) => {
+  // Ensure `assets` is always an array
+  assets = assets || [];
 
-  // State to track selected document
-  const [selectedDoc, setSelectedDoc] = useState(null);
+  // State to track selected asset
+  const [selectedAsset, setSelectedAsset] = useState(null);
 
   return (
     <div className="flex flex-wrap items-center">
-      {documents?.length > 0 ? (
-        documents.map((document) => (
+      {assets?.length > 0 ? (
+        assets.map((asset) => (
           <div
-            key={document.id}
+            key={asset.id}
             className="opacity-70 text-xs p-[6px] w-full text-slate-800 font-normal rounded-lg border bg-yellow-50 flex items-center justify-between cursor-pointer"
-            onClick={() => setSelectedDoc(document.link)} // Clicking anywhere opens the iframe
+            onClick={() => setSelectedAsset(asset.link)} // Clicking anywhere opens the iframe
           >
-            {/* Document Name & Icon */}
+            {/* Asset Name & Icon */}
             <div className="flex items-center">
               <Lucide icon="FileText" className="w-[14px] h-[14px] text-slate-800 mr-1" />
-              {document.name}
+              {asset.name}
             </div>
 
             {/* Open in New Tab Button */}
             {/* <button
               onClick={(e) => {
                 e.stopPropagation(); // Prevent the main div's click event (don't open iframe)
-                window.open(document.link, "_blank");
+                window.open(asset.link, "_blank");
               }}
               className="text-blue-500 hover:text-blue-700 transition"
               title="Open in new tab"
@@ -191,16 +223,16 @@ const DocumentList = ({ documents }) => {
         ))
       ) : (
         <span className="text-xs font-medium ml-4">
-          Dit taaktype heeft geen documenten
+          Dit taaktype heeft geen bestanden
         </span>
       )}
 
-      {/* Show iframe if a document is selected */}
-      {selectedDoc && (
+      {/* Show iframe if a asset is selected */}
+      {selectedAsset && (
         <div className="mt-4 w-full p-4 bg-gray-100 rounded-lg border relative">
           {/* Close Button */}
           <button
-            onClick={() => setSelectedDoc(null)}
+            onClick={() => setSelectedAsset(null)}
             className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
           >
             Sluiten ✖
@@ -208,9 +240,9 @@ const DocumentList = ({ documents }) => {
 
           {/* Iframe Container */}
           <iframe
-            src={selectedDoc}
+            src={selectedAsset}
             className="w-full h-[500px] border rounded-lg"
-            title="Document Viewer"
+            title="Bestand viewer"
           />
         </div>
       )}

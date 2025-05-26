@@ -17,8 +17,8 @@ return new class extends Migration
             $table->date('date');
             $table->boolean('public')->default(false); // Public holiday or custom holiday
             $table->foreignId('created_by')->constrained('users'); // Public holiday or custom holiday
-            $table->softDeletes();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

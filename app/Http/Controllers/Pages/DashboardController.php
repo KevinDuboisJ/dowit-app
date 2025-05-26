@@ -60,21 +60,21 @@ class DashboardController extends Controller
       }),
 
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getTeamsMatchingAssignmentRules(new Task([
+        return TaskAssignmentService::getAssignmentRulesByTaskMatchAndTeams(new Task([
           'campus_id' => $request->input('campus') ?? null,
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]));
+        ]), Auth::user()->teams->pluck('id')->all());
       }),
 
       'patients' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getTeamsMatchingAssignmentRules(new Task([
+        return TaskAssignmentService::getAssignmentRulesByTaskMatchAndTeams(new Task([
           'campus_id' => $request->input('campus') ?? null,
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]));
+        ]), Auth::user()->teams->pluck('id')->all());
       }),
 
       'announcements' => fn() => DB::table('comments')

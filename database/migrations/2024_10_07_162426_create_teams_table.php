@@ -16,9 +16,10 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable(); // Optional: Add a description for the team
             $table->foreignId('parent_team_id')->nullable()->constrained('teams')->onDelete('set null'); // This allows a team to have a parent, representing a sub-team.
-            $table->foreignId('user_id')->nullable();
+            $table->foreignId('created_by')->nullable();
             $table->json('autoassign_rules')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

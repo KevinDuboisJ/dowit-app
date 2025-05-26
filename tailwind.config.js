@@ -14,6 +14,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Inter', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        inter: ['Inter'],
         roboto: ['Roboto'],
       },
       fontSize: {

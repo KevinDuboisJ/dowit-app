@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Document;
+use App\Models\Asset;
 
 class TaskType extends Model
 {
@@ -22,8 +22,8 @@ class TaskType extends Model
         return $this->hasMany(Task::class);
     }
 
-    public function documents()
+    public function assets()
     {
-        return $this->belongsToMany(Document::class); // Laravel assumes `document_task_type`
+        return $this->belongsToMany(Asset::class);
     }
 }

@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Pages\LoginController;
 use App\Http\Controllers\Pages\DashboardController;
-use App\Http\Controllers\Pages\DocumentController;
+use App\Http\Controllers\Pages\AssetController;
 use App\Http\Controllers\Pages\NewsfeedController;
 use App\Http\Controllers\Pages\HelpController;
 use App\Http\Controllers\Pages\TaskController;
@@ -47,7 +47,7 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
   // Route::post('/task/{task}/create/comment', [TaskController::class, 'addComment'])->name('task.addComment');
   Route::post('/patient/visitid', [PatientController::class, 'getPatient'])->name('task.getPatient');
   Route::match(['get', 'post'], '/newsfeed', [NewsfeedController::class, 'index'])->name('newsfeed.index');
-  Route::get('/documents', [DocumentController::class, 'index'])->name('document.index');
+  Route::get('/assets', [AssetController::class, 'index'])->name('asset.index');
   Route::any('help', [HelpController::class, 'index']);
   Route::post('logout', [LoginController::class, 'logout'])->name('logout');
   

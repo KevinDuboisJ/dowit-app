@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 export const FontSizeSlider = ({fontSize, setFontSize}) => {
 
   const handleChange = (event) => {
-    console.log('test')
     setFontSize(event.target.value);
   };
 

@@ -51,7 +51,7 @@ class TaskController extends Controller
   public function store(StoreTaskRequest $request)
   {
     try {
-
+      $user = Auth::user();
       $data = $request->prepareForDatabase();
 
       // Start transactions on both connections
@@ -117,7 +117,7 @@ class TaskController extends Controller
         $task->assignees()->sync($ids);
       }
 
-      TaskAssignmentService::assignTaskToTeams($task);
+      TaskAssignmentService::assignTaskToTeams($task, $user->teams->pluck('id')->toArray());
 
       // Commit the transaction if all operations succeed
       DB::connection('mysql')->commit();

@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 trait HasCreator
 {
@@ -18,5 +19,10 @@ trait HasCreator
                 $model->created_by = Auth::id();
             }
         });
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

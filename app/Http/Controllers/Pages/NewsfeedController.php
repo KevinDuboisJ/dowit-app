@@ -17,7 +17,6 @@ class NewsfeedController extends Controller
 
   public function index(Request $request)
   {
-    logger($request);
     $filters = $request->input('filters', []);
     $user = Auth::user();
 

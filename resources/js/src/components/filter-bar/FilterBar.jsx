@@ -13,10 +13,9 @@ import {
   Heroicon
 } from '@/base-components';
 
-export const FilterBar = ({ defaultValues = {}, onApplyFilters }) => {
+export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
+  
   const { statuses, teams } = usePage().props;
-  const filtersRef = defaultValues;
-
   const onFilters = () => {
     const activeFilters = Object.values(filtersRef.current).filter(filter => filter.value);
     onApplyFilters({ activeFilters, filtersRef });
@@ -33,7 +32,7 @@ export const FilterBar = ({ defaultValues = {}, onApplyFilters }) => {
       }}
     >
       <Input
-        defaultValue={filtersRef.current.assignedTo.value || ''}
+        defaultValue={filtersRef.current.assignedTo?.value || ''}
         className={cn("xl:items-center bg-white", isActive('assignedTo') && 'bg-[rgb(233,240,255,0.65)]')}
         type="text"
         placeholder="Gebruiker"

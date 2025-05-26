@@ -18,11 +18,8 @@ use Filament\Tables\Actions\Action;
 use App\Filament\Resources\TeamUserResource\Pages\CreateTeamUser;
 use App\Filament\Resources\TeamUserResource\Pages\EditTeamUser;
 use App\Filament\Resources\TeamUserResource\Pages\ListTeamUsers;
-use Filament\Facades\Filament;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Route;
-use App\Traits\HasTeams;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Forms\Components\Checkbox;
 use Awcodes\TableRepeater\Components\TableRepeater;
@@ -33,8 +30,6 @@ use Filament\Tables\Columns\TextColumn;
 
 class TeamResource extends Resource
 {
-    use HasTeams;
-
     protected static ?string $model = Team::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
@@ -192,4 +187,5 @@ class TeamResource extends Resource
     }
 
     public static function getTableQuery(): Builder {}
+
 }

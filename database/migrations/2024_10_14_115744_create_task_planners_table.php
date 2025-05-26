@@ -25,11 +25,13 @@ return new class extends Migration
             $table->enum('frequency', ['Daily', 'Weekly', 'Monthly', 'EachXDay', 'SpecificDays']);
             $table->json('interval')->nullable();  // For interval frequency
             $table->json('assignments')->nullable();  // For user assignation
+            $table->json('assets')->nullable();  // For files
             $table->enum('action', ['Add', 'Replace']);
             $table->string('comment')->nullable(); 
             $table->dateTime('next_run_at');
-            $table->foreignId('user_id');
+            $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use App\Models\Task;
@@ -12,13 +11,14 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use Illuminate\Support\Facades\Cache;
 use App\Casts\Interval;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Support\Facades\Log;
+use App\Traits\HasTeams;
+use App\Traits\HasCreator;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class TaskPlanner extends Model
 {
-    use HasFactory;
+    use SoftDeletes, HasCreator, HasTeams;
 
     protected $casts = [
         'frequency' => TaskPlannerFrequency::class,
@@ -28,6 +28,7 @@ class TaskPlanner extends Model
         'next_run_at' => 'datetime', // This casts the 'next_run_at' attribute to a Carbon instance for date manipulation
         'interval' => Interval::class,
         'assignments' => 'array',
+        'assets' => 'array',
     ];
 
     // Automatically handle logic during creation
@@ -43,7 +44,7 @@ class TaskPlanner extends Model
                     $taskPlanner->next_run_at = $taskPlanner->start_date_time;
                 }
 
-                $taskPlanner->user_id = Auth::id();
+                $taskPlanner->created_by = Auth::id();
             }
             Cache::forget('next_run_tasks');
         });
@@ -61,14 +62,59 @@ class TaskPlanner extends Model
                 if ($taskPlanner->frequency === TaskPlannerFrequency::Daily->name) {
                     $taskPlanner->interval = null;
                 }
-                $taskPlanner->user_id = Auth::id();
+                $taskPlanner->created_by = Auth::id();
             }
 
             Cache::forget('next_run_tasks');
         });
     }
 
-    public function getNextRunDate(Carbon $next_run_at = null, $frequency = null, array|string $interval = null): Carbon
+    public function campus()
+    {
+        return $this->belongsTo(Campus::class);
+    }
+
+    public function taskType()
+    {
+        return $this->belongsTo(TaskType::class);
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class, 'team_id');
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'task_planner_id');
+    }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'task_user');
+    }
+
+    public function space()
+    {
+        return $this->belongsTo(Space::class, 'space_id');
+    }
+
+    public function spaceTo()
+    {
+        return $this->belongsTo(Space::class, 'space_to_id');
+    }
+
+    public function assets()
+    {
+        return $this->belongsToMany(Asset::class);
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
+    public function getNextRunDate(?Carbon $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon
     {
         // Fallback to the model's properties if no arguments are passed
         $next_run_at = $next_run_at ?? $this->next_run_at;
@@ -128,7 +174,6 @@ class TaskPlanner extends Model
             }
         }
 
-
         // If no upcoming days in the current week, return the first specific day in the next week
         return $currentDate->copy()->next($dayNumbers[0])->setTimeFrom($currentDate);
     }
@@ -143,43 +188,15 @@ class TaskPlanner extends Model
         Cache::forget('next_run_tasks');
     }
 
-    public function campus()
+    public function toTaskModel(): Task
     {
-        return $this->belongsTo(Campus::class);
-    }
-
-    public function taskType()
-    {
-        return $this->belongsTo(TaskType::class);
-    }
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class, 'team_id');
-    }
-
-    public function tasks()
-    {
-        return $this->hasMany(Task::class, 'task_planner_id');
-    }
-
-    public function users()
-    {
-        return $this->belongsToMany(User::class, 'task_user');
-    }
-
-    public function space()
-    {
-        return $this->belongsTo(Space::class, 'space_id');
-    }
-
-    public function spaceTo()
-    {
-        return $this->belongsTo(Space::class, 'space_to_id');
-    }
-
-    public function owner()
-    {
-        return $this->belongsTo(User::class, 'user_id');
+        $task = new Task([
+            'campus_id'    => $this->campus_id,
+            'task_type_id' => $this->task_type_id,
+            'space_id'     => $this->space_id,
+            'space_to_id'  => $this->space_to_id,
+        ]);
+        $task->setRelation('tags', $this->tags);
+        return $task;
     }
 }

@@ -8,6 +8,7 @@ use App\Filament\Resources\TaskAssignmentRuleResource\RelationManagers;
 use App\Models\TaskAssignmentRule;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
+use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Form;
 use App\Models\Space;
@@ -17,6 +18,9 @@ use App\Models\TaskType;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
+use App\Traits\HasFilamentTeamFields;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Get;
 
 class TaskAssignmentRuleResource extends Resource
 {
@@ -27,7 +31,6 @@ class TaskAssignmentRuleResource extends Resource
     protected static ?string $navigationGroup = 'Taakconfigurator';
     protected static ?int $navigationSort = 3;
     protected static array $staticOptions;
-
 
     public static function form(Form $form): Form
     {
@@ -44,11 +47,47 @@ class TaskAssignmentRuleResource extends Resource
                 Section::make([
                     Select::make('teams')
                         ->label('Teams')
-                        ->relationship('teams', 'name')
+                        ->relationship(
+                            name: 'teams',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn($query) => $query->byTeamsUserBelongsTo()
+                        )
                         ->multiple()
-                        ->required()
+                        ->required(function (?Model $record, $state) {
+
+                            if (! $record && empty($state)) {
+                                return true;
+                            }
+
+                            $user = auth()->user();
+                            $userTeamIds = $user->teams->pluck('id')->toArray();
+                            $recordTeamIds = $record?->teams->pluck('id')->toArray();
+                            $hasAtLeastOneTeamUserDoesNotHave = !empty(array_diff($recordTeamIds, $userTeamIds));
+
+                            return !$hasAtLeastOneTeamUserDoesNotHave;
+                        })
+                        ->helperText(function (?Model $record, $state) {
+
+                            if (! $record) {
+                                return null;
+                            }
+
+                            // Get the IDs of the teams the user can select from (i.e., user’s teams)
+                            $userTeamIds = auth()->user()->teams->pluck('id')->toArray();
+
+                            // Get the teams linked to the record but not part of user teams
+                            $otherTeams = $record->teams
+                                ->filter(fn($team) => !in_array($team->id, $userTeamIds))
+                                ->pluck('name');
+
+                            return $otherTeams->isNotEmpty()
+                                ? 'Toegewezen aan andere teams: ' . $otherTeams->join(', ')
+                                : null;
+                        })
+
                 ])->description('Kies aan welke teams deze regels worden toegepast'),
                 Section::make([
+
                     Select::make('campuses')
                         ->label('Campus')
                         ->relationship(name: 'campus', titleAttribute: 'name')
@@ -59,6 +98,7 @@ class TaskAssignmentRuleResource extends Resource
                         ->afterStateHydrated(function (Select $component, ?array $state) {
                             $state ? $component->state(array_column($state, 'id')) : null;
                         }),
+
                     Select::make('task_types')
                         ->label('Taaktype')
                         ->relationship(name: 'taskType', titleAttribute: 'name')
@@ -89,7 +129,22 @@ class TaskAssignmentRuleResource extends Resource
                         ->getOptionLabelFromRecordUsing(fn(Space $record) => "{$record->name} ({$record->_spccode})")
                         ->searchable(['name', '_spccode'])
                         ->formatStateUsing(fn(?array $state): ?array => $state ? array_column($state, 'id') : null),
-                ])->columns(1)->description('Regels')
+
+                    Select::make('tags')
+                        ->label('Tags')
+                        ->relationship(name: 'tags', titleAttribute: 'name')
+                        ->dehydrated()
+                        ->dehydrateStateUsing(fn(?array $state, Select $component): ?array => $state ? self::processSelectedOptions($state, $component) : null)
+                        ->multiple()
+                        ->preload()
+                        ->afterStateHydrated(function (Select $component, ?array $state) {
+                            $state ? $component->state(array_column($state, 'id')) : null;
+                        }),
+
+                ])->columnSpan(2)->columns(2)->description('Regels'),
+
+                HasFilamentTeamFields::creatorField(),
+
             ]);
     }
 
@@ -115,13 +170,17 @@ class TaskAssignmentRuleResource extends Resource
                 ViewColumn::make('spaces_to')
                     ->view('filament.tables.columns.jsonArray')
                     ->label('Bestemmingslocaties'),
+                ViewColumn::make('tags')
+                    ->view('filament.tables.columns.jsonArray')
+                    ->label('Tags'),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 EditAction::make(),
-            ]);
+            ])
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array

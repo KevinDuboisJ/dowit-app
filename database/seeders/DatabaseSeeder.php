@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             HolidaySeeder::class,
             SettingSeeder::class,
             TeamSeeder::class,
+            TagSeeder::class,
         ]);
     }
 }

@@ -14,17 +14,13 @@ import {
   useIsMobile,
   useWebSocket,
   useFilter,
-  useLoader,
   inertiaResourceSync,
 } from '@/hooks';
 
 import {
   TaskOverviewSheet,
-  AnnouncementSheet,
-  TaskSheet,
+  TaskDesktopView,
   TaskMobileView,
-  FilterBar,
-  TaskTable
 } from '@/components';
 
 const Dashboard = ({
@@ -43,7 +39,6 @@ const Dashboard = ({
   const { newEvent } = useWebSocket();
   const [sheetState, setSheetState] = useState({ open: false, task: null });
   const { isMobile } = useIsMobile();
-  const { loading, setLoading, Loader } = useLoader();
   const lastUpdatedTaskRef = useRef(null);
 
   // Poll every 5 minutes as a fallback for WebSockets (300000 ms)
@@ -133,50 +128,20 @@ const Dashboard = ({
             handleTaskUpdate={handleTaskUpdate}
             setSheetState={setSheetState}
             lastUpdatedTaskRef={lastUpdatedTaskRef}
-            filters={filters.get()}
+            filtersRef={filtersRef}
           />
 
         ) : (
-          <>
-            <div className="flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3">
-              <FilterBar
-                defaultValues={filtersRef}
-                onApplyFilters={({ activeFilters }) => {
-                  console.log(activeFilters)
-                  setLoading(true)
-                  router.get('/', { filters: activeFilters }, {
-                    only: ['tasks'],
-                    queryStringArrayFormat: 'indices',
-                    preserveState: true,
-                    onSuccess: ({ props }) => {
-                      setTasks(props.tasks.data);
-                      setLoading(false)
-                    },
-                    onError: (error) => {
-                      console.log(error)
-                    }
-                  });
-                }}
-              />
-              <div className="ml-auto space-x-2">
-                <AnnouncementSheet />
-                <TaskSheet />
-              </div>
-            </div>
-            {/* Loading Overlay */}
-            {loading && (
-              <div className="absolute inset-0 flex justify-center items-center bg-gray-100 bg-opacity-50 z-30 transition-opacity duration-300">
-                <Loader width={150} height={150} className="z-40" />
-              </div>
-            )}
-            <TaskTable
-              tasks={tasks}
-              setTasks={setTasks}
-              setSheetState={setSheetState}
-              handleTasksRecon={handleTasksRecon}
-              handleTaskUpdate={handleTaskUpdate}
-            />
-          </>
+          <TaskDesktopView
+            tasks={tasks}
+            todoTasks={todoTasks}
+            openTasks={openTasks}
+            setTasks={setTasks}
+            handleTasksRecon={handleTasksRecon}
+            handleTaskUpdate={handleTaskUpdate}
+            setSheetState={setSheetState}
+            filtersRef={filtersRef}
+          />
         )}
       </div>
 

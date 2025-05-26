@@ -18,16 +18,18 @@ use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use App\Models\Team;
-use App\Contracts\Teams;
 use App\Traits\HasTeams;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Scopes\ExcludeSystemUser;
 
-class User extends Authenticatable implements FilamentUser, HasName, HasAvatar, Teams
+class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 {
     use HasFactory, Notifiable, HasTeams;
+
+    public const ROLE_ADMIN       = 'ADMIN';
+    public const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -67,26 +69,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar, 
     public function scopeExcludeSystemUser($query)
     {
         return $query->where('id', '!=', config('app.system_user_id'));
-    }
-
-    public function scopeByUserTeams(Builder $query): Builder
-    {
-        // Get authenticated user, $this is not available at the moment of this method
-        $user = Auth::user();
-
-        // Get all team IDs the user belongs to
-        $teamIds = $user->teams->pluck('id')->toArray();
-
-        if (!empty($teamIds)) {
-
-            $query->whereHas('teams', function ($query) use ($teamIds) {
-                $query->whereIn('team_id', $teamIds);
-            });
-
-            return $query;
-        }
-
-        throw new AuthenticationException('Gebruiker heeft geen teams');
     }
 
     public function getFormattedDepartmentIdAttribute()
@@ -191,21 +173,14 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar, 
 
     public function isSuperAdmin()
     {
-        return $this->hasRole('SUPER_ADMIN');
+        return $this->hasRole(self::ROLE_SUPER_ADMIN);
     }
 
     public function isAdmin()
     {
-        return $this->hasRole('ADMIN');
+        return $this->hasRole(self::ROLE_ADMIN);
     }
 
-    // Define a many-to-many relationship with Team
-    public function teams(): BelongsToMany
-    {
-        return $this->belongsToMany(Team::class, 'team_user', 'user_id', 'team_id');
-    }
-
-    // Define a many-to-many relationship with Team
     public function tasks(): BelongsToMany
     {
         return $this->belongsToMany(Task::class);
@@ -271,13 +246,17 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar, 
         return $settings;
     }
 
-    // public function getTenants(Panel $panel): Collection
-    // {
-    //     return $this->teams;
-    // }
+    public function userBelongsToAllTeams(array $teamIds): bool
+    {
+        $userTeamIds = $this->teams->pluck('id')->toArray();
 
-    // public function canAccessTenant(Model $tenant): bool
-    // {
-    //     return $this->teams()->whereKey($tenant)->exists();
-    // }
+        return empty(array_diff($teamIds, $userTeamIds));
+    }
+
+    public function userBelongsToAtLeastOneTeam(array $teamIds): bool
+    {
+        $userTeamIds = $this->teams->pluck('id')->toArray();
+
+        return !empty(array_intersect($teamIds, $userTeamIds));
+    }
 }

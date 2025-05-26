@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskAssignmentService;
 use App\Events\BroadcastEvent;
-use App\Models\Comment;
+use Illuminate\Support\Facades\Auth;
 
 class TaskPlannerService
 {
@@ -112,15 +112,18 @@ class TaskPlannerService
 
         // Add Initial comment
         $task->comments()->create([
-          'user_id' => $taskPlanner->user_id,
+          'user_id' => $taskPlanner->created_by,
           'content' => $taskPlanner->comment
         ]);
 
         // Handle assignations
         $this->handleAssignations($taskPlanner, $task);
 
+        // Copy the planner's tags to the task
+        $task->tags()->sync($taskPlanner->tags->pluck('id'));
+
         // Assign task to teams based on assignment rules
-        TaskAssignmentService::assignTaskToTeams($task);
+        TaskAssignmentService::assignTaskToTeams($task, $taskPlanner->teams->pluck('id')->toArray());
 
         broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
       });
@@ -171,19 +174,6 @@ class TaskPlannerService
     }
   }
 
-  // public function handleEachXDay($taskPlanner)
-  // {
-  //   if ($taskPlanner->frequency === TaskPlannerFrequency::EachXDay) {
-
-  //     $interval = $taskPlanner->interval;
-  //     $diffInDays = Carbon::now()->diffInDays($taskPlanner->next_run_at);
-
-  //     if ($diffInDays % $interval !== 0) {
-  //       $taskPlanner->updateNextRunDate();
-  //     }
-  //   }
-  // }
-
   public function getCacheExpiration()
   {
     // Retrieve the next taskPlanner and determine how long to cache until it runs
@@ -206,7 +196,7 @@ class TaskPlannerService
     $users = $taskPlanner->assignments['users'] ?? null;
 
     if ($users) {
-      
+
       $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? null;
       $task->assignees()->attach($users);
 
@@ -215,5 +205,20 @@ class TaskPlannerService
         $taskPlanner->save();
       }
     }
+  }
+
+  /**
+   * Sync the TaskPlanner’s teams from a pre-computed array of IDs.
+   *
+   * @param  TaskPlanner  $planner
+   * @param  int[]        $teamIds
+   */
+  public function syncAssignedTeams(TaskPlanner $planner, array $teamIds): void
+  {
+    // Only sync the IDs the user could actually assign
+    $allowed = Auth::user()->teams->pluck('id')->all();
+    $toSync  = array_intersect($teamIds, $allowed);
+
+    $planner->teams()->sync($toSync);
   }
 }

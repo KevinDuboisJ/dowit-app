@@ -19,7 +19,8 @@ export default defineConfig(({ command, mode }) => {
         ],
         refresh: true
       }),
-      react()
+
+      react(),
     ],
     resolve: {
       alias: {
@@ -28,7 +29,8 @@ export default defineConfig(({ command, mode }) => {
         '@css': path.resolve(__dirname, './resources/css'),
         '@json': path.resolve(__dirname, './resources/json')
       }
-    }
+    },
+
   };
 
   if (command === 'serve') {

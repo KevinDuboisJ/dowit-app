@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\PATIENTLIST\Patient;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\TaskType;
 use App\Models\TaskStatus;
@@ -12,10 +11,12 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Carbon;
+use App\Traits\HasTeams;
+use App\Traits\HasCreator;
 
 class Task extends Model
 {
-    use HasFactory;
+    use HasCreator, HasTeams;
 
     protected $appends = ['capabilities'];
 
@@ -131,6 +132,11 @@ class Task extends Model
         return $this->belongsToMany(User::class, 'task_user');
     }
 
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
     public function comments()
     {
         return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
@@ -152,8 +158,9 @@ class Task extends Model
     {
         return [
             'patient',
+            'tags',
             'status',
-            'taskType' => fn($query) => $query->with(['documents']),
+            'taskType' => fn($query) => $query->with(['assets']),
             'space',
             'comments' => fn($query) => $query->with(['user', 'status' => fn($query) => $query->select('id', 'name')]),
             'assignees',
@@ -183,10 +190,4 @@ class Task extends Model
 
         return $comment;
     }
-
-    // public function firstComment()
-    // {
-    //     return $this->hasOne(Comment::class, 'task_id', 'id')
-    //         ->orderBy('created_at', 'asc');
-    // }
 }

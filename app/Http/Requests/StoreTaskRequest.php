@@ -58,7 +58,7 @@ class StoreTaskRequest extends FormRequest
                 'is_active' => true,
             ]
         ];
-        logger($validated);
+
         if (isset($validated['patient'])) {
             $data['patient'] = $validated['patient'];
         }

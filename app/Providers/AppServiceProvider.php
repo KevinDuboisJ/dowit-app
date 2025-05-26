@@ -17,6 +17,7 @@ use App\Observers\UserObserver;
 use App\Observers\TeamObserver;
 use App\Observers\BroadcastObserver;
 use Filament\Facades\Filament;
+use BladeUI\Icons\Factory as IconFactory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,13 +40,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-       
         Filament::serving(function () {
             Filament::registerNavigationGroups([
                 'Taakconfigurator',
                 'Instellingen',
             ]);
         });
+        
+        // Register a custom icon path(folder) for use with the Icon Picker Filament plugin
+        app(IconFactory::class)->add('taskicons', [
+            'path' => resource_path('images/icons'),
+            'prefix' => 'az',
+        ]);
     
         Model::unguard();
         Model::preventLazyLoading(! app()->isProduction());
