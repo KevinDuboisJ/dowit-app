@@ -25,4 +25,13 @@ trait HasCreator
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function isCreator(?User $user = null): bool
+    {
+        if($user === null) {
+            $user = Auth::user();
+        }
+        
+        return $this->created_by === $user->id;
+    }
 }

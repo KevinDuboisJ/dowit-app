@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { toast } from 'sonner'
 import axios from "axios";
 import { CalendarIcon } from 'lucide-react'
-// import { DateRange } from 'react-day-picker'
 import { cn } from '@/utils'
 import { format, addDays, parseISO } from 'date-fns';
 import { nlBE } from "date-fns/locale";
@@ -156,6 +155,7 @@ const CreateAnnouncementForm = () => {
   });
 
   async function onSubmit(data) {
+
     try {
       const response = await axios.post('/announce', {
         selectedUsers: data.selectedUsers,
@@ -169,19 +169,16 @@ const CreateAnnouncementForm = () => {
         toast.success("Mededeling is succesvol geplaatst!")
       }
     } catch (error) {
-
-      console.log(error)
-      form.reset(formValues)
       // Extract error messages
-      const errorMessages = error.response?.data
-        ? Object.values(error.response.data)
+      const errorMessages = error.response?.data.message ? error.response?.data.message : error.response?.data.errors
+        ? Object.values(error.response.data.errors)
           .flat() // Flatten arrays of messages
           .join(', ') // Join messages with commas
-        : error.message; // Fallback to the generic error message
+        : 'Er is een fout opgetreden. Gelieve dit te melden aan de helpdesk'; // Fallback to the generic error message
 
       // Show the combined error messages in a toast
-      toast.error(`Validatie of serverfout: ${errorMessages}`);
-      console.error('Validatie of serverfout:', errorMessages);
+      toast.error(`${errorMessages}`);
+      console.error(`${error.message}: `, error.response );
     }
   }
 
@@ -252,7 +249,7 @@ const CreateAnnouncementForm = () => {
                     )}
                     size={'sm'}
                   >
-                    <CalendarIcon className='text-xs text-slate-500 font-normal' />
+                    <CalendarIcon className='text-sm text-slate-500 font-normal' />
                     {field.value?.from ? (
                       field.value.to ? (
                         <>
@@ -263,7 +260,7 @@ const CreateAnnouncementForm = () => {
                         format(new Date(field.value.from), "LLL dd, y")
                       )
                     ) : (
-                      <span className='text-xs text-slate-500 font-normal'>Kies een datum</span>
+                      <span className='text-sm text-slate-500 font-normal'>Kies een datum</span>
                     )}
                   </Button>
                 </PopoverTrigger>

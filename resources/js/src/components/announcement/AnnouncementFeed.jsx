@@ -34,7 +34,7 @@ export const AnnouncementFeed = ({ className }) => {
               <TableCell>
                 <div className='flex items-center min-h-4 py-0'>
                   <Heroicon icon='InformationCircle' className='h-5 w-5' />
-                  <RichText text={announcement.content} className='whitespace-nowrap text-xs px-3'/>
+                  <RichText text={announcement.content} className='whitespace-nowrap text-sm px-3'/>
                   <Heroicon icon='XMark' className='h-4 w-4 cursor-pointer ml-auto' onClick={() => markAsRead(announcement.id)} />
                 </div>
               </TableCell>

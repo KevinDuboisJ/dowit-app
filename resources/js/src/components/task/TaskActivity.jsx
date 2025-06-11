@@ -123,7 +123,7 @@ const UpdateBox = ({ activity }) => {
         <UpdateBoxTitle activity={activity} />
         <div className="border rounded-lg px-4 py-3 bg-gray-100">
           {activity.content && (
-            <RichText text={activity.content} className="whitespace-nowrap text-xs" />
+            <RichText text={activity.content} className="whitespace-nowrap text-sm" />
           )}
 
           {Array.isArray(changed_keys.assignees) && changed_keys.assignees.length > 0 && (
@@ -136,8 +136,8 @@ const UpdateBox = ({ activity }) => {
 
           {filteredChanges.map(([key, value]) => (
             <div className="flex" key={key}>
-              <p className="text-xs capitalize mr-1">{__(key)}: </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-sm capitalize mr-1">{__(key)}: </p>
+              <p className="text-sm text-gray-600">
                 {key === 'needs_help' ? 'Nee' : __(value)}
               </p>
             </div>
@@ -148,10 +148,10 @@ const UpdateBox = ({ activity }) => {
           )}
 
           <div className="flex items-center space-x-1">
-            <p className="text-xs text-gray-600 font-medium">
+            <p className="text-sm text-gray-600 font-medium">
               {`${activity.user?.firstname} ${activity.user?.lastname}`}
             </p>
-            <p className="text-xs text-gray-600">- {formatDate(activity.created_at)}</p>
+            <p className="text-sm text-gray-600">- {formatDate(activity.created_at)}</p>
           </div>
         </div>
       </div>
@@ -167,9 +167,9 @@ const TextBox = ({ activity }) => (
 
 const MetaText = ({ id, title, keytitle, users }) => (
   <div className="flex flex-wrap">
-    <p className="text-xs mr-1">{title || keytitle}</p>
+    <p className="text-sm mr-1">{title || keytitle}</p>
     {users.map((assignee, index) => (
-      <p key={`${id}-${index}`} className="text-xs text-gray-600">
+      <p key={`${id}-${index}`} className="text-sm text-gray-600">
         {`${assignee}${index < users.length - 1 ? ', ' : ''}`}
       </p>
     ))}

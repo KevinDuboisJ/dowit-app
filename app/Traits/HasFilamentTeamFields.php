@@ -32,7 +32,7 @@ trait HasFilamentTeamFields
         return Placeholder::make('')
             ->visible(fn($record) => $record?->creator !== null)
             ->content(fn($record): HtmlString => new HtmlString(
-                '<span class="text-xs font-extralight text-gray-500">Aangemaakt door: ' .
+                '<span class="text-sm font-extralight text-gray-500">Aangemaakt door: ' .
                     e($record->creator->firstname . ' ' . $record->creator->lastname) .
                     '</span>'
             ))

@@ -60,21 +60,21 @@ class DashboardController extends Controller
       }),
 
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getAssignmentRulesByTaskMatchAndTeams(new Task([
+        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(new Task([
           'campus_id' => $request->input('campus') ?? null,
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]), Auth::user()->teams->pluck('id')->all());
+        ]), Auth::user()->teams->pluck('id')->all())->get();
       }),
 
       'patients' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getAssignmentRulesByTaskMatchAndTeams(new Task([
+        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(new Task([
           'campus_id' => $request->input('campus') ?? null,
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]), Auth::user()->teams->pluck('id')->all());
+        ]), Auth::user()->teams->pluck('id')->all())->get();
       }),
 
       'announcements' => fn() => DB::table('comments')
@@ -123,7 +123,7 @@ class DashboardController extends Controller
   {
     $data = $request->prepareForDatabase();
     $announcement = Comment::create($data);
-    broadcast(new BroadcastEvent($announcement, 'announcement_created'));
+    broadcast(new BroadcastEvent($announcement, 'announcement_created', 'dashboard-announce'));
     return response()->json($announcement);
   }
 

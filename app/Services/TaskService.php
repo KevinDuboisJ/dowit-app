@@ -134,7 +134,6 @@ class TaskService
 
     // Get assigned tasks (non-paginated)
     $assignedTasks = Task::with($relationships)
-      ->byAssigned()
       ->byActive()
       ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
         $this->applyFilters($query, $filters, $hasFilterByStatus);
@@ -161,6 +160,8 @@ class TaskService
       ->orderBy('start_date_time', 'desc')
       ->select('tasks.*')
       ->get();
+
+
 
     // Get team tasks (paginated with joins for sorting)
     $teamTasks = Task::query()

@@ -32,11 +32,11 @@ class TaskPlannerPolicy
 
     public function update(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAtLeastOneTeam($taskPlanner->teams->pluck('id')->toArray());
+        return $user->userBelongsToAtLeastOneTeam($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator();
     }
 
     public function delete(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAllTeams($taskPlanner->teams->pluck('id')->toArray());
+        return $user->userBelongsToAllTeams($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator();
     }
 }

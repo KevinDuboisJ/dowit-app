@@ -10,15 +10,11 @@ class UserController extends Controller
 {
   public function search(Request $request)
   {
-    $userTeams = auth()->user()->teams; // Assuming the user's teams are fetched here
-    $userInput = trim(strip_tags($request->userInput)); // Sanitize the input
-    $searchWords = array_filter(explode(' ', $userInput)); // Split input into words
+    $searchWords = array_filter(explode(' ', trim(strip_tags($request->userInput)))); // Split input into words
 
-    $users = User::with(['teams' => function ($query) use ($userTeams) {
-      $query->whereIn('teams.id', $userTeams->pluck('id'));
-    }])
+    $users = User::byTeams()
       ->excludeSystemUser()
-      ->where(function ($query) use ($searchWords, $userInput) {
+      ->where(function ($query) use ($searchWords) {
         foreach ($searchWords as $word) {
           // Case-insensitive search for firstname and lastname
           $query->orWhereRaw("LOWER(firstname) LIKE ?", ["%" . strtolower($word) . "%"])

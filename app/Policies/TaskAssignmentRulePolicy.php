@@ -32,11 +32,11 @@ class TaskAssignmentRulePolicy
 
     public function update(User $user, TaskAssignmentRule $taskAssignmentRule): bool
     {
-        return $user->userBelongsToAtLeastOneTeam($taskAssignmentRule->teams->pluck('id')->toArray());
+        return $user->userBelongsToAtLeastOneTeam($taskAssignmentRule->teams->pluck('id')->toArray()) || $taskAssignmentRule->isCreator();
     }
 
     public function delete(User $user, TaskAssignmentRule $taskAssignmentRule): bool
     {
-        return $user->userBelongsToAllTeams($taskAssignmentRule->teams->pluck('id')->toArray());
+        return $user->userBelongsToAllTeams($taskAssignmentRule->teams->pluck('id')->toArray()) || $taskAssignmentRule->isCreator();
     }
 }

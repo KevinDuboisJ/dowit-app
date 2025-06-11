@@ -44,6 +44,8 @@ use App\Traits\HasFilamentTeamFields;
 use Filament\Tables\Actions\DeleteAction;
 use App\Models\Team;
 use Illuminate\Support\Arr;
+use FilamentTiptapEditor\TiptapEditor;
+use FilamentTiptapEditor\Enums\TiptapOutput;
 
 class TaskPlannerResource extends Resource
 {
@@ -144,19 +146,17 @@ class TaskPlannerResource extends Resource
                     ),
 
 
-                RichEditor::make('comment')
+                TiptapEditor::make('comment')
                     ->label('commentaar')
-                    ->toolbarButtons([
+                    ->tools([
                         'bold',
-                        'bulletList',
-                        'h2',
                         'italic',
-                        'orderedList',
-                        'redo',
-                        'strike',
-                        'underline',
-                        'undo',
+                        'link',
+                        'bullet-list',
+                        'ordered-list',
                     ])
+                    ->disableFloatingMenus()
+                    ->disableBubbleMenus()
                     ->columnSpan(6)
                     ->placeholder('Typ hier uw commentaar...')
                     ->nullable()
@@ -262,24 +262,25 @@ class TaskPlannerResource extends Resource
 
                 Group::make()
                     ->schema([
-
                         Section::make('Toewijzing')
                             ->schema([
                                 select::make('assignments.users')
                                     ->label('Medewerkers')
-                                    ->getSearchResultsUsing(fn(string $search): array => User::where(function ($query) use ($search) {
-                                        $query->where('firstname', 'like', "{$search}%")
-                                            ->orWhere('lastname', 'like', "{$search}%");
-                                    })
-                                        ->excludeSystemUser()
-                                        ->byTeams()
-                                        ->limit(50)->get()->pluck('full_name', 'id')->toArray())
+                                    ->getSearchResultsUsing(
+                                        fn(string $search, Get $get): array =>
+                                        User::byTeams()
+                                            ->where(function ($query) use ($search) {
+                                                $query->where('firstname', 'like', "{$search}%")
+                                                    ->orWhere('lastname', 'like', "{$search}%");
+                                            })
+                                            ->limit(50)->get()->pluck('full_name', 'id')->toArray()
+                                    )
                                     ->getOptionLabelsUsing(fn(array $values): array => User::whereIn('id', $values)->get()->pluck('full_name', 'id')->toArray())
                                     ->multiple()
                                     ->placeholder('Wijs persoon toe')
                                     ->hint(
                                         new HtmlString(view('filament.components.hint-icon', [
-                                            'tooltip' => 'Dit toont de teams waaraan deze taakplanner de taak zal toewijzen op basis van de huidige taaktoewijzingsregels.</br></br>Als <b>"Eenmalig toewijzing"</b> is aangevinkt, worden de geselecteerde personen alleen aan de volgende taak toegewezen',
+                                            'tooltip' => 'Enkel teamleden kunnen aan taakplanner gekoppeld worden.</br></br>Als <b>"Eenmalig toewijzing"</b> is aangevinkt, worden de geselecteerde personen alleen aan de volgende taak toegewezen',
                                         ])->render())
                                     ),
 
@@ -398,6 +399,10 @@ class TaskPlannerResource extends Resource
 
                 TextColumn::make('tags.name')->label('Tags')->badge(),
 
+                TextColumn::make('on_holiday')->label('Feestdagen'),
+
+                TextColumn::make('next_run_at')->label('Ingepland voor'),
+
                 IconColumn::make('is_active')
                     ->label('Actief')
                     ->icon(fn(string $state): string => match ($state) {
@@ -408,11 +413,6 @@ class TaskPlannerResource extends Resource
                         '0' => 'gray',
                         '1' => 'success',
                     }),
-
-                TextColumn::make('on_holiday')
-                    ->label('Feestdagen'),
-
-                TextColumn::make('next_run_at')->label('Ingepland voor'),
             ])
             ->filters([])
             ->actions([
@@ -426,7 +426,7 @@ class TaskPlannerResource extends Resource
                             Section::make([
                                 select::make('assignments.users')
                                     ->label('Toewijzing')
-                                    ->getSearchResultsUsing(fn(string $search): array => User::where('firstname', 'like', "{$search}%")->orWhere('lastname', 'like', "{$search}%")->limit(50)->get()->pluck('full_name', 'id')->toArray())
+                                    ->getSearchResultsUsing(fn(string $search): array => User::byTeams()->where('firstname', 'like', "{$search}%")->orWhere('lastname', 'like', "{$search}%")->limit(50)->get()->pluck('full_name', 'id')->toArray())
                                     ->getOptionLabelsUsing(fn(array $values): array => User::whereIn('id', $values)->get()->pluck('full_name', 'id')->toArray())
                                     ->multiple()
                                     ->placeholder('Wijs persoon toe'),
@@ -483,11 +483,6 @@ class TaskPlannerResource extends Resource
                 collect($get('tags') ?? [])
                     ->map(fn($id) => ['id' => (int) $id])
             );
-
-        // dd(TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task, Auth::user()->teams->pluck('id')->toArray())
-        // ->byTeamsUserBelongsTo()
-        // ->pluck('id')
-        // ->toArray());
 
         return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task, Auth::user()->teams->pluck('id')->toArray())
             ->byTeamsUserBelongsTo()

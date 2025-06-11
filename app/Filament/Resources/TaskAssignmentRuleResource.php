@@ -55,13 +55,13 @@ class TaskAssignmentRuleResource extends Resource
                         ->multiple()
                         ->required(function (?Model $record, $state) {
 
-                            if (! $record && empty($state)) {
+                            if (!$record && empty($state)) {
                                 return true;
                             }
 
                             $user = auth()->user();
                             $userTeamIds = $user->teams->pluck('id')->toArray();
-                            $recordTeamIds = $record?->teams->pluck('id')->toArray();
+                            $recordTeamIds = $record?->teams->pluck('id')->toArray() ?? [];
                             $hasAtLeastOneTeamUserDoesNotHave = !empty(array_diff($recordTeamIds, $userTeamIds));
 
                             return !$hasAtLeastOneTeamUserDoesNotHave;
@@ -170,15 +170,22 @@ class TaskAssignmentRuleResource extends Resource
                 ViewColumn::make('spaces_to')
                     ->view('filament.tables.columns.jsonArray')
                     ->label('Bestemmingslocaties'),
-                ViewColumn::make('tags')
-                    ->view('filament.tables.columns.jsonArray')
-                    ->label('Tags'),
+                TextColumn::make('tags')
+                    ->label('Tags')
+                    ->formatStateUsing(fn ($state) => $state['name'] ?? '')
+                    ->badge(),
             ])
             ->filters([
                 //
             ])
             ->actions([
-                EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->label('Bewerken'),
+                        
+                    Tables\Actions\DeleteAction::make(),
+                ]),
+
             ])
             ->bulkActions([]);
     }

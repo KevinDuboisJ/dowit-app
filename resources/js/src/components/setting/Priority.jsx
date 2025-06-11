@@ -5,7 +5,7 @@ import {
 
 export const PriorityText = ({ state, color }) => {
   return (
-    <span style={{ color: color }} className="text-xs">{state}</span>
+    <span style={{ color: color }} className="text-sm">{state}</span>
   )
 }
 

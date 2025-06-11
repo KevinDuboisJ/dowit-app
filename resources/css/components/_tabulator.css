@@ -87,11 +87,11 @@
     }
 
     .tabulator-group-content {
-      @apply text-xs font-medium !text-slate-700;
+      @apply text-sm font-medium !text-slate-700;
     }
 
     .tabulator-group-info {
-      @apply text-xs !text-white ml-2 bg-red-600 p-1 px-2 rounded-xl;
+      @apply text-sm !text-white ml-2 bg-red-600 p-1 px-2 rounded-xl;
     }
   }
   .tabulator-footer {
@@ -166,7 +166,7 @@
     @apply overflow-auto;
     .tabulator-placeholder {
       span {
-        @apply text-slate-500 font-normal text-xs;
+        @apply text-slate-500 font-normal text-sm;
       }
     }
   }

@@ -18,7 +18,7 @@ const sideMenu = {
     {
       icon: 'DocumentText',
       title: 'Bestanden',
-      pathname: '/bestanden'
+      pathname: '/assets'
     },
     {
       type: 'title',

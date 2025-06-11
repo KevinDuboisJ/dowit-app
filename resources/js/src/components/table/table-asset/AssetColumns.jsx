@@ -11,7 +11,7 @@ export const AssetColumns = [
     header: getColumnName('name'),
     headerText: ({ column }) => <HeaderText column={column} />,
     cell: ({ row }) => (
-      <a className="text-primary text-xs" href={row.original.link} target="_blank">
+      <a className="text-primary text-sm" href={row.original.link} target="_blank">
         {row.original.name}
       </a>
 

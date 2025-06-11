@@ -42,14 +42,14 @@ const UserMenu = ({ user, fontSize, setFontSize }) => {
         <DropdownMenuLabel>
         <span className='text-sm font-light'>Teams</span>
           {user.teams.length > 0 ? user.teams.map(team => (
-            <span key={team.id} className="block text-xs font-normal text-slate-500">{team.name}</span>
-          )) : <span className="block text-xs font-normal text-slate-500">Leeg</span>}
+            <span key={team.id} className="block text-sm font-normal text-slate-500">{team.name}</span>
+          )) : <span className="block text-sm font-normal text-slate-500">Leeg</span>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>
           <span className='text-sm font-light'>Rollen</span>
           {user.roles && Object.values(user.roles).map(role => (
-            <div key={role} className="text-xs font-normal text-slate-500">{role}</div>
+            <div key={role} className="text-sm font-normal text-slate-500">{role}</div>
           ))}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

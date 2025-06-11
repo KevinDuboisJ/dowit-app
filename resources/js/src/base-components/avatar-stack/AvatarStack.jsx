@@ -34,7 +34,7 @@ export const AvatarStack = ({ avatars, maxAvatars = 4, className }) => {
 
       {remainingAvatarsCount > 0 && (
         <div className={cn(
-          "flex items-center justify-center w-6 h-6 bg-sky-900 text-white rounded-full text-xs"
+          "flex items-center justify-center w-6 h-6 bg-sky-900 text-white rounded-full text-sm"
         )}>
           +{remainingAvatarsCount}
         </div>
@@ -100,7 +100,7 @@ export const AvatarStackWrap = ({ children }) => {
 
 export const AvatarStackHeader = ({ title = '', icon = null }) => {
   return (
-    <div className="flex items-center space-x-1 min-w-0 text-xs text-slate-500">
+    <div className="flex items-center space-x-1 min-w-0 text-sm text-slate-500">
       {icon}
       <span>{title}</span>
     </div>

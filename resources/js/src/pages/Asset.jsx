@@ -1,7 +1,6 @@
 import { AssetTable, AssetColumns } from '@/components';
 
 const Asset = ({ assets }) => {
-
   return (
     <div className='flex flex-col h-full'>
       <div className="flex mb-2 shrink-0 items-center flex-nowrap col-span-12 fadeInUp">

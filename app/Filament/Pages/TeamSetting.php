@@ -1,86 +1,76 @@
 <?php
+// app/Filament/Pages/AbstractSettingsPage.php
 
 namespace App\Filament\Pages;
 
+use Filament\Forms;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Config;
+use App\Services\SettingService;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use App\Models\Setting;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Notifications\Notification;
-use Livewire\Component;
-use App\Models\Team;
-use Exception;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Form;
 
 class TeamSetting extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static ?string $title = 'Teaminstellingen ';
+    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static string $view = 'filament.pages.team-setting';
-    protected static ?string $navigationLabel = 'Teaminstellingen';
+    protected static ?string $navigationLabel = 'Teaminstellingen ';
     protected static ?string $navigationGroup = 'Instellingen';
 
-    public int $team_id;
-    public Team $team;
-    public ?array $settings = [];
-    public array $defaultSettings = [];
-    public array $settingNameArray = [];
+    /** Scope: either 'global' or 'team' */
+    protected static string $scope = 'team';
 
-    public function mount(): void
+    public array $data = [];
+    protected SettingService $settingService;
+
+    /** Map your config type → Filament component */
+    protected static array $fieldMap = [
+        'text'     => \Filament\Forms\Components\TextInput::class,
+        'email'    => \Filament\Forms\Components\TextInput::class,
+        'number'   => \Filament\Forms\Components\TextInput::class,
+        'textarea' => \Filament\Forms\Components\Textarea::class,
+        'select'   => \Filament\Forms\Components\Select::class,
+        'color'    => \Filament\Forms\Components\ColorPicker::class,
+        'repeater' => \Filament\Forms\Components\Repeater::class,
+    ];
+
+    public static function canAccess(): bool
     {
-        // Load default setting
-        $defaultSettingQueryBuilder = Setting::select('value', 'code', 'name');
-        $this->settingNameArray = $defaultSettingQueryBuilder->pluck('name', 'code')->toArray();
-        $this->defaultSettings =  $defaultSettingQueryBuilder->pluck('value', 'code')->toArray();
-
-        // Set default team
-        $this->setTeam();
+        return Auth::user()->isSuperAdmin() || Auth::user()->isAdmin();
     }
 
-    protected function setTeam($teamId = null)
+    public function getFormModel(): ?string
     {
-        if (!$teamId) {
-            // Get default team id
-            $teamId = Auth::user()->getDefaultTeam()->id;
-        }
-
-        // Set the team
-        $this->team = Team::with('settings')->find($teamId);
-
-        // Set the team_id
-        $this->team_id = $this->team->id;
-
-        // Merge team-specific overrides with defaults
-        $this->settings = $this->team->settings->toArray();
+        return null; // not binding to a model
     }
 
-    // #[On('refreshForm')]
-    // public function refresh(): void {}
-
-    public function form(Form $form): Form
+    public function getFormStatePath(): ?string
     {
+        return 'data';
+    }
 
-        return $form->schema([
-            Select::make('team_id')
-                ->label('Kies een team')
-                ->options(Auth::user()->teams->pluck('name', 'id')->toArray())
-                ->required()
-                ->live()
-                ->default($this->team)
-                ->selectablePlaceholder(false)
-                ->afterStateUpdated(fn(String $state, Component $livewire,) => $this->setTeam($state)),
+    public function mount(SettingService $settingService): void
+    {
+        $this->settingService = $settingService;
+        $userDefaultTeamId = Auth::user()->getDefaultTeam()->id;
 
-            Section::make()->schema(fn() => $this->generateDynamicFields()),
-        ]);
+        // fill initial state
+        $this->data = $this->getDefaultSettingsForSelectedTeam($userDefaultTeamId);
+        $this->data['team_id'] = $userDefaultTeamId;
+        $this->form->fill();
     }
 
     public function getFormAction(): array
@@ -92,98 +82,171 @@ class TeamSetting extends Page implements HasForms
         ];
     }
 
-    public function save()
+    public function form(Form $form): Form
     {
-        $data = $this->form->getState();
 
-        foreach ($data['settings'] as $code => $newSettingArray) {
-            $setting = Setting::where('code', $code)->first();
+        return $form->schema([
+            //------------------------------------------------------------
+            // 1) The team dropdown (reactive). When it changes, it sets
+            //    $this->data['team_id'], causing Filament to re-render the closure
+            //    in the “Dynamic Settings” section below.
+            //------------------------------------------------------------
+            Select::make('team_id')
+                ->label('Kies een team')
+                ->options(Auth::user()->teams->pluck('name', 'id')->toArray())
+                ->default($this->data['team_id'])
+                ->required()
+                ->live() // Makes Filament re‐evaluate any closures
+                ->selectablePlaceholder(false)
+                ->afterStateUpdated(function ($state) {
+                    // When the team changes, we fetch the default settings for that team
+                    $this->data = array_merge($this->data, $this->getDefaultSettingsForSelectedTeam($state));
+                }),
 
-            if ($code === 'TASK_PRIORITY') {
-                // Custom handling for task priority colors
-                $mergedSettings = [];
-                foreach ($newSettingArray as $key => $value) {
-                    $mergedSettings[$key] = [
-                        'time' => $value['time'],
-                        'color' => $value['color'],
-                    ];
-                }
-                $this->team->settings()->syncWithoutDetaching([
-                    $setting->id => ['value' => $mergedSettings],
-                ]);
-            } else {
-                // Default handling for other settings
-                $defaultSettingArray = $this->defaultSettings[$code] ?? throw new Exception("Error: Contact support.");
+            //------------------------------------------------------------
+            // 2) A Section whose `schema` is a closure. Filament will
+            //    call this closure every time `$this->data['team_id']` changes,
+            //    so inside we can fetch all settings for that team and
+            //    return a freshly built array of Form components.
+            //------------------------------------------------------------
+            Section::make('Instellingen voor geselecteerd team')
+                ->schema(fn(): array => $this->generateDynamicFieldsForTeam()),
+        ])
+            ->statePath('data');
+    }
 
-                foreach ($defaultSettingArray as $index => $item) {
-                    if (isset($newSettingArray[$index])) {
-                        $newSettingArray[$index] = array_merge($item, $newSettingArray[$index]);
+    /**
+     * Build an array of Form components based on the DB rows for $this->data['team_id'].
+     *
+     * @return \Filament\Forms\Components\Component[] 
+     */
+    protected function generateDynamicFieldsForTeam(): array
+    {
+        $components = [];
+
+        // 5) Loop door je “settings.definitions” (instellingen uit settings.php)
+        foreach (Config::get('settings.definitions') as $code => $def) {
+            // a) Alleen tonen als deze scope klopt
+            if (! in_array(static::$scope, $def['scopes'], true)) {
+                continue;
+            }
+
+            // b) Haal de bijbehorende “raw” waarde uit de DB (indien aanwezig)
+            //    Bij een groepsveld is dit vaak een JSON‐string die we straks decoderen.
+            $rawValue = $this->data[$code] ?? null;
+
+            // c) Indien het geen “group” is, maak één enkel component
+            if ($def['type'] !== 'group') {
+                // Bepaal eerst welke Filament‐component we gebruiken (text/email/number/color)
+                $componentClass = static::$fieldMap[$def['type']] ?? null;
+
+                if ($componentClass) {
+                    $field = $componentClass::make($code)
+                        ->label($def['label'])
+                        ->rules($def['rules'] ?? [])
+                        ->default($rawValue);
+
+                    // Type‐shorthand: email() en numeric() indien gewenst
+                    if ($def['type'] === 'email') {
+                        $field->email();
                     }
+                    if ($def['type'] === 'number') {
+                        $field->numeric();
+                    }
+
+                    $components[] = $field;
                 }
 
-                if ($newSettingArray !== $defaultSettingArray) {
-                    $this->team->settings()->syncWithoutDetaching([$setting->id => ['value' => $newSettingArray]]);
-                } else {
-                    $this->team->settings()->detach($setting->id);
-                }
+                continue;
+            }
+
+            // d) Als het wél een “group” is, en specifiek TASK_PRIORITY:
+            //    We gaan ervan uit dat voor TASK_PRIORITY in je settings.php
+            //    iets staat als:
+            //      'type'   => 'group',
+            //      'config' => [
+            //          'levels' => ['low','medium','high'],
+            //          'fields' => [
+            //              'time'  => [ 'label'=>'...', 'placeholder'=>'...', 'rules'=>[...] ],
+            //              'color' => [ 'label'=>'...', 'rules'=>[...] ],
+            //          ],
+            //      ],
+            //    en dat de DB‐waarde $rawValue een JSON‐string is zoals:
+            //      {
+            //        "low":    { "time": 48, "color": "#00FF00" },
+            //        "medium": { "time": 24, "color": "#FFFF00" },
+            //        "high":   { "time": 4,  "color": "#FF0000" }
+            //      }
+            if ($def['type'] === 'group' && $code === 'TASK_PRIORITY') {
+                // Decodeer de JSON naar een array
+                $groupValues = $rawValue;
+
+                // Maak voor elk “level” uit de definitie één Grid
+                $components[] = Section::make($def['label'] ?? 'Taak prioriteit')->schema(
+                    array_map(function ($level) use ($def, $code, $groupValues) {
+                        // $groupValues[$level] = ['time'=>..., 'color'=>...]
+                        $levelData = $groupValues[$level] ?? [];
+
+                        return Grid::make(12)
+                            ->schema([
+                                Placeholder::make("{$code}_label_{$level}")
+                                    ->label(__("Settings.{$level}") . ':')
+                                    ->columnSpan(1),
+
+                                TextInput::make("{$code}.{$level}.time")
+                                    ->label($def['config']['fields']['time']['label'])
+                                    ->placeholder($def['config']['fields']['time']['placeholder'])
+                                    ->rules($def['config']['fields']['time']['rules'])
+                                    ->numeric()
+                                    ->default($levelData['time'] ?? null)
+                                    ->columnSpan(4),
+
+                                ColorPicker::make("{$code}.{$level}.color")
+                                    ->label($def['config']['fields']['color']['label'])
+                                    ->rules($def['config']['fields']['color']['rules'])
+                                    ->default($levelData['color'] ?? null)
+                                    ->columnSpan(4),
+                            ]);
+                    }, $def['config']['levels'])
+                )->columns(3);
+
+                continue;
             }
         }
 
+        return $components;
+    }
+
+
+    public function save(SettingService $settingService): void
+    {
+        $data = $this->form->getState();
+        $teamId = $data['team_id'];
+
+        unset($data['team_id']);
+
+        foreach ($data as $code => $value) {
+            $settingService->set($code, $value, static::$scope, $teamId);
+        }
+
         Notification::make()
-            ->title('Saved successfully')
+            ->title('Opgeslagen')
             ->success()
             ->send();
     }
 
-    protected function generateDynamicFields()
+    public function getDefaultSettingsForSelectedTeam($teamId): array
     {
-        $result = [];
-        foreach ($this->settings as $code => $inputGroup) {
+        $settingsService = app(SettingService::class);
+        $data = [];
 
-            if ($code === 'TASK_PRIORITY') {
-
-                // Handle task priority colors dynamically
-                $result[] = Section::make("Taak prioriteit")
-                    ->schema(array_map(function ($field, $index) use ($code) {
-
-                        return Grid::make(12)
-                            ->schema([
-                                Placeholder::make('text')
-                                    ->label(__("settings.$index") . ':') // Displayed as the label for the static text
-                                    ->columnSpan(2), // Takes up one column
-                                TextInput::make("settings.$code.$index.time")
-                                    ->label(__('Tijd (minuten)')) // Translate "Time (minutes)" if needed
-                                    ->numeric()
-                                    ->default($field['time'])
-                                    ->columnSpan(5),
-                                ColorPicker::make("settings.$code.$index.color")
-                                    ->label(__('Kleur')) // Translate "Color" if needed
-                                    ->default($field['color'])
-                                    ->columnSpan(5),
-                            ]);
-                    }, $inputGroup, array_keys($inputGroup)))
-                    ->label('Taak prioriteit')
-                    ->description('De kleur die wordt toegepast op een taak hangt af van of deze minder dan het opgegeven aantal minuten geleden is aangemaakt');
-            } else {
-                // Default handling for other settings
-                $result[] = Section::make()->schema(
-                    array_map(function ($field, $index) use ($code) {
-                        return match ($field['type']) {
-                            'text' => TextInput::make("settings.$code.$index.value")
-                                ->label($field['label'])
-                                ->default($field['value']),
-                            'color' => ColorPicker::make("settings.$code.$index.value")
-                                ->label(__('Kleur')) // Translate "Color" if necessary
-                                ->default($field['value']),
-                            default => TextInput::make("settings.$code.$index.value")
-                                ->label($field['label'])
-                                ->default($field['value']),
-                        };
-                    }, $inputGroup, array_keys($inputGroup))
-                )->label($this->settingNameArray[$code]);
+        foreach (Config::get('settings.definitions') as $code => $def) {
+            if (! in_array(static::$scope, $def['scopes'], true)) {
+                continue;
             }
+            $data[$code] = $settingsService->get($code, $teamId, $def['default']);
         }
 
-        return $result;
+        return $data;
     }
 }

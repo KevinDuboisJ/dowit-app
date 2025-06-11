@@ -84,7 +84,7 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
               {headerGroup.headers.map((header) => {
                 return (
                   header.id !== 'assignedGroup' && (
-                    <TableHead key={header.id} style={{ width: header.getSize() === 'width' ? header.getSize() : `${header.getSize()}px` }} className='bg-zinc-50 text-xs text-primary'>
+                    <TableHead key={header.id} style={{ width: header.getSize() === 'width' ? header.getSize() : `${header.getSize()}px` }} className='bg-zinc-50 text-sm text-primary'>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -116,10 +116,10 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
                           >
                             {row.getIsExpanded() ? <MdOutlineKeyboardArrowDown /> : <MdOutlineKeyboardArrowRight />}
                           </button>
-                          <span className='text-xs font-medium !text-slate-700'>
+                          <span className='text-sm font-medium !text-slate-700'>
                             {row.groupingValue === 'true' ? 'Aan mij toegewezen' : 'Niet aan mij toegewezen'}
                           </span>
-                          <span className="text-xs !text-white ml-2 bg-red-600 p-1 px-2 rounded-xl">
+                          <span className="text-sm !text-white ml-2 bg-red-600 p-1 px-2 rounded-xl">
                           {row.subRows.length === 1 && row.subRows[0].original?.isDummy ? 0 : row.subRows.length}
                           </span>
                         </div>

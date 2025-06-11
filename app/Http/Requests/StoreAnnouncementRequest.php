@@ -45,7 +45,7 @@ class StoreAnnouncementRequest extends FormRequest
     public function messages()
     {
         return [
-            'date.from.after_or_equal' => 'De "from"-datum moet vandaag of een toekomstige datum zijn.',
+            'date.from.after_or_equal' => 'De startdatum moet vandaag of later zijn.',
             'announcement.required' => 'Het veld voor de mededeling is verplicht.',
         ];
     }

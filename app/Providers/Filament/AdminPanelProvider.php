@@ -21,9 +21,32 @@ use Filament\Support\Enums\MaxWidth;
 use Filament\FontProviders\GoogleFontProvider;
 use App\Filament\Pages\Dashboard;
 use App\Http\Middleware\InertiaExternalRedirect;
-
+use Filament\Facades\Filament;
+use BladeUI\Icons\Factory as IconFactory;
+use Filament\Support\Facades\FilamentAsset;
+use Filament\Support\Assets\Js;
+use Illuminate\Support\Facades\Vite;
+use Filament\Support\Facades\FilamentView;
+use Illuminate\Support\Facades\Blade;
 class AdminPanelProvider extends PanelProvider
 {
+    public function boot()
+    {
+        Filament::serving(function () {
+            Filament::registerNavigationGroups([
+                'Taakconfigurator',
+                'Instellingen',
+            ]);
+        });
+
+        // Register a custom icon path(folder) for use with the Icon Picker Filament plugin
+        app(IconFactory::class)->add('taskicons', [
+            'path' => resource_path('images/icons'),
+            'prefix' => 'az',
+        ]);
+
+         FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/src/filament/app.js')"));
+    }
     public function panel(Panel $panel): Panel
     {
         return $panel

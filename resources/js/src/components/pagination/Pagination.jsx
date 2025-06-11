@@ -23,10 +23,10 @@ export default function Pagination({
   return (
     <CustomPagination>
       <PaginationContent>
-        <PaginationCounter current_page={current_page} last_page={last_page}/>
+        <PaginationCounter current_page={current_page} last_page={last_page} />
         <PaginationFirst href={first_page_url} />
-        <PaginationPrevious href={prev_page_url} />
-        <PaginationNext href={next_page_url} />
+        <PaginationPrevious href={prev_page_url ?? ''} />
+        <PaginationNext href={next_page_url  ?? ''} />
         <PaginationLast href={last_page_url} />
       </PaginationContent>
     </CustomPagination>

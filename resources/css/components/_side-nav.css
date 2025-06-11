@@ -97,7 +97,7 @@
     }
   }
   .side-nav__devider {
-    @apply w-full h-5 pl-5 text-white/50 text-xs relative;
+    @apply w-full h-5 pl-5 text-white/50 text-sm relative;
     &:not(:first-child) {
       @apply mt-6;
     }
@@ -202,7 +202,7 @@
       }
       li a {
         &:not(.side-menu--active) {
-          @apply text-white/90 dark:text-slate-400;
+          @apply text-white dark:text-slate-400;
         }
         &.side-menu--active .side-menu__title {
           @apply font-medium;

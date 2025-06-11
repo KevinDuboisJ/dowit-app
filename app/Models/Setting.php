@@ -19,4 +19,16 @@ class Setting extends Model
     {
         return $this->BelongsTo(Team::class);
     }
+
+    // Scope for global settings
+    public function scopeGlobal($query)
+    {
+        return $query->where('type', 'global');
+    }
+
+    // Scope for team settings
+    public function scopeForTeam($query, $teamId)
+    {
+        return $query->where('type', 'team')->where('team_id', $teamId);
+    }
 }

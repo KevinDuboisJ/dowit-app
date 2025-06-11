@@ -65,7 +65,7 @@ function SquareMeterValue({ value }) {
 
 function AutocompleteValue({ field, config }) {
   // return <span>{field?.label || ''}</span>
-  return <span className={field?.name || field?.label ? "ml-1 text-xs inline-flex items-center font-bold leading-sm uppercase px-3 py-1 rounded-full bg-white text-gray-700 border" : ''}>{field?.name || field?.label || ''}</span>
+  return <span className={field?.name || field?.label ? "ml-1 text-sm inline-flex items-center font-bold leading-sm uppercase px-3 py-1 rounded-full bg-white text-gray-700 border" : ''}>{field?.name || field?.label || ''}</span>
 }
 
 export function InputDisplay({ columnType, value, config }) {

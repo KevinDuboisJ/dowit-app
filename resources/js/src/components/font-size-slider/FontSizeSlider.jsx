@@ -13,7 +13,7 @@ export const FontSizeSlider = ({fontSize, setFontSize}) => {
         <div
           className="absolute top-1/2 left-0 h-1 bg-blue-500 rounded-lg pointer-events-none"
           style={{
-            width: `${((fontSize - 12) / (20 - 12)) * 100}%`,
+            width: `${((fontSize - 12) / (26 - 12)) * 100}%`,
             transform: 'translateY(-50%)',
             zIndex: 0,
           }}
@@ -21,13 +21,11 @@ export const FontSizeSlider = ({fontSize, setFontSize}) => {
         <input
           type="range"
           min="12"
-          max="20"
+          max="26"
           value={fontSize}
           onChange={handleChange}
           className="relative z-10 w-full h-1 bg-transparent appearance-none cursor-pointer focus:outline-none focus:ring-0 focus:border-transparent"
         />
-
-
       </div>
       <span className="text-lg font-bold">A</span>
     </div>

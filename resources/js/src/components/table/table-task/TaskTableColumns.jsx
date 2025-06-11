@@ -47,7 +47,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       size: 100,
       cell: ({ cell, row }) => (
         <Tippy content="Hulp gevraagd" options={{ allowHTML: true }}>
-          <span className="relative whitespace-nowrap text-xs">
+          <span className="relative whitespace-nowrap text-sm">
             <HelpAnimation
               needsHelp={row.original.needs_help}
               isAssignedToCurrentUser={row.original.capabilities.isAssignedToCurrentUser}
@@ -64,7 +64,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       size: 130,
       cell: ({ cell, row }) => {
         const dateStr = cell.getValue();
-        return <div className="whitespace-nowrap text-xs">{format(parseISO(dateStr), 'PP HH:mm')}</div>;
+        return <div className="whitespace-nowrap text-sm">{format(parseISO(dateStr), 'PP HH:mm')}</div>;
       },
     }),
 
@@ -72,7 +72,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     columnHelper.accessor('name', {
       header: 'Taak',
       size: 150,
-      cell: (cell) => <div className='whitespace-nowrap text-xs'>{cell.getValue()}</div>,
+      cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
     }),
 
     // Task Type Column
@@ -80,7 +80,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       id: 'task_type',
       header: 'Taaktype',
       size: 150,
-      cell: (cell) => <div className='whitespace-nowrap text-xs'>{cell.getValue()}</div>,
+      cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
     }),
 
     // Assigned Users Column
@@ -98,7 +98,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       id: 'comment',
       header: 'Recente commentaar',
       cell: ({ cell }) => {
-        return <RichText text={cell.getValue()?.[0]?.content} className='whitespace-nowrap text-xs'></RichText>;
+        return <RichText text={cell.getValue()?.[0]?.content} className='whitespace-nowrap text-sm'></RichText>;
       },
     }),
 

@@ -10,12 +10,6 @@ use Filament\Forms;
 use Filament\Resources\Pages\Page;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Wizard\Step;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Group;
 use Filament\Forms\Components\View;
 use Filament\Notifications\Notification;
 use Filament\Forms\Contracts\HasForms;
@@ -23,150 +17,246 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Vite;
 use Filament\Support\Assets\Js;
+use Filament\Forms\Form;
+use Filament\Forms\Components\ViewField;
+use Filament\Forms\Components\Actions\Action as ComponentAction;
 
 class CreateTaskChainWizard extends Page implements HasForms
 {
     use InteractsWithForms;
 
+    /**
+     * If Filament routes you here with an existing TaskChain ID, this will be set.
+     * Otherwise (creating new), it stays null.
+     */
+    public ?TaskChain $record = null;
+
+    /**
+     * Holds “chain” data (e.g. name, description). Bound to the wizard form.
+     */
+    public ?string $name = null;
+    public ?string $trigger_source = null;
+    public ?string $trigger_event = null;
+    public ?int $space_id = null;
+    public ?string $description = null;
+    public ?string $conditions = null;
+    public ?bool $is_active = null;
+    public ?array $actions = [];
+
+
     protected static string $resource = TaskChainResource::class;
-    protected static string $view = 'filament.pages.create-task-chain-wizard';
+    protected static string $view     = 'filament.pages.create-task-chain-wizard';
 
-    public array $chainData = [];
-    public array $steps = [];
-    public array $validatedSteps = [];
+    /**
+     * mount(): runs when Filament instantiates this Page. If $recordId was passed
+     * (i.e. we’re editing), load the existing TaskChain and its tasks. Also register
+     * our custom JS asset here.
+     */
 
-
-    #[On('step-valid')]
-    public function onStepValid($stepIndex)
+    public function mount(?int $record = null): void
     {
-        $this->validatedSteps[] = $stepIndex;
+        // 1️⃣ Register the compiled JS (Alpine + SortableJS) so Filament loads it.
 
-        // Assume we wait for all steps (optional — or just one)
-        if (count($this->validatedSteps) === count($this->steps)) {
-            $this->validatedSteps = []; // reset
-            $this->dispatchBrowserEvent('continue-wizard-step'); // trigger Alpine to proceed
-        }
-    }
-
-
-    public static function boot(): void
-    {
         FilamentAsset::register([
-            Js::make('javascript', Vite::asset('resources/js/src/filament/app.js')),
+            Js::make('sort.js', Vite::asset('resources/js/src/filament/sort.js')),
         ]);
+
+        // If a record‐ID was provided by Filament (edit mode), load it from DB.
+        if ($record) {
+            $this->record = TaskChain::findOrFail($record);
+
+            // Fill data from the existing record.
+            $this->name       = $this->record->name;
+            $this->description = $this->record->description;
+            $this->actions = [];
+        }
+
+        //     $this->actions = [
+        //     ['id' => 99, 'type' => 'email', 'name' => 'Test Email', 'expanded' => false],
+        //     ['id' => 100, 'type' => 'approval', 'name' => 'Test Approval', 'expanded' => false],
+        // ];
+
+        // Pre‐fill the Filament form with data so the “Review” step sees them.
+        $this->form->fill();
     }
 
-    public function mount(): void
-    {
-        $this->form->fill([]);
-    }
-
-    public function getTitle(): string
-    {
-        return 'Nieuwe keten aanmaken';
-    }
-
-    protected function getFormSchema(): array
+    /**
+     * Build the Filament wizard. We have two actions:
+     *  1) “Configuration” – chain info + our drag‐and‐drop view
+     *  2) “Review & Submit” – a placeholder that shows a summary
+     */
+    public function form(Form $form): Form
     {
 
-        return [
+        return $form->schema([
             Wizard::make([
                 Step::make('Configuratie')
                     ->icon('heroicon-m-cog-6-tooth')
                     ->schema([
-                        View::make('filament.pages.task-chain-builder')->viewData([
-                            'steps' => $this->steps,
-                        ]),
+                        Forms\Components\Section::make([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Ketting naam')
+                                ->required(),
+                            Forms\Components\Select::make('trigger_source')
+                                ->label('Triggerbron')
+                                ->options([
+                                    'api' => 'API',
+                                ])
+                                ->required()
+                                ->live(),
+                            Forms\Components\Select::make('trigger_event')
+                                ->label('Triggergebeurtenis')
+                                ->options([
+                                    'create' => 'Aanmaken',
+                                ])
+                                ->required(),
+                            Forms\Components\Select::make('space_id')
+                                ->label('locatie')
+                                ->native(false)
+                                ->relationship('space', 'name')
+                                ->searchable(['name', '_spccode'])
+                                ->getSearchResultsUsing(function (string $search) {
+                                    return \App\Models\Space::query()
+                                        ->where('name', 'like', "%{$search}%")
+                                        ->orWhere('_spccode', 'like', "%{$search}%")
+                                        ->limit(50)
+                                        ->get()
+                                        ->mapWithKeys(fn($space) => [
+                                            $space->id => "{$space->name} ({$space->_spccode})",
+                                        ]);
+                                })
+                                ->reactive()
+                                ->visible(fn(\Filament\Forms\Get $get) => $get('trigger_source') === 'internal')
+                                ->required(),
+                            Forms\Components\Textarea::make('description')
+                                ->label('omschrijving')
+                                ->rows(3)
+                                ->columnSpanFull(),
+                        ])->columnSpan(6)->columns(2),
+
+                        Forms\Components\Group::make()->schema([
+                            Forms\Components\Section::make([
+                                Forms\Components\Textarea::make('conditions')
+                                    ->label('Voorwaarden (JSON format)')
+                                    ->rows(5)
+                                    ->helperText('Voorbeeld: {"campus_id": 3, "space_id":5}')
+                                    ->columnSpan(2),
+                            ]),
+
+                            Forms\Components\Section::make([
+                                Forms\Components\Toggle::make('is_active')
+                                    ->label('Actief')
+                                    ->default(true)
+                                    ->accepted(),
+                            ])
+                        ])
+                            ->columnSpan(2)
+
                     ])
-                    ->afterValidation(fn($stepIndex, $goingToStepIndex, callable $proceed) => $this->validateStepForms($stepIndex, $proceed)),
+                    ->columns(8),
 
-                // Replace the static "Steps" step with our custom drag and drop view
-                Step::make('Steps')
-                    ->icon('heroicon-m-briefcase')
+                Step::make('Acties')
+                    ->icon('heroicon-m-list-bullet')
                     ->schema([
-                        // Render our custom view that contains the two-panel drag and drop interface.
-                        // View::make('filament.pages.task-chain-builder')->viewData([
-                        //     'steps' => $this->,
-                        // ]),
+                        // ── Custom two‐pane builder ──
+                        ViewField::make('actions')->view('filament.pages.task-chain-builder', ['actions' => $this->actions])->columnSpanFull(),
 
-                    ]),
+                    ])->afterValidation(fn() => dd($this->actions)),
 
-                Step::make('Bevestiging')
+                //
+                Step::make('Review & Submit')
                     ->icon('heroicon-m-check-circle')
                     ->schema([
                         Forms\Components\Placeholder::make('summary')
-                            ->content('Review your inputs and press Create to save.')
-                    ]),
+                            ->label('Review & Confirm')
+                            ->content(fn() => logger('Review')),
+                    ])
             ])
+                ->nextAction(
+                    fn(ComponentAction $action) => $action->label('Next step'),
+                )
                 ->contained(false)
                 ->submitAction(
-                    Action::make('create')
-                        ->label('Create')
-                        ->action('create')
+                    Action::make('save')
+                        ->label($this->record ? 'Update' : 'Create')
+                        ->action(fn() => $this->saveTaskChain())
                         ->keyBindings(['enter'])
                 ),
-        ];
+
+        ]);
     }
 
-    public function validateStepForms(int $currentStep, callable $proceed)
-    {
-        // Only validate for the "Steps" step, adjust index as needed
-        if ($currentStep === 1) {
-            // Emit event to all task step forms to validate themselves
-            $this->dispatch('validate-task-steps')
-                ->to('task-step-form'); // Only targets components with this name
-        }
 
-        // Delay proceeding until step forms confirm they're valid
-        $this->dispatch('proceed-after-validation', $proceed);
+    /**
+     * Called when the “Next” button is clicked on the first wizard step.
+     * We can perform any server‐side validation here. For now, we just proceed.
+     */
+    public function onStepValid(int $currentStep, callable $proceed): void
+    {
+        // If you wanted to dispatch validation to per‐step forms, do it here.
+        // For now, we simply allow moving to the next step:
+        $proceed();
     }
 
-    public function create()
+    /**
+     * Persist (create or update) the TaskChain + its Tasks into the database.
+     */
+    protected function saveTaskChain(): void
     {
-        $state = $this->form->getState();
-        // Create the TaskChain record
-        $taskChain = TaskChain::create($state['chainData']);
+        if ($this->record) {
+            // ── Update existing TaskChain ──
+            $taskChain = $this->record;
+            $taskChain->update([
+                'name'        => $this->data['name'],
+                'description' => $this->data['description'],
+            ]);
 
-        // Process each step (the steps data is received as an array)
-        foreach ($this->steps as $step) {
-            // Here you can customize the creation process based on step type and configuration
-            Task::create([
-                ...$step,  // Contains the type and additional configuration from the step
-                'task_chain_id' => $taskChain->id,
+            // Delete any tasks that were removed by the user
+            $incomingIds = collect($this->data['actions'])->pluck('id')->filter(fn($id) => is_int($id))->all();
+            Task::where('task_chain_id', $taskChain->id)
+                ->whereNotIn('id', $incomingIds)
+                ->delete();
+        } else {
+            // ── Create a brand‐new TaskChain ──
+            $taskChain = TaskChain::create([
+                'name'        => $this->data['name'],
+                'description' => $this->data['description'],
             ]);
         }
 
+        // Upsert each step in its correct order
+        foreach ($this->actions as $sortOrder => $step) {
+            $attributes = [
+                'task_chain_id' => $taskChain->id,
+                'type'          => $step['type'],
+                'name'          => $step['name'],
+                'sort_order'    => $sortOrder,
+                // If you store extra JSON/config data in the Task model, add it here:
+                // 'config_json' => json_encode($step['config'] ?? []),
+            ];
+
+            // If this step already had a numeric DB ID, update. Otherwise, create new.
+            if (isset($step['id']) && is_int($step['id'])) {
+                Task::findOrFail($step['id'])->update($attributes);
+            } else {
+                Task::create($attributes);
+            }
+        }
+
         Notification::make()
-            ->title('Task Chain created!')
+            ->title($this->record ? 'Opgeslagen' : 'Aangemaakt')
             ->success()
             ->send();
 
-        $this->redirect(TaskChainResource::getUrl());
+        // Redirect to the Resource index
+        $this->redirect(TaskChainResource::getUrl('index'));
     }
 
-    // public function toggleExpand($index)
-    // {
-    //     $this->steps[$index]['expanded'] = !($this->steps[$index]['expanded'] ?? false);
-    // }
-
-    // public function removeStep($index)
-    // {
-    //     array_splice($this->steps, $index, 1);
-    // }
-
-
-    // public function addStep($payload)
-    // {
-    //     $position = $payload['position'] ?? count($this->steps);
-
-    //     array_splice($this->steps, $position, 0, [[
-    //         'type' => $payload['type'],
-    //         'expanded' => true,
-    //         'task_name' => '',
-    //         'task_description' => '',
-    //     ]]);
-    // }
-
+    /**
+     * Let Filament know that our “data” is using the TaskChain model
+     * (mainly for correct form binding). We manually populated $this->data
+     * in mount(), so nothing else is needed here.
+     */
     protected function getFormModel(): string
     {
         return TaskChain::class;

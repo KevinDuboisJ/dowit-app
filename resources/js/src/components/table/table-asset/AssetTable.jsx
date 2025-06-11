@@ -102,7 +102,7 @@ export const AssetTable = ({ columns, data }) => {
         <Input
           placeholder="Zoeken"
           onChange={handleSearch}
-          className="max-w-64 bg-white text-xs text-slate-500"
+          className="max-w-64 bg-white text-sm text-slate-500"
         />
       </div>
       <div className="border rounded-md overflow-auto">

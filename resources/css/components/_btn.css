@@ -15,7 +15,7 @@
 
   /* Default Sizes */
   .btn-sm {
-    @apply text-xs py-1.5 px-2;
+    @apply text-sm py-1.5 px-2;
   }
   .btn-lg {
     @apply text-lg py-1.5 px-4;

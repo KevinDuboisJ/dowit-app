@@ -35,7 +35,7 @@ class TaskPlannerService
     // Cache tasks for the day to avoid querying every minute
     // This will not refresh the cache if it already exists. Instead, it will return the cached value if it exists, or generate and store the new cache if it doesn't
     return Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () {
-      return TaskPlanner::where('next_run_at', '>=', Carbon::now()->second(0))
+      return TaskPlanner::with(['teams', 'tags'])->where('next_run_at', '>=', Carbon::now()->second(0))
         ->where('next_run_at', '<=', Carbon::now()->endOfDay())
         ->where('is_active', true)
         ->orderBy('next_run_at')

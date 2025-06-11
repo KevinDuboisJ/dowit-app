@@ -44,7 +44,7 @@ export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
         onValueChange={(value) => filtersRef.current.status_id.value = value}
         defaultValue={filtersRef.current.status_id.value || ''}
       >
-        <SelectTrigger className={cn("bg-white text-xs text-slate-500", isActive('status_id') && 'bg-[rgb(233,240,255,0.65)]')}>
+        <SelectTrigger className={cn("bg-white text-sm text-slate-500", isActive('status_id') && 'bg-[rgb(233,240,255,0.65)]')}>
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -62,7 +62,7 @@ export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
         onValueChange={(value) => filtersRef.current.team_id.value = value}
         defaultValue={String(filtersRef.current.team_id.value || '')}
       >
-        <SelectTrigger className={cn("bg-white text-xs text-slate-500", isActive('team_id') && 'bg-[rgb(233,240,255,0.65)]')}>
+        <SelectTrigger className={cn("bg-white text-sm text-slate-500", isActive('team_id') && 'bg-[rgb(233,240,255,0.65)]')}>
           <SelectValue placeholder="Team" />
         </SelectTrigger>
         <SelectContent>

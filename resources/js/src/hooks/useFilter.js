@@ -10,7 +10,6 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
   const { url } = usePage();
   const { filterFromUrlParams } = options;
   const filtersRef = useRef(filterFromUrlParams ? getFiltersFromUrlParams(url, defaultValues) : defaultValues);
-
   const setFilters = useCallback((key, value) => {
     filtersRef.current[key] = value;
   }, []);

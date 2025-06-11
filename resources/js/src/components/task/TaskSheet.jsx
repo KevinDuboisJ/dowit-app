@@ -40,9 +40,11 @@ import {
   Input,
   DateTimePicker,
   ScrollArea,
-  Autocomplete,
-  Separator
 } from '@/base-components';
+
+import {
+  PatientAutocomplete
+} from '@/components';
 
 const FormSchema = z.object({
   name: z.string().min(1, ('Naam is verplicht')), // Required string with a custom error message
@@ -207,7 +209,6 @@ const CreateTaskForm = () => {
 
   async function onSubmit(data) {
 
-    const formValues = { ...form.getValues() }
     const cleanData = { ...data }
 
     if (!data.patient.pat_id) {
@@ -224,19 +225,16 @@ const CreateTaskForm = () => {
       }
 
     } catch (error) {
-
-      console.log(error)
-      form.reset(formValues)
       // Extract error messages
-      const errorMessages = error.response?.data
-        ? Object.values(error.response.data)
+      const errorMessages = error.response?.data.message ? error.response?.data.message : error.response?.data.errors
+        ? Object.values(error.response.data.errors)
           .flat() // Flatten arrays of messages
           .join(', ') // Join messages with commas
-        : error.message; // Fallback to the generic error message
+        : 'Er is een fout opgetreden. Gelieve dit te melden aan de helpdesk'; // Fallback to the generic error message
 
       // Show the combined error messages in a toast
-      toast.error(`Validatie of serverfout: ${errorMessages}`);
-      console.error('Validatie of serverfout:', errorMessages);
+      toast.error(`${errorMessages}`);
+      console.error(`${error.message}: `, error.response);
     }
   }
 
@@ -341,7 +339,7 @@ const CreateTaskForm = () => {
                           onClear={() => {
                             field.onChange("")
                           }}
-                          className="text-xs text-slate-500 bg-white"
+                          className="text-sm text-slate-500 bg-white"
                         >
                           <SelectValue placeholder="Selecteer taaktype" />
                         </SelectTrigger>
@@ -369,7 +367,7 @@ const CreateTaskForm = () => {
                         onClear={() => {
                           field.onChange("")
                         }}
-                        className="text-xs text-slate-500 bg-white"
+                        className="text-sm text-slate-500 bg-white"
                       >
                         <SelectValue placeholder="Selecteer campus" />
                       </SelectTrigger>
@@ -393,7 +391,7 @@ const CreateTaskForm = () => {
                 <FormItem>
                   <FormLabel>Patiënt</FormLabel>
                   <FormControl>
-                    <Autocomplete onValueChange={field.onChange} />
+                    <PatientAutocomplete onValueChange={field.onChange} />
 
                   </FormControl>
                   <FormMessage />
@@ -526,21 +524,21 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
 
   return (
     <div>
-      <h2 className='text-xs font-medium'>Teams</h2>
-      <p className='text-xs text-slate-500'>Dit toont de teams waaraan deze taak zal worden toegewezen op basis van de huidige taaktoewijzingsregels</p>
+      <h2 className='text-sm font-medium'>Teams</h2>
+      <p className='text-sm text-slate-500'>Dit toont de teams waaraan deze taak zal worden toegewezen op basis van de huidige taaktoewijzingsregels</p>
 
       {teamsMatchingAssignmentRules.length > 0 ? (
         <div className='mt-2'>
           {teamsMatchingAssignmentRules.map((team, index) => (
             <span
               key={team.id}
-              className={cn({ 'ml-2': index > 0 }, 'text-xs text-slate-500 font-medium rounded-sm border p-1 bg-gray-100')}
+              className={cn({ 'ml-2': index > 0 }, 'text-sm text-slate-500 font-medium rounded-sm border p-1 bg-gray-100')}
             >
               {team.name}
             </span>
           ))}
         </div>
-      ) : <div className='mt-1 '><p className='text-xs text-yellow-700 italic'>Er is geen teamtaaktoewijzingsregel voor uw selectie</p></div>}
+      ) : <div className='mt-1 '><p className='text-sm text-yellow-700 italic'>Er is geen teamtaaktoewijzingsregel voor uw selectie</p></div>}
 
     </div>)
 };

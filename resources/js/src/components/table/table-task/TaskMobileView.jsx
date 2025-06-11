@@ -24,7 +24,7 @@ import {
   TaskSheet,
 } from '@/components';
 
-export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate, lastUpdatedTaskRef, filtersRef, setFilters }) => {
+export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate, lastUpdatedTaskRef, filtersRef }) => {
 
   const { announcements, settings, user } = usePage().props;
   const { loading, setLoading, Loader } = useLoader();
@@ -77,7 +77,7 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
 
               {/* Priority */}
               <div className='flex'>
-                <span className={`text-xs text-slate-500 font-medium ${statusColor}`}>{__(task.status.name)}</span>
+                <span className={`text-sm text-slate-500 font-medium ${statusColor}`}>{__(task.status.name)}</span>
 
               </div>
             </div>
@@ -157,15 +157,14 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
 
             <FilterBar
               filtersRef={filtersRef}
-              handleFilters={(filters) => {
+              onApplyFilters={({ activeFilters }) => {
                 setLoading(true)
-                setFilters(filters)
-                router.get('/', { filters: filters }, {
+                router.get('/', { filters: activeFilters }, {
                   only: ['tasks'],
                   queryStringArrayFormat: 'indices',
                   preserveState: true,
                   onSuccess: ({ props }) => {
-                    setTasks(props.tasks);
+                    setTasks(props.tasks.data);
                     setLoading(false)
                   },
                   onError: (error) => {
@@ -194,7 +193,7 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
             <AccordionTrigger className='text-sm font-bold p-4 cursor-pointer hover:no-underline'>
               <span>
                 Aan mij toegewezen
-                <span className='ml-1 text-xs text-white bg-red-600 p-1 px-2 rounded-xl'>{todoTasks.length}</span>
+                <span className='ml-1 text-sm text-white bg-red-600 p-1 px-2 rounded-xl'>{todoTasks.length}</span>
               </span>
             </AccordionTrigger>
             <AccordionContent asChild>
@@ -210,7 +209,7 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
             <AccordionTrigger className='text-sm font-bold p-4 cursor-pointer hover:no-underline'>
               <span>
                 Niet aan mij toegewezen
-                <span className="ml-1 text-xs text-white bg-red-600 p-1 px-2 rounded-xl">{openTasks.length}</span>
+                <span className="ml-1 text-sm text-white bg-red-600 p-1 px-2 rounded-xl">{openTasks.length}</span>
               </span>
 
 
@@ -233,9 +232,9 @@ const InfoRow = ({ icon = null, label, value, minWidth = '90px' }) => {
     <div className="flex items-start text-gray-700">
       <div style={{ minWidth: minWidth }} className="flex items-center space-x-1 min-w-0">
         {icon}
-        <span className="text-xs text-slate-500">{label}</span>
+        <span className="text-sm text-slate-500">{label}</span>
       </div>
-      {isValidElement(value) ? value : <span className="text-xs font-medium text-slate-500">{value}</span>}
+      {isValidElement(value) ? value : <span className="text-sm font-medium text-slate-500">{value}</span>}
     </div>
   );
 };

@@ -14,22 +14,19 @@ Thing to do in production when pulling new version.
 
 Behavior and flow
 Teams behaviour:
- 1. Records are visible for the creator.
- 2. Records are visible for the teams who are assigned to the resource(for TaskAssignment for example is the teams for which the TaskAssignmentRule wil apply)
- 3. An user can remove a team from a record even if they dont belong to it but only add from his own teams.
-
-
+ 1. Super admins can do everything
+ 2. Records are visible for the creator but are not editable if they dont belong to atleast one team or deletable only if it belong to all teams.
+ 3. Records are visible for the teams who are assigned to it. If a record is shared between multiple teams an user cant remove a team from the record if they dont belong to it,
+    they only can see to what teams the record belongs to
+    
 If a user belongs to both Bewaking and Schoonmaak CA, and there is a shared assignment rule for both, then when the user creates a task planner that complies with those rules, the task will be assigned to Bewaking and Schoonmaak CA
 Schoonmaak CA admin can see that record and see to what teams it applies to, even if they do not belong to that team. But only a user that belongs to all the assigned teams can edit it.
 
-
- 
-
-When to udpate the user UI
+When to update the user UI
   1. A task can be replaced or added by the task planner
-  2. a User updates the task
+  2. a User updates the task.
+  
 
-// This is the test,
 TO-DO's
   IMPORTANT: MAKE comments and task creation with richt text editor.
   1. Change icons in filament.
@@ -41,6 +38,13 @@ TO-DO's
   53. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
   59. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
   60. Replace tippy.js with floatingUI
+  61. Fix the api route for laravel 11
+  62. Check basic functionaility works before pushing to production
+  63. Push and pull in production.
+  64. Get the HL7 message in a api route to test(check mirth to send this data)
+  65. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
+  66. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
+  67. tiptap both in the react and the filament version seems to be removing the target property of the <a> tag
 
 Questions.
   1. How can i know if a patient left a room?

@@ -127,7 +127,7 @@ const Newsfeed = ({ newsfeed: initNewsfeed, teammates, statuses, teams }) => {
           }}
             defaultValue={null}
           >
-            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+            <SelectTrigger className='w-[180px] bg-white text-sm text-slate-500'>
               <SelectValue placeholder='Medewerkers' />
             </SelectTrigger>
             <SelectContent>
@@ -141,7 +141,7 @@ const Newsfeed = ({ newsfeed: initNewsfeed, teammates, statuses, teams }) => {
           <Select onValueChange={(e) => {
             handleSearch('teams.id', '=', e)
           }}>
-            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+            <SelectTrigger className='w-[180px] bg-white text-sm text-slate-500'>
               <SelectValue placeholder='Team' />
             </SelectTrigger>
             <SelectContent>
@@ -155,7 +155,7 @@ const Newsfeed = ({ newsfeed: initNewsfeed, teammates, statuses, teams }) => {
           <Select onValueChange={(e) => {
             handleSearch('status_id', '=', e)
           }}>
-            <SelectTrigger className='w-[180px] bg-white text-xs text-slate-500'>
+            <SelectTrigger className='w-[180px] bg-white text-sm text-slate-500'>
               <SelectValue placeholder='Status' />
             </SelectTrigger>
             <SelectContent>

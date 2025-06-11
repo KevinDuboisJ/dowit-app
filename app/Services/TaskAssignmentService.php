@@ -18,22 +18,23 @@ class TaskAssignmentService
    * @param  int[]  $allowedTeamsScopeIds only include these teams
    * @return Collection|\App\Models\Team[]
    */
-  public static function getAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds): Collection {
+  public static function getAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds): Builder
+  {
 
     return TaskAssignmentRule::with('teams')
       ->byBelongsToTeamIds($allowedTeamsScopeIds)
       ->byTaskMatch($task);
 
-      
-      // ->get()
-      // ->flatMap->teams
-      // ->unique('id')
-      // ->values();
+
+    // ->get()
+    // ->flatMap->teams
+    // ->unique('id')
+    // ->values();
   }
 
   public static function assignTaskToTeams(Task $task, array $allowedTeamsScopeIds): void
   {
-    $teams = self::getAssignmentRulesByTaskMatchAndTeams($task, $allowedTeamsScopeIds);
+    $teams = self::getAssignmentRulesByTaskMatchAndTeams($task, $allowedTeamsScopeIds)->get();
 
     // Attach the task to each matched team
     if (!$teams->isEmpty()) {
@@ -46,11 +47,13 @@ class TaskAssignmentService
     }
   }
 
-  public static function getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds) {
+  public static function getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds)
+  {
     return Team::whereHas('taskAssignmentRules', function ($query) use ($task, $allowedTeamsScopeIds) {
       $query->byBelongsToTeamIds($allowedTeamsScopeIds)
-            ->byTaskMatch($task);
-  })->distinct();
+        ->byTaskMatch($task);
+    })
+      ->byTeamsUserBelongsTo()
+      ->distinct();
   }
-  
 }

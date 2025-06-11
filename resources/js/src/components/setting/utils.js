@@ -20,7 +20,6 @@ export const getPriority = (createdAt, taskPriority, setting) => {
     const timeWindow = setting[priority].time * 60000; // Convert seconds to milliseconds
 
     if (elapsedTimeSinceTaskCreation <= timeWindow) {
-      // console.log([elapsedTimeSinceTaskCreation, timeWindow])
       data.state = __(priority); // Return color if within the time window
       data.color = setting[priority].color; // Return color if within the time window
 

@@ -271,13 +271,13 @@ const DataRow = ({ task }) => {
     <div className="p-2 space-y-2">
       {/* Header Row */}
       <div className="flex items-center text-gray-500 text-sm font-medium">
-        <div className="flex-1 text-xs px-4">Status wijzigen</div>
-        <div className="flex-1 text-xs px-4">Prioriteit wijzigen</div>
-        <div className="flex-1 text-xs px-4">Collega nodig</div>
+        <div className="flex-1 text-sm px-4">Status wijzigen</div>
+        <div className="flex-1 text-sm px-4">Prioriteit wijzigen</div>
+        <div className="flex-1 text-sm px-4">Collega nodig</div>
       </div>
 
       {/* Data Row */}
-      <div className="flex items-center divide-x divide-gray-300 text-xs text-gray-800">
+      <div className="flex items-center divide-x divide-gray-300 text-sm text-gray-800">
         {/* Status */}
         <div className="flex-1 h-8 px-4">
 

@@ -27,7 +27,7 @@ import {
 
 export const TaskDetails = ({ task }) => {
 
-  const { settings } = usePage().props;
+  const { user, settings } = usePage().props;
   const priorityObj = getPriority(task.created_at, task.priority, settings.TASK_PRIORITY.value);
 
   const opacity = useMemo(() => {
@@ -98,7 +98,7 @@ export const TaskDetails = ({ task }) => {
           <InfoRow
             icon={<Heroicon icon="UserGroup" variant="solid" className="w-4 h-4 text-slate-400" />}
             label="Teams:"
-            value={<TeamTag teams={task?.teams} />}
+            value={<TeamTag user={user} teams={task?.teams} />}
           />
 
           <IconContext.Provider value={{ color: "94A3B8" }}>
@@ -117,7 +117,7 @@ export const TaskDetails = ({ task }) => {
               <AvatarStack avatars={task.assignees} maxAvatars={16} className='w-10 h-10' />
             </AvatarStackWrap>
 
-            : <span className='text-xs font-medium italic'>Geen persoon toegewezen</span>
+            : <span className='text-sm font-medium italic'>Geen persoon toegewezen</span>
           }
 
         </div>
@@ -160,29 +160,34 @@ const InfoRow = ({ icon = null, label, value, minWidth = '150px', className, sty
       {/* Left Section: Icon + Label */}
       <div style={{ minWidth: minWidth }} className="flex items-center space-x-1 min-w-0">
         {icon}
-        <span className="text-xs text-slate-500">{label}</span>
+        <span className="text-sm text-slate-500">{label}</span>
       </div>
 
 
       {/* Right Section: Value */}
-      {isValidElement(value) ? value : <span className="text-xs text-ellipsis overflow-hidden whitespace-nowrap">{value}</span>}
+      {isValidElement(value) ? value : <span className="text-sm text-ellipsis overflow-hidden whitespace-nowrap">{value}</span>}
 
     </div>
   );
 };
 
-const TeamTag = ({ teams }) => {
+const TeamTag = ({ user, teams }) => {
 
   // Ensure `teams` is always an array
   teams = teams || [];
 
+  if (!Object.values(user.roles).includes('SUPER_ADMIN')) {
+    teams =  teams.filter(team => team.name !== 'Reserve');
+  }
+
+  console.log(user);
   return (
     teams.length > 0 ? teams.map((team, index) => (
-      <span key={team.id} className={cn({ 'ml-0': index === 0, 'ml-2': index > 0 }, 'text-xs text-gray-900 rounded-sm')}>
+      <span key={team.id} className={cn({ 'ml-0': index === 0, 'ml-2': index > 0 }, 'text-sm text-gray-900 rounded-sm')}>
         {team.name}
       </span>
 
-    )) : <span className='text-xs font-medium'>Deze taak is niet gekoppeld aan een team</span>
+    )) : <span className='text-sm font-medium'>Deze taak is niet gekoppeld aan een team</span>
   );
 };
 
@@ -199,7 +204,7 @@ const AssetList = ({ assets }) => {
         assets.map((asset) => (
           <div
             key={asset.id}
-            className="opacity-70 text-xs p-[6px] w-full text-slate-800 font-normal rounded-lg border bg-yellow-50 flex items-center justify-between cursor-pointer"
+            className="opacity-70 text-sm p-[6px] w-full text-slate-800 font-normal rounded-lg border bg-yellow-50 flex items-center justify-between cursor-pointer"
             onClick={() => setSelectedAsset(asset.link)} // Clicking anywhere opens the iframe
           >
             {/* Asset Name & Icon */}
@@ -222,7 +227,7 @@ const AssetList = ({ assets }) => {
           </div>
         ))
       ) : (
-        <span className="text-xs font-medium ml-4">
+        <span className="text-sm font-medium ml-4">
           Dit taaktype heeft geen bestanden
         </span>
       )}

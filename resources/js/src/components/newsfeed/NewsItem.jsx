@@ -17,7 +17,7 @@ export const NewsItem = ({ newsItem }) => {
           </div>
           <div
             className={cn(
-              "ml-auto text-xs",
+              "ml-auto text-sm",
               newsItem.selected === newsItem.id
                 ? "text-foreground"
                 : "text-muted-foreground"
@@ -32,7 +32,7 @@ export const NewsItem = ({ newsItem }) => {
           <AvatarImage src={newsItem.user?.image_path} alt={newsItem.user?.firstname} />
           <AvatarFallback>{newsItem.user?.firstname.charAt(0)}</AvatarFallback>
         </Avatar>
-        <div className="relative w-full p-3 py-2 text-xs text-muted-foreground border border-slate-100 rounded border-neutral-200 bg-slate-50
+        <div className="relative w-full p-3 py-2 text-sm text-muted-foreground border border-slate-100 rounded border-neutral-200 bg-slate-50
     after:content-[''] after:absolute after:z-10 after:left-[-10px] after:top-[5px] after:w-0 after:h-0 after:border-r-[10px] after:border-r-neutral-200 after:border-t-[10px] after:border-t-transparent after:border-b-[10px] after:border-b-transparent">
 
           <span className="block">{newsItem?.task_id ? newsItem.task.name : 'Mededeling'}</span>
@@ -49,7 +49,7 @@ export const NewsItem = ({ newsItem }) => {
             </div>
           )}
 
-          <span className="block text-xs mt-1">{createdAt}</span>
+          <span className="block text-sm mt-1">{createdAt}</span>
 
         </div>
       </div>

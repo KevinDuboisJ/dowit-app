@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -17,22 +17,22 @@ const badgeVariants = cva(
         outline:
           "text-foreground",
         progress:
-          "font-medium text-xs rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
+          "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         success:
-          "font-normal text-xs rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
+          "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
 
         Added:
-          "font-medium text-xs rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
+          "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         Replaced:
-          "font-medium text-xs rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
+          "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         InProgress:
-          "font-medium text-xs rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
+          "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         WaitingForSomeone:
-          "font-normal text-xs rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
+          "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
         Completed:
-          "font-normal text-xs rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
+          "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
         Skipped:
-          "font-normal text-xs rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
+          "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
       },
     },
     defaultVariants: {

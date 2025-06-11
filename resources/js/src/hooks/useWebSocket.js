@@ -32,7 +32,7 @@ export const useWebSocket = () => {
     }
   }, [user]);
 
-  // Reconnect WebSocket
+  // Workaround for connectivity issues
   const reconnectWebSocket = useCallback(async () => {
     try {
       await axios.get(import.meta.env.VITE_APP_URL + ':6002', { mode: 'no-cors' });
@@ -45,6 +45,7 @@ export const useWebSocket = () => {
   // Set up WebSocket on mount, clean up on unmount
   useEffect(() => {
     reconnectWebSocket();
+    connectWebSocket();
 
     return () => {
       if (user?.id) {
@@ -54,7 +55,7 @@ export const useWebSocket = () => {
         window.Echo.leave(`team.${team.id}`);
       });
     };
-  }, [user, reconnectWebSocket]);
+  }, [user]);
 
   return { onEvent, newEvent }; // Expose onEvent and newEvent
 };
@@ -66,11 +67,15 @@ export const shouldProcessEvent = (processedEventIds, event, user) => {
 
   console.log("Processing check for WebSocket event:", event);
 
-  // Ignore events created by the current user
-  if (event.createdBy === user.id && event.source === 'dashboard') return false;
+  if (event.createdBy === user.id && event.source === 'dashboard') {
+    console.log("WebSocket event created by the current user, skipped:", event);
+    return false;
+  }
 
-  // If already processed, skip it
-  if (processedEventIds.has(event.id)) return false;
+  if (processedEventIds.has(event.id)) {
+    console.log("WebSocket event already processed, skipped:", event);
+    return false;
+  }
 
   // Add to cache (limit to last 10)
   processedEventIds.add(event.id);

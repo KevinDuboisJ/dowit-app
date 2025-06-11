@@ -45,6 +45,8 @@
     /* Theme */
     --app-background: theme('colors.rgb.neutral.100');
     --app-background-secondary: theme('colors.rgb.neutral.50');
+    --app-link: theme('colors.indigo.800');
+    
   }
 
   /* Default dark-mode colors */

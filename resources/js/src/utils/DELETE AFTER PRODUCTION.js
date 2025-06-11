@@ -1,4 +1,4 @@
-i have this code is it better to extract it in individual js files? import dayjs from 'dayjs'
+// i have this code is it better to extract it in individual js files? import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import {clsx} from 'clsx'
 import {twMerge} from 'tailwind-merge'

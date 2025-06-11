@@ -50,7 +50,7 @@ export const SegmentButton = forwardRef<SegmentButtonRef, SegmentButtonProps>(
           disabled,
         }}
       >
-        <div className="text-xs space-y-2">{children}</div>
+        <div className="text-sm space-y-2">{children}</div>
       </SegmentButtonContext.Provider>
     );
   }

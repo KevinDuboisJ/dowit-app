@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Models\Comment;
-use App\Services\TeamService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\Helper;
@@ -48,7 +47,7 @@ class NewsfeedController extends Controller
 
     return Inertia::render('Newsfeed', [
       'newsfeed' => fn() => $newsfeed,
-      'teammates' => fn() => $user->getTeammates(),
+      'teammates' => fn() => User::byTeams()->get(),
       'statuses' => fn() => DB::table('task_statuses')->select('id', 'name')->whereIn('id', [1, 2, 4, 5, 6, 12])->get(),
       'teams' => fn() => $user->getTeams(),
     ]);

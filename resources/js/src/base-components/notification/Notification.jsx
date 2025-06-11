@@ -57,7 +57,7 @@ const Notification = ({ user }) => {
             </div>
             <div className="ml-2">
               <a className="font-medium mr-1">Systeem</a> <span className="text-slate-500">{message} </span>
-              <div className="text-xs text-slate-400 mt-1">{dateTime}</div>
+              <div className="text-sm text-slate-400 mt-1">{dateTime}</div>
             </div>
           </div> : 'Er zijn geen notificaties'}
 

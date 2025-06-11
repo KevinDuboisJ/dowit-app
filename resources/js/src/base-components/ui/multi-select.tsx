@@ -224,7 +224,7 @@ export const MultiSelect = React.forwardRef<
               value={inputValue}
               onChange={handleInputChange}
               placeholder={placeholder}
-              className="border-none shadow-none flex-1 h-8 text-xs"
+              className="border-none shadow-none flex-1 h-8 text-sm"
             />
             {selectedValues.length > 0 && (
               <XIcon
@@ -262,7 +262,7 @@ export const MultiSelect = React.forwardRef<
                       <CommandItem
                         key="all"
                         onSelect={toggleAll}
-                        className="gap-1 text-xs cursor-pointer"
+                        className="gap-1 text-sm cursor-pointer"
                       >
                         <div
                           className={cn(
@@ -288,7 +288,7 @@ export const MultiSelect = React.forwardRef<
                           onSelect={() => !isDisabled && toggleOption(option)}
                           className={cn(
                             { "opacity-50 cursor-not-allowed": isDisabled },
-                            "gap-1 text-xs cursor-pointer"
+                            "gap-1 text-sm cursor-pointer"
                           )}
                           value={option.value}
                         >

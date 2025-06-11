@@ -61,10 +61,10 @@
         @apply bg-primary border-primary rounded-md;
     }
     .fc-event-title-container {
-        @apply py-1 px-2 text-xs;
+        @apply py-1 px-2 text-sm;
     }
     .fc-daygrid-event {
-        @apply text-xs;
+        @apply text-sm;
     }
     .fc-daygrid-event-dot {
         @apply border-primary mr-2;

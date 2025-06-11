@@ -30,7 +30,17 @@ trait HasTeams
 
             /** @var self $model */
             $model = new static;
-            $model->scopeByOwnOrBelongsToUserTeams($query, $user);
+
+            $query->where(function ($query) use ($model, $user) {
+                $model->scopeByOwnOrBelongsToUserTeams($query, $user);
+
+                // If the model has an 'assignees' relationship, include assigned tasks
+                if (method_exists($model, 'assignees')) {
+                    $query->orWhereHas('assignees', function ($q2) use ($user) {
+                        $q2->where('users.id', $user->id);
+                    });
+                }
+            });
         });
     }
 
@@ -40,6 +50,12 @@ trait HasTeams
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class);
+    }
+
+    // Team.php
+    public function users()
+    {
+        return $this->belongsToMany(User::class);
     }
 
     public function scopeByOwnOrBelongsToUserTeams(Builder $query, User $user): Builder
@@ -70,5 +86,4 @@ trait HasTeams
 
         return $query;
     }
-
 }

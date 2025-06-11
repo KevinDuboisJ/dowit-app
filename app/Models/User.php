@@ -66,6 +66,15 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         return "{$this->firstname} {$this->lastname}";
     }
 
+    // Scope users by teams or default to the authenticated user's teams
+    public function scopeByTeams(Builder $query, ?array $teamIds = null): Builder
+    {
+        $teamIds = $teamIds ?? auth()->user()?->teams->pluck('id') ?? [];
+
+        return $query
+            ->whereHas('teams', fn($q) => $q->whereIn('teams.id', $teamIds));
+    }
+
     public function scopeExcludeSystemUser($query)
     {
         return $query->where('id', '!=', config('app.system_user_id'));
@@ -209,16 +218,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         }
 
         return $this->teams()->get();
-    }
-
-    public function getTeammates()
-    {
-        return self::whereHas('teams', function ($query) {
-            $query->whereIn('teams.id', $this->teams()->pluck('teams.id'));
-        })
-            ->where('id', '!=', $this->id) // Exclude the current user
-            ->distinct()
-            ->get();
     }
 
     public function getSettings()
