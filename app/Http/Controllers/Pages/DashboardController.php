@@ -48,6 +48,17 @@ class DashboardController extends Controller
           });
       }),
 
+      'tags' => Inertia::lazy(function () {
+        return DB::table('tags')
+          ->select('id', 'name')
+          ->get()->map(function ($item) {
+            return [
+              'value' => $item->id,
+              'label' => $item->name,
+            ];
+          });
+      }),
+
       'task_types' => Inertia::lazy(function () {
         return DB::table('task_types')
           ->select('id', 'name')
@@ -60,12 +71,20 @@ class DashboardController extends Controller
       }),
 
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(new Task([
+        $task = new Task([
           'campus_id' => $request->input('campus') ?? null,
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]), Auth::user()->teams->pluck('id')->all())->get();
+        ]);
+
+        $task->setRelation(
+          'tags',
+          collect($request->input('tags') ?? [])
+            ->map(fn($id) => ['id' => (int) $id])
+        );
+
+        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task, Auth::user()->teams->pluck('id')->all())->get();
       }),
 
       'patients' => Inertia::lazy(function () use ($request) {
@@ -126,5 +145,4 @@ class DashboardController extends Controller
     broadcast(new BroadcastEvent($announcement, 'announcement_created', 'dashboard-announce'));
     return response()->json($announcement);
   }
-
 }

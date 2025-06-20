@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { __ } from '@/stores';
 import helpAnimation from '@json/animation-help.json';
 import Lottie from "lottie-react";
-import { Loader, AvatarStack, Tippy, RichText} from '@/base-components';
+import { Loader, AvatarStack, Tippy, RichText } from '@/base-components';
 import { TaskActionButton, getPriority } from '@/components';
 
 export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
@@ -45,17 +45,23 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       id: 'status',
       header: 'Status',
       size: 100,
-      cell: ({ cell, row }) => (
-        <Tippy content="Hulp gevraagd" options={{ allowHTML: true }}>
+      cell: ({ cell, row }) => {
+        return row.original.needs_help ? (
+          <Tippy content="Hulp gevraagd" options={{ allowHTML: true }}>
+            <span className="relative whitespace-nowrap text-sm">
+              <HelpAnimation
+                needsHelp={row.original.needs_help}
+                isAssignedToCurrentUser={row.original.capabilities.isAssignedToCurrentUser}
+              />
+              {__(cell.getValue())}
+            </span>
+          </Tippy>
+        ) : (
           <span className="relative whitespace-nowrap text-sm">
-            <HelpAnimation
-              needsHelp={row.original.needs_help}
-              isAssignedToCurrentUser={row.original.capabilities.isAssignedToCurrentUser}
-            />
             {__(cell.getValue())}
           </span>
-        </Tippy>
-      ),
+        )
+      },
     }),
 
     // Start Date Column

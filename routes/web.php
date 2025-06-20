@@ -10,6 +10,7 @@ use App\Http\Controllers\Pages\PatientController;
 use App\Http\Controllers\Pages\UserController;
 use App\Http\Controllers\Pages\TeamController;
 use App\Http\Controllers\Pages\SpaceController;
+use App\Http\Controllers\Pages\TagController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,7 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
   Route::post('users/search', [UserController::class, 'search'])->name('user.search');
   Route::post('teams/search', [TeamController::class, 'search'])->name('team.search');
   Route::post('spaces/search', [SpaceController::class, 'search'])->name('space.search');
+  Route::post('tags/search', [TagController::class, 'search'])->name('tag.search');
   Route::post('/announce', [DashboardController::class, 'announce'])->name('dashboard.announce');
   Route::post('/announce/{comment}/mark-as-read', [DashboardController::class, 'markAsRead'])->name('dashboard.markAsRead');
   Route::post('/task/store', [TaskController::class, 'store'])->name('task.store');

@@ -75,7 +75,7 @@ class TaskStepForm extends Component implements HasForms
     {
         $this->validate();
 
-        // Notify parent (CreateTaskChainWizard) that validation was successful
+        // Notify parent (CreateChainWizard) that validation was successful
         $this->dispatch('step-valid', stepIndex: $this->stepIndex);
     }
 

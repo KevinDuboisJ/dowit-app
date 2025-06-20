@@ -32,6 +32,11 @@ class TaskAssignmentRuleResource extends Resource
     protected static ?int $navigationSort = 3;
     protected static array $staticOptions;
 
+    public static function GetTheform(Form $form): Form
+    {
+        return self::form($form);
+    }
+
     public static function form(Form $form): Form
     {
         self::addStaticOptions(TaskType::query()->pluck('name', 'id')->toArray());
@@ -172,7 +177,7 @@ class TaskAssignmentRuleResource extends Resource
                     ->label('Bestemmingslocaties'),
                 TextColumn::make('tags')
                     ->label('Tags')
-                    ->formatStateUsing(fn ($state) => $state['name'] ?? '')
+                    ->formatStateUsing(fn($state) => $state['name'] ?? '')
                     ->badge(),
             ])
             ->filters([
@@ -182,7 +187,7 @@ class TaskAssignmentRuleResource extends Resource
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make()
                         ->label('Bewerken'),
-                        
+
                     Tables\Actions\DeleteAction::make(),
                 ]),
 

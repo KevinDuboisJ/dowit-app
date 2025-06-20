@@ -1,13 +1,17 @@
+1. Identifier: User gives a identifier in this serves for identifing the chain and for the api it helps creating only one endpoint api/v1/{identifier}
+2. description: in case user want to specify what the chain does.
+3. trigger_type: the user specifies if it is triggered via the APi or INTERNAL
+4. actions user can currently only select 'custom' and add extra field custom_code_class->label is 'interface'
 
+For the internal trigger: add a TaskObserver with ChainService::execute('internal', $task) and Register it in AppServiceProvider.
+
+1. Bijlage toevoegen in task and taskplanner.
+3. Taak van sletuel, taken van nood kloppen
+3. Bijlage optie.
 
 
 Thing to do in production when pulling new version.
-1. Change the user_id column to created_by in task_planners, teams, task(create it here)
-2. php artisan migrate:refresh --path=/database/migrations/*.php (all the mgirations file from 2025_04_24_143556 until today) 
-3. add assets json to task_planners
-4. Add icon column to tasktype and tag
-5. Add tag json column to task_assignment_rules and created_by
-6. Add deleted_at to assets, taskplanner, teams, TaskAssignmentRule, Ketens, feestdagen en rollen
+1. Make sure the Chain table is equal to the test one
 
 
 • The hintIcon tooltip hides on click and escapes HTML, so a custom component is used to allow HTML and custom behavior.
@@ -45,6 +49,11 @@ TO-DO's
   65. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
   66. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
   67. tiptap both in the react and the filament version seems to be removing the target property of the <a> tag
+  69. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
+  70. Fix creatorField in hasFilamentField so that it uses created_by instead of dynamic generated
+  71. when searching locations omit characters like '-' or '_' so that receptie - onthaal for example can be found as receptie onthaal
+  72. when creating task show loader until notification is showed that it was succesfully created
+  73. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
 
 Questions.
   1. How can i know if a patient left a room?
@@ -230,3 +239,21 @@ WebSockets: For real-time updates.
 Polling/Resync: Periodically fetch the current state to ensure consistency (e.g., every 5 minutes or on reconnection).
 Conclusion:
 Websockets are safe and effective for maintaining real-time sync between the server and clients, but they need proper handling to ensure users don’t miss updates. By implementing acknowledgment, resynchronization, and fallback mechanisms, you can ensure a robust and reliable system even in cases of network or server issues.
+
+
+improve this promt. I have a laravel 11 task management system and i want to add an chain module using laravel filament v3 that basically triggers a task based on certain event the table is named chains. For example first when certain action happen internally in the system like when a task is created with specific conditions like it has certain task type, create then another task or specify that is custom code that is written inside the laravel 11 app. And second most important via API that when certain endpoint is triggered also a task is created with certain condition or the same specify as before that is a custom code that wil be executed. For the api as security add only a IP whitelist field so that only those ip can trigger the endpoint (allow multiple IPs field). For the API for example a HL7 message wil be sended when an patient is admited, create for me also the custom code to process this. The idea is that the patient information liek this: $table->string('patient_id');
+            $table->string('visit_id');
+            $table->string('firstname')->nullable();
+            $table->string('lastname')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('birthdate')->nullable();
+            $table->string('ext_id_1')->nullable();
+            $table->string('campus_id')->nullable();
+            $table->string('ward_id')->nullable();
+            $table->foreignId('room_id')->nullable();
+            $table->string('bed_id')->nullable();
+            $table->datetime('admission')->nullable();
+            $table->datetime('discharge')->nullable();
+are stored in the patient table. also there wil be a department table to track the departments where the patient is to track if a transfer happens also a room and bed table wil exist to track in what room and bed the patient is.  Also give me ideas of improvement if you see necessary to develope this idea.
+
+

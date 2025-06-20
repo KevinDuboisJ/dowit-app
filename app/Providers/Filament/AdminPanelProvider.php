@@ -28,6 +28,7 @@ use Filament\Support\Assets\Js;
 use Illuminate\Support\Facades\Vite;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Support\Facades\Blade;
+
 class AdminPanelProvider extends PanelProvider
 {
     public function boot()
@@ -45,7 +46,8 @@ class AdminPanelProvider extends PanelProvider
             'prefix' => 'az',
         ]);
 
-         FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/src/filament/app.js')"));
+        FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/src/filament/app.js')"));
+        FilamentAsset::register([Js::make('tiptap-custom-extension-scripts', Vite::asset('resources/js/src/filament/tiptap/extensions.js'))->module()], 'awcodes/tiptap-editor');
     }
     public function panel(Panel $panel): Panel
     {

@@ -20,21 +20,14 @@ class TaskAssignmentService
    */
   public static function getAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds): Builder
   {
-
     return TaskAssignmentRule::with('teams')
       ->byBelongsToTeamIds($allowedTeamsScopeIds)
       ->byTaskMatch($task);
-
-
-    // ->get()
-    // ->flatMap->teams
-    // ->unique('id')
-    // ->values();
   }
 
   public static function assignTaskToTeams(Task $task, array $allowedTeamsScopeIds): void
   {
-    $teams = self::getAssignmentRulesByTaskMatchAndTeams($task, $allowedTeamsScopeIds)->get();
+    $teams = self::getAssignmentRulesByTaskMatchAndTeams($task, $allowedTeamsScopeIds)->get()->flatMap->teams->unique('id')->values();
 
     // Attach the task to each matched team
     if (!$teams->isEmpty()) {

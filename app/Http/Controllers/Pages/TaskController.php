@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
+use Illuminate\Support\Arr;
 
 class TaskController extends Controller
 {
@@ -99,16 +100,21 @@ class TaskController extends Controller
           ]);
         }
         // Create the task with validated data
-        $task = new Task([...$data['task'], 'patient_id' => $patient->id]);
+        $task = new Task([$data['task'], 'patient_id' => $patient->id]);
       }
 
       if (!isset($patient)) {
         $task = new Task($data['task']);
       }
 
+      // Set inactive if the task has to be triggered in the future
       $task->deactivateIfScheduledForFuture();
+
+      // Save in db
       $task->save();
 
+      // Sync tags
+      $task->tags()->sync(collect($data['tags'] ?? [])->pluck('value'));
 
       // Sync the many-to-many relationship for assigned users
       if ($request->validated('assignTo')) {
@@ -165,7 +171,6 @@ class TaskController extends Controller
       }
 
       return response()->json(['data' => $tasks, 'updatedTask' => $result['task']]);
-
     } catch (\Exception $e) {
       logger()->error('Task update failed', ['error' => $e->getMessage()]);
       return response()->json([

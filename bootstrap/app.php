@@ -7,11 +7,12 @@ use App\Http\Middleware\LogWithId;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Inertia\Inertia;
+use App\Http\Middleware\ChainAccessControl;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
+        api: __DIR__ . '/../routes/api.php',
         apiPrefix: 'api/v1',
         commands: __DIR__ . '/../routes/console.php',
         channels: __DIR__ . '/../routes/channels.php',
@@ -20,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             LogWithId::class,
+        ]);
+        $middleware->alias([
+            'ip.whitelist' => ChainAccessControl::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

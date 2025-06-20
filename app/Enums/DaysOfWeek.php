@@ -6,7 +6,6 @@ use Filament\Support\Contracts\HasLabel;
 
 enum DaysOfWeek implements HasLabel
 {
-
     case Monday;
     case Tuesday;
     case Wednesday;

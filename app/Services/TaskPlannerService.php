@@ -99,6 +99,7 @@ class TaskPlannerService
         // 1. Create the new task from recurrence
         $task = new Task([
           'task_planner_id' => $taskPlanner->id,
+          'description' => $taskPlanner->description,
           'start_date_time' => $startDateTime ?? $taskPlanner->next_run_at,
           'name' => $taskPlanner->name,
           'campus_id' => $taskPlanner->campus_id,
@@ -111,10 +112,10 @@ class TaskPlannerService
         $task->save();
 
         // Add Initial comment
-        $task->comments()->create([
-          'user_id' => $taskPlanner->created_by,
-          'content' => $taskPlanner->comment
-        ]);
+        // $task->comments()->create([
+        //   'user_id' => $taskPlanner->created_by,
+        //   'content' => $taskPlanner->comment
+        // ]);
 
         // Handle assignations
         $this->handleAssignations($taskPlanner, $task);

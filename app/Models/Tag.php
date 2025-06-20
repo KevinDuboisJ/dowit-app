@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-
+use Illuminate\Database\Eloquent\Builder;
 class Tag extends Model
 {
     public function taskPlanners()
@@ -18,5 +18,20 @@ class Tag extends Model
             get: fn(string $value) => ucwords($value), // Display: "High Priority"
             set: fn(string $value) => strtolower($value), // Store: "high priority"
         );
+    }
+
+    public function scopeByUserInput(Builder $query, ?string $userInput): Builder
+    {
+
+        return $query->when($userInput, function ($query, $userInput) {
+            $userInput = trim(strip_tags($userInput));
+            $searchWords = array_filter(explode(' ', $userInput)); // Remove empty words
+
+            $query->where(function ($query) use ($searchWords) {
+                foreach ($searchWords as $word) {
+                    $query->where('tags.name', 'LIKE', "%{$word}%");
+                }
+            });
+        });
     }
 }

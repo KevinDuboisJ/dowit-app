@@ -137,6 +137,10 @@ class TaskPlanner extends Model
                 return $next_run_at->copy()->addMonth();
                 break;
 
+            case 'Quarterly':
+                return $next_run_at->copy()->addMonths(3);
+                break;
+
             case 'EachXDay':
                 if (!$interval) {
                     throw new InvalidArgumentException("Day interval must be provided for 'EachXDay'.");
@@ -152,8 +156,59 @@ class TaskPlanner extends Model
                 // Find the next occurrence of one of the specific days
                 return $this->getNextSpecificDay($next_run_at, $interval);
 
+            case 'WeekdayInMonth':
+                if (
+                    !is_array($interval) ||
+                    !isset($interval['week_number']) ||
+                    !isset($interval['day_of_week'])
+                ) {
+                    throw new InvalidArgumentException("Interval must contain 'week_number' and 'day_of_week' for 'WeekdayInMonth'.");
+                }
+
+                return $this->getNextWeekdayInMonth($next_run_at, $interval['week_number'], $interval['day_of_week']);
+
             default:
                 throw new InvalidArgumentException("Invalid frequency: $frequency");
+        }
+    }
+
+    public function getNextWeekdayInMonth(Carbon $fromDate, int $weekNumber, string $dayOfWeek): Carbon
+    {
+        // Store original time
+        $hour = $fromDate->hour;
+        $minute = $fromDate->minute;
+        $second = $fromDate->second;
+
+        $date = $fromDate->copy()->startOfMonth();
+        $count = 0;
+
+        while (true) {
+            if (strtolower($date->format('l')) === strtolower($dayOfWeek)) {
+                $count++;
+                if ($count === $weekNumber) {
+                    if ($date->greaterThan($fromDate)) {
+                        return $date->setTime($hour, $minute, $second);
+                    }
+                    break;
+                }
+            }
+            $date->addDay();
+            if ($date->month !== $fromDate->month) {
+                break;
+            }
+        }
+
+        // Next month
+        $nextMonth = $fromDate->copy()->addMonth()->startOfMonth();
+        $count = 0;
+        while (true) {
+            if (strtolower($nextMonth->format('l')) === strtolower($dayOfWeek)) {
+                $count++;
+                if ($count === $weekNumber) {
+                    return $nextMonth->setTime($hour, $minute, $second);
+                }
+            }
+            $nextMonth->addDay();
         }
     }
 

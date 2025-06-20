@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('task_planner_id')->nullable();
             $table->datetime('start_date_time');
             $table->string('name');
-            $table->string('description', 500)->nullable();
+            $table->longText('description')->nullable();
             $table->foreignId('campus_id');
             $table->foreignId('task_type_id');
             $table->foreignId('patient_id')->nullable();

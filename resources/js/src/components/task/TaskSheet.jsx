@@ -40,6 +40,7 @@ import {
   Input,
   DateTimePicker,
   ScrollArea,
+  RichTextEditor,
 } from '@/base-components';
 
 import {
@@ -94,6 +95,14 @@ const FormSchema = z.object({
       }),
     ).optional(),
 
+  tags:
+    z.array(
+      z.object({
+        label: z.string(),
+        value: z.number(),
+      }),
+    ).optional(),
+
   assignTo:
     z.array(
       z.object({
@@ -106,7 +115,7 @@ const FormSchema = z.object({
 
 }).refine((data) => !(data?.teamsMatchingAssignment?.length === 0 && data?.assignTo?.length === 0), {
   path: ["assignTo"], // Attach error to assignTo field
-  message: "Gelieve een teamtaaktoewijzingsregel aan te maken of de taak handmatig toe te wijzen aan een persoon",
+  message: "Gelieve een teamtaaktoewijzingsregel aan te maken of de taak rechtstreeks aan een persoon toe te wijzen",
 })
   .refine(
     (data) => {
@@ -173,16 +182,30 @@ export const TaskSheet = React.memo(() => {
 })
 
 const CreateTaskForm = () => {
+  
+  const { list: { campuses, task_types: taskTypes, tags: tagsEager } } = useInertiaFetchList({ only: ['campuses', 'task_types', 'tags'], eager: true });
 
-  const { list: { campuses, task_types: taskTypes } } = useInertiaFetchList({ only: ['campuses', 'task_types'], eager: true });
   const { list: spaces, fetchList: fetchSpaces } = useAxiosFetchByInput({
     url: "/spaces/search",
     queryKey: "userInput",
   });
+
   const { list: users, fetchList: fetchUsers } = useAxiosFetchByInput({
     url: "/users/search",
     queryKey: "userInput",
   });
+
+  const { list: tagsList, fetchList: fetchTags } = useAxiosFetchByInput({
+    url: "/tags/search",
+    queryKey: "userInput",
+  });
+
+  const tags = [
+    ...(tagsEager ?? []),
+    ...(tagsList ?? []).filter(
+      tag => !(tagsEager ?? []).some(existing => existing.id === tag.id)
+    )
+  ];
 
   const form = useForm({
     resolver: zodResolver(FormSchema),
@@ -195,6 +218,7 @@ const CreateTaskForm = () => {
       patient: {},
       space: [],
       spaceTo: [],
+      tags: [],
       assignTo: [],
       teamsMatchingAssignment: [],
     },
@@ -208,8 +232,9 @@ const CreateTaskForm = () => {
   });
 
   async function onSubmit(data) {
-
+    
     const cleanData = { ...data }
+    console.log(cleanData)
 
     if (!data.patient.pat_id) {
       delete cleanData.patient;
@@ -309,13 +334,13 @@ const CreateTaskForm = () => {
               <FormItem>
                 <FormLabel>Omschrijving</FormLabel>
                 <FormControl>
-                  <Input onChange={(value) => {
-                    field.onChange(value); // Updates form state when MultiSelect changes
-                  }}
-                    className='bg-white xl:items-center'
-                    type='text'
-                    placeholder='Omschrijving'
+                  <RichTextEditor
+                    className='text-sm h-32 bg-white'
+                    onUpdate={(value) => {
+                      field.onChange(value); // Updates form state when MultiSelect changes
+                    }}
                     value={field.value}
+
                   />
                 </FormControl>
                 <FormMessage />
@@ -381,6 +406,29 @@ const CreateTaskForm = () => {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name='tags'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tags</FormLabel>
+                <FormControl>
+                  <MultiSelect
+                    options={tags}
+                    onValueChange={(selected) => {
+                      field.onChange(selected); // Updates form state when MultiSelect changes
+                    }}
+                    selectedValues={field.value} // Uses form's field value as the selected value
+                    placeholder='Kies tags'
+                    animation={0}
+                    handleInputOnChange={fetchTags}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Conditionally Rendered Campus Field */}
           {taskType === '1' && (
@@ -502,7 +550,7 @@ const CreateSelectOptions = ({ rows }) => (
 
 const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
 
-  const [taskType, campus, space, spaceTo] = useWatch({ control, name: ['taskType', 'campus'] });
+  const [taskType, campus, space, spaceTo, tags] = useWatch({ control, name: ['taskType', 'campus', 'tags'] });
   const { list: teamsMatchingAssignmentRules, fetchList: fetchTeamsMatchingAssignmentRules } = useInertiaFetchList({
     only: ['teamsMatchingAssignmentRules'],
     payload: {
@@ -510,12 +558,15 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
       campus: campus,
       space: space,
       spaceTo: spaceTo,
+      tags: tags,
     },
   });
 
   useEffect(() => {
+    console.log(campus)
+    console.log(tags)
     fetchTeamsMatchingAssignmentRules();
-  }, [taskType, campus]);
+  }, [taskType, campus, tags]);
 
   useEffect(() => {
     setValue('teamsMatchingAssignment', teamsMatchingAssignmentRules); // Update form state

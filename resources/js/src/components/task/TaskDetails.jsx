@@ -1,7 +1,6 @@
 import { isValidElement, useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { __ } from '@/stores';
-import { IconContext } from 'react-icons';
 import { HiHandRaised } from 'react-icons/hi2';
 import Lottie from 'lottie-react';
 import fireAnimation from '@json/fire';
@@ -15,7 +14,8 @@ import {
   AvatarStackWrap,
   AvatarStackHeader,
   AvatarStack,
-  Badge
+  Badge,
+  RichText,
 } from '@/base-components';
 import {
   getPriority,
@@ -59,6 +59,11 @@ export const TaskDetails = ({ task }) => {
 
       <div className="space-y-5 my-2">
         <div className="space-y-3 border rounded-lg p-4 bg-white shadow-xs dark:bg-darkmode-500 dark:border-darkmode-400">
+
+          <p className="text-sm text-muted-foreground">
+            <RichText text={task.description} className='whitespace-nowrap text-sm px-3'/>
+          </p>
+          
           <InfoRow
             icon={<Heroicon icon="Flag" variant="solid" className="w-4 h-4 text-slate-400" />}
             label="Prioriteit"
@@ -101,13 +106,11 @@ export const TaskDetails = ({ task }) => {
             value={<TeamTag user={user} teams={task?.teams} />}
           />
 
-          <IconContext.Provider value={{ color: "94A3B8" }}>
-            <InfoRow
-              icon={<HiHandRaised className="w-4 h-4 text-slate-400" />}
-              label="Collega nodig:"
-              value={task.needs_help ? 'Ja' : 'Nee'}
-            />
-          </IconContext.Provider>
+          <InfoRow
+            icon={<HiHandRaised className="w-4 h-4 text-slate-400" />}
+            label="Collega nodig:"
+            value={task.needs_help ? 'Ja' : 'Nee'}
+          />
 
           <Separator className='bg-slate-200/60 dark:bg-darkmode-400' />
 
@@ -177,10 +180,9 @@ const TeamTag = ({ user, teams }) => {
   teams = teams || [];
 
   if (!Object.values(user.roles).includes('SUPER_ADMIN')) {
-    teams =  teams.filter(team => team.name !== 'Reserve');
+    teams = teams.filter(team => team.name !== 'Reserve');
   }
 
-  console.log(user);
   return (
     teams.length > 0 ? teams.map((team, index) => (
       <span key={team.id} className={cn({ 'ml-0': index === 0, 'ml-2': index > 0 }, 'text-sm text-gray-900 rounded-sm')}>

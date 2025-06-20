@@ -15,10 +15,9 @@ class StoreTaskRequest extends FormRequest
 
     public function rules()
     {
-       
         return [
             'name' => 'required|string|max:255',
-            'description' => 'string|max:500',
+            'description' => 'string',
             'startDateTime' => 'required|date',
             'taskType' => 'required|exists:task_types,id',
             'campus' => 'required|exists:campuses,id',
@@ -32,6 +31,7 @@ class StoreTaskRequest extends FormRequest
             'patient.*'  => [
                 'string',
             ],
+            'tags' => 'array',
             'space' => 'array',
             'space.*.value' => 'required|exists:spaces.spaces,id',
             'spaceTo' => 'array|min:0',
@@ -58,6 +58,10 @@ class StoreTaskRequest extends FormRequest
                 'is_active' => true,
             ]
         ];
+
+        if (isset($validated['tags'])) {
+            $data['tags'] = $validated['tags'];
+        }
 
         if (isset($validated['patient'])) {
             $data['patient'] = $validated['patient'];

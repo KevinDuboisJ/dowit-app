@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreignId('task_type_id');
             $table->boolean('is_active'); // To mark task as active/inactive
             $table->enum('on_holiday', ['Yes', 'No', 'OnlyOnHolidays']);
-            $table->enum('frequency', ['Daily', 'Weekly', 'Monthly', 'EachXDay', 'SpecificDays']);
+            $table->enum('frequency', ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'EachXDay', 'SpecificDays', 'WeekdayInMonth']);
             $table->json('interval')->nullable();  // For interval frequency
             $table->json('assignments')->nullable();  // For user assignation
             $table->json('assets')->nullable();  // For files

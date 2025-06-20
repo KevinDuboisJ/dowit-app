@@ -11,25 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('task_chains', function (Blueprint $table) {
+        Schema::create('chains', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('identifier')->unique();
             $table->text('description')->nullable();
-            $table->string('trigger_event');
-            $table->string('trigger_source'); // You can cast this as enum in the model if needed
-            $table->json('conditions')->nullable();
-            $table->foreignId('created_task_type_id')->constrained('task_types')->onDelete('cascade');
+            $table->string('trigger_type');
+            $table->json('trigger_conditions')->nullable();
+            $table->json('actions')->nullable();
+            $table->string('custom_code_class')->nullable();
+            $table->json('ip_whitelist')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
     }
 
+
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('task_chains');
+        Schema::dropIfExists('chains');
     }
 };

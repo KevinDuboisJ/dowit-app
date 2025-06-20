@@ -61,7 +61,7 @@ const VerticalTimeline = ({ activity, index, lastIndex }) => (
 const Icon = ({ activity }) => {
   if (activity.needs_help) {
     return (
-      <div className="absolute z-10 -left-2.5 top-0 w-5 h-5 rounded-full flex items-center justify-center">
+      <div className="absolute z-10 -left-2.5 top-0 w-5 h-5 rounded-full flex items-center justify-center text-[#9CA3AF]">
         <Heroicon icon="HandRaised" variant="solid" />
       </div>
     );

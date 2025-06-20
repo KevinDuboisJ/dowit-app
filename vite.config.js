@@ -16,6 +16,7 @@ export default defineConfig(({ command, mode }) => {
           'resources/js/src/app.jsx',
           'resources/js/src/filament/app.js',
           'resources/js/src/filament/sort.js',
+          'resources/js/src/filament/tiptap/extensions.js',
           'resources/css/filament.css'
         ],
         refresh: true

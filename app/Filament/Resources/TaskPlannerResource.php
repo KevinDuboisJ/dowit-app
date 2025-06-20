@@ -45,7 +45,6 @@ use Filament\Tables\Actions\DeleteAction;
 use App\Models\Team;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 
 class TaskPlannerResource extends Resource
 {
@@ -89,11 +88,24 @@ class TaskPlannerResource extends Resource
                     })
                     ->native(false),
 
-                Textarea::make('description')
+                TiptapEditor::make('description')
                     ->label('Omschrijving')
+                    ->tools([
+                        'bold',
+                        'italic',
+                        'link',
+                        'bullet-list',
+                        'ordered-list',
+                    ])
+                    ->disableFloatingMenus()
+                    ->disableBubbleMenus()
+                    ->placeholder('Voer hier een omschrijving in...')
                     ->nullable()
-                    ->rows(1)
+
+                    ->extraInputAttributes(['style' => 'min-height: 12rem;'])
+                    ->maxContentWidth('full')
                     ->columnSpanFull(),
+
 
                 Select::make('task_type_id')
                     ->label('Taaktype')
@@ -145,23 +157,6 @@ class TaskPlannerResource extends Resource
                         fn(Get $get): bool => $get('task_type_id') === '1'
                     ),
 
-
-                TiptapEditor::make('comment')
-                    ->label('commentaar')
-                    ->tools([
-                        'bold',
-                        'italic',
-                        'link',
-                        'bullet-list',
-                        'ordered-list',
-                    ])
-                    ->disableFloatingMenus()
-                    ->disableBubbleMenus()
-                    ->columnSpan(6)
-                    ->placeholder('Typ hier uw commentaar...')
-                    ->nullable()
-                    ->columnSpanFull(),
-
                 // TextInput doesn't automatically convert an array to a string, unlike the TextColumn. To Solve this i use formatStateUsing
 
 
@@ -207,6 +202,33 @@ class TaskPlannerResource extends Resource
                                     TextInput::make('interval')
                                         ->label('Interval')
                                         ->numeric()
+                                        ->required()
+                                        ->columnSpan(1),
+                                ],
+
+                                TaskPlannerFrequency::WeekdayInMonth->name => [
+                                    Select::make('interval.week_number')
+                                        ->label('Weeknummer')
+                                        ->options([
+                                            1 => '1e week',
+                                            2 => '2e week',
+                                            3 => '3e week',
+                                            4 => '4e week',
+                                        ])
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Select::make('interval.day_of_week')
+                                        ->label('Weekdag')
+                                        ->options([
+                                            'Monday' => 'Maandag',
+                                            'Tuesday' => 'Dinsdag',
+                                            'Wednesday' => 'Woensdag',
+                                            'Thursday' => 'Donderdag',
+                                            'Friday' => 'Vrijdag',
+                                            'Saturday' => 'Zaterdag',
+                                            'Sunday' => 'Zondag',
+                                        ])
                                         ->required()
                                         ->columnSpan(1),
                                 ],
@@ -306,6 +328,11 @@ class TaskPlannerResource extends Resource
 
                                         // 1) Compute suggested & existing team IDs
                                         $suggested   = $get('teams') ?? [];
+
+                                        if (empty($suggested)) {
+                                            return new HtmlString('<span class="text-sm text-gray-500">Er is geen teamtaaktoewijzingsregel voor uw selectie</span>');
+                                        }
+
                                         $existing    = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
 
                                         $toAdd     = array_diff($suggested, $existing);
@@ -348,6 +375,22 @@ class TaskPlannerResource extends Resource
                                             <span class="text-gray-500 mr-2">Grijs</span> = ongewijzigd',
                                         ])->render())
                                     ),
+
+                                // \Filament\Forms\Components\Actions::make([
+                                //     \Filament\Forms\Components\Actions\Action::make('createRule')
+                                //         ->label('Team toevoegen')
+                                //         ->icon('heroicon-m-plus')
+                                //         ->modalHeading('Voeg een regel toe')
+                                //         ->modalSubmitActionLabel('Opslaan')
+                                //         ->form(function (Form $form) {
+                                //             $form->fill();
+                                //             return TaskAssignmentRuleResource::form($form);
+                                //         })
+                                // ]),
+
+
+
+
                             ]),
 
                         Group::make()
@@ -388,8 +431,14 @@ class TaskPlannerResource extends Resource
                 TextColumn::make('frequency')->label('Frequentie'),
 
                 ViewColumn::make('interval')
-                    ->view('filament.tables.columns.jsonEnum')
-                    ->label('Interval'),
+                    ->view('filament.tables.columns.interval')
+                    ->label('Interval')
+                    ->state(function ($record) {
+                        return [
+                            'interval' => $record->interval,
+                            'frequency' => $record->frequency->name ?? null,
+                        ];
+                    }),
 
                 TextColumn::make('campus.name')->label('Campus'),
 

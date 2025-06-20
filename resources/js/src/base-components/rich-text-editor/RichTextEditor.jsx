@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify";
 import { useEditor, EditorContent } from '@tiptap/react';
+import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import { useEffect, useCallback } from 'react'
@@ -32,7 +33,6 @@ export const RichTextEditor = ({ value, onUpdate, className, readonly = false })
     content: value,
     extensions: [
       StarterKit,
-
       Link.configure({
         openOnClick: false,
 
@@ -49,7 +49,11 @@ export const RichTextEditor = ({ value, onUpdate, className, readonly = false })
 
       Link.extend({
         inclusive: false,
-      })
+      }),
+
+      Image.configure({
+					allowBase64: true,
+				}),
 
     ],
 
