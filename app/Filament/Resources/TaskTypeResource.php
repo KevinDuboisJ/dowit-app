@@ -12,6 +12,9 @@ use Guava\FilamentIconPicker\Forms\IconPicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\Section;
+use App\Traits\HasFilamentTeamFields;
+use Illuminate\Database\Eloquent\Model;
 
 class TaskTypeResource extends Resource
 {
@@ -31,24 +34,42 @@ class TaskTypeResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name')
-                ->label('Naam'),
+                Section::make('')
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Naam'),
 
-                IconPicker::make('icon')
-                ->label('Icoon')
-                ->placeholder('Selecteren')
-                ->sets(['taskicons'])
-                ->cacheable(false)
-                ->preload()
-                ->itemTemplate(fn($component, $icon) => view('filament.components.icon-picker', [
-                    'statePath' => $component->getStatePath(),
-                    'icon' => $icon,
-                ])->render())
-                ->extraAttributes([
-                    'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
-                ])
-                ->columns(3)
-            ]);
+                        IconPicker::make('icon')
+                            ->label('Icoon')
+                            ->placeholder('Selecteren')
+                            ->sets(['taskicons'])
+                            ->cacheable(false)
+                            ->preload()
+                            ->itemTemplate(fn($component, $icon) => view('filament.components.icon-picker', [
+                                'statePath' => $component->getStatePath(),
+                                'icon' => $icon,
+                            ])->render())
+                            ->extraAttributes([
+                                'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
+                            ]),
+                    ])
+                    ->extraAttributes([
+                        'class' => 'h-full',
+                    ])
+                    ->columns(2)
+                    ->columnSpan(5),
+
+                Section::make('')
+                    ->schema(function (?Model $record) {
+
+                        return [
+                            HasFilamentTeamFields::belongsToTeamsField(),
+                        ];
+                    })
+                    ->columnSpan(3),
+
+                HasFilamentTeamFields::creatorField(),
+            ])->columns(8);
     }
 
     public static function table(Table $table): Table
@@ -56,8 +77,8 @@ class TaskTypeResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                ->label('Naam')
-                ->width('300px'),
+                    ->label('Naam')
+                    ->width('300px'),
 
                 IconColumn::make('icon')
                     ->label('Icoon')

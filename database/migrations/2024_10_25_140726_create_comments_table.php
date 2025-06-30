@@ -11,8 +11,8 @@ return new class extends Migration
         // Create comments table
         Schema::create('comments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id');
-            $table->foreignId('task_id')->nullable();
+            $table->foreignId('created_by');
+            $table->foreignId('task_id')->nullable()->constrained('tasks')->onDelete('cascade');
             $table->foreignId('status_id')->nullable();
             $table->boolean('needs_help')->nullable();
             $table->text('content')->nullable();
@@ -24,13 +24,6 @@ return new class extends Migration
             $table->json('read_by')->nullable();
             $table->timestamps();
         });
-
-        // Create the pivot table for tasks and comments
-        // Schema::create('comment_task', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->foreignId('task_id')->constrained()->onDelete('cascade');
-        //     $table->foreignId('comment_id')->constrained()->onDelete('cascade');
-        // });
     }
 
     public function down()

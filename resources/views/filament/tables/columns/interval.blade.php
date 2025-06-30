@@ -9,17 +9,17 @@
     @if ($frequency === 'WeekdayInMonth' && is_array($interval))
         <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
             <div>Week van de maand: {{ $interval['week_number'] ?? '?' }}</div>
-            <div>Dag: {{ DaysOfWeek::fromName($interval['day_of_week'] ?? '')?->getLabel() ?? '?' }}</div>
+            <div>Dag: {{ DaysOfWeek::fromCaseName($interval['day_of_week'] ?? '')?->getLabel() ?? '?' }}</div>
         </div>
     @elseif (is_array($interval))
+    <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
         @foreach ($interval as $value)
-            <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
-                {{ DaysOfWeek::fromName($value)?->getLabel() }}
-            </div>
+            {{ DaysOfWeek::fromCaseName($value)?->getLabel() }}@if (!$loop->last), @endif
         @endforeach
+    </div>
     @else
         <span class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
-            {{ $interval }}
+            {{DaysOfWeek::fromCaseName($interval)?->getLabel() }}
         </span>
     @endif
 @endif

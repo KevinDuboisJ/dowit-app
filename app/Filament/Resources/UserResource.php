@@ -28,7 +28,7 @@ class UserResource extends Resource
     protected static ?string $modelLabel = 'Gebruiker';
 
     protected static ?string $pluralModelLabel = 'Gebruikers';
-    
+
     public static function form(Form $form): Form
     {
         return $form
@@ -46,28 +46,33 @@ class UserResource extends Resource
     {
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->whereNot('id', 1))
+            ->modifyQueryUsing(fn(Builder $query) => $query->whereNot('id', 1))
             ->columns([
                 TextColumn::make('firstname')
                     ->label('Voornaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('lastname')
                     ->label('Achternaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('username')
                     ->label('Gebruikersnaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('email')
                     ->label('E-mail')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('teams.name')
                     ->label('Teams')
-                    ->limit(5)
-                    ->sortable(),
+                    ->limit(30) // Truncate display after 20 characters
+                    ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state),
+
                 TextColumn::make('last_login')
                     ->label('Laatste aanmelding')
                     ->datetime('d/m/Y H:m:s')

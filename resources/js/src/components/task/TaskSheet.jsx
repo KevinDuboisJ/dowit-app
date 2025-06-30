@@ -61,23 +61,21 @@ const FormSchema = z.object({
 
   patient:
     z.object({
-      pat_id: z.string().optional(),
-      visit_id: z.string().optional(),
+      patient_number: z.string().optional(),
+      visit_number: z.string().optional(),
       firstname: z.string().optional(),
       lastname: z.string().optional(),
       gender: z.string().optional(),
       birthdate: z.string().optional(),
-      ext_id_1: z.string().optional(),
       campus_id: z.string().optional(),
-      ward_id: z.string().optional(),
-      room_id: z.string().optional(),
-      bed_id: z.string().optional(),
+      department_number: z.string().optional(),
+      room_number: z.string().optional(),
+      bed_number: z.string().optional(),
       adm_date: z.string().optional(),
       adm_time: z.string().optional(),
       dis_date: z.string().optional(),
       dis_time: z.string().optional(),
     }).optional(),
-
 
   space:
     z.array(
@@ -85,7 +83,7 @@ const FormSchema = z.object({
         label: z.string(),
         value: z.number(),
       }),
-    ).min(1, "Gelieve een locatie te kiezen"),
+    ).optional(), //.min(1, "Gelieve een locatie te kiezen"),
 
   spaceTo:
     z.array(
@@ -96,6 +94,14 @@ const FormSchema = z.object({
     ).optional(),
 
   tags:
+    z.array(
+      z.object({
+        label: z.string(),
+        value: z.number(),
+      }),
+    ).optional(),
+
+  assets:
     z.array(
       z.object({
         label: z.string(),
@@ -121,7 +127,7 @@ const FormSchema = z.object({
     (data) => {
       // If taskType is "1", ensure patient is not undefined
       if (data.taskType === '1') {
-        return data.patient && data.patient.pat_id !== undefined;
+        return data.patient && data.patient.patient_number !== undefined;
       }
       return true; // If taskType is not 1, patient can be undefined
     },
@@ -182,7 +188,7 @@ export const TaskSheet = React.memo(() => {
 })
 
 const CreateTaskForm = () => {
-  
+
   const { list: { campuses, task_types: taskTypes, tags: tagsEager } } = useInertiaFetchList({ only: ['campuses', 'task_types', 'tags'], eager: true });
 
   const { list: spaces, fetchList: fetchSpaces } = useAxiosFetchByInput({
@@ -198,6 +204,12 @@ const CreateTaskForm = () => {
   const { list: tagsList, fetchList: fetchTags } = useAxiosFetchByInput({
     url: "/tags/search",
     queryKey: "userInput",
+  });
+
+  const { list: assets, fetchList: fetchAssets } = useAxiosFetchByInput({
+    url: "/assets",
+    method: "get",
+    queryKey: "search",
   });
 
   const tags = [
@@ -232,11 +244,11 @@ const CreateTaskForm = () => {
   });
 
   async function onSubmit(data) {
-    
+
     const cleanData = { ...data }
     console.log(cleanData)
 
-    if (!data.patient.pat_id) {
+    if (!data.patient.patient_number) {
       delete cleanData.patient;
     }
 
@@ -429,6 +441,29 @@ const CreateTaskForm = () => {
               </FormItem>
             )}
           />
+
+          {/* <FormField
+            control={form.control}
+            name='assets'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bestanden</FormLabel>
+                <FormControl>
+                  <MultiSelect
+                    options={assets}
+                    onValueChange={(selected) => {
+                      field.onChange(selected); // Updates form state when MultiSelect changes
+                    }}
+                    selectedValues={field.value} // Uses form's field value as the selected value
+                    placeholder='Kies bestanden'
+                    animation={0}
+                    handleInputOnChange={fetchAssets}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          /> */}
 
           {/* Conditionally Rendered Campus Field */}
           {taskType === '1' && (

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ChainResource\Pages;
 
+use App\Enums\ChainActionType;
 use App\Filament\Resources\ChainResource;
 use App\Models\Task;
 use App\Models\Chain;
@@ -30,6 +31,9 @@ use App\Models\Campus;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Illuminate\Support\HtmlString;
+use App\Traits\HasFilamentTeamFields;
+use FilamentTiptapEditor\Enums\TiptapOutput;
+
 use Closure;
 
 class CreateChainWizard extends Page implements HasForms
@@ -49,9 +53,10 @@ class CreateChainWizard extends Page implements HasForms
     public ?string $description = null;
     public ?string $trigger_type = null;
     public ?string $action = null;
-    public ?array  $actions = [];
-    public ?array  $ip_whitelist = [];
+    public ?array  $actions = null;
+    public ?array  $ip_whitelist = null;
     public ?bool   $is_active = null;
+    public ?array  $teams = null;
 
 
     protected static string $resource = ChainResource::class;
@@ -85,7 +90,12 @@ class CreateChainWizard extends Page implements HasForms
         // ];
 
         // Pre‐fill the Filament form with data so the “Review” step sees them.
-        $this->form->fill($record->attributesToArray());
+        $this->form->fill(array_merge(
+            $record->attributesToArray(),
+            [
+                'teams' => $record->teams->pluck('id')->toArray(),
+            ]
+        ));
     }
 
     /**
@@ -115,6 +125,11 @@ class CreateChainWizard extends Page implements HasForms
                                     'api' => 'API',
                                     'internal' => 'Intern',
                                 ])
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if ($state === 'internal') {
+                                        $set('ip_whitelist', null);
+                                    }
+                                })
                                 ->required()
                                 ->live(),
 
@@ -126,10 +141,7 @@ class CreateChainWizard extends Page implements HasForms
 
                             Forms\Components\Select::make('action')
                                 ->label('Actie')
-                                ->options([
-                                    'createTask' => 'Taak aanmaken',
-                                    'code' => 'Code',
-                                ])
+                                ->options(ChainActionType::class)
                                 ->required()
                                 // load existing value on edit
                                 ->afterStateHydrated(function ($set, $get, $record) {
@@ -140,10 +152,10 @@ class CreateChainWizard extends Page implements HasForms
                                 })
                                 // when the user changes the action, clear the class field
                                 ->afterStateUpdated(function ($state, $set) {
-                                    if ($state === 'createTask') {
-                                        $set('actions.code', null); // clear code data, preserve createTask
-                                    } elseif ($state === 'code') {
-                                        $set('actions.createTask', null); // clear task fields only
+                                    if ($state === ChainActionType::CreateTask->name) {
+                                        $set('actions.' . ChainActionType::CustomCode->name, null); // clear custom code data, preserve CreateTask
+                                    } elseif ($state === ChainActionType::CustomCode->name) {
+                                        $set('actions.' . ChainActionType::CreateTask->name, null); // clear task fields only
                                     }
                                 })
                                 // but we do NOT want Filament to try to save this directly
@@ -151,13 +163,12 @@ class CreateChainWizard extends Page implements HasForms
                                 ->live(),
 
 
-                        ])->columnSpan(6)->columns(2),
+                        ])->extraAttributes(['class' => 'h-full'])->columnSpan(6)->columns(2),
 
                         Forms\Components\Section::make([
                             Forms\Components\TagsInput::make('ip_whitelist')
                                 ->label('IP Whitelist')
                                 ->placeholder('Nieuwe IP toevoegen')
-                                ->visible(fn($get) => $get('trigger_type') === 'api')
                                 ->helperText('Alleen numerieke IPv4 adressen')
                                 ->rules([
                                     'array',
@@ -169,7 +180,11 @@ class CreateChainWizard extends Page implements HasForms
                                             }
                                         }
                                     },
-                                ]),
+                                ])
+                                ->visible(fn($get) => $get('trigger_type') === 'api')
+                                ->dehydratedWhenHidden(true),
+
+                            HasFilamentTeamFields::customPageBelongsToTeamsField(tooltip: 'Teams waaraan de actie wordt toegewezen'),
 
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Actief'),
@@ -186,17 +201,16 @@ class CreateChainWizard extends Page implements HasForms
 
                                     TiptapEditor::make('description')
                                         ->label('Omschrijving')
+                                        ->placeholder('Voer hier een omschrijving in...')
                                         ->tools([
                                             'bold',
                                             'italic',
                                             'link',
                                             'bullet-list',
                                             'ordered-list',
-                                            'media',
                                         ])
                                         ->disableFloatingMenus()
                                         ->disableBubbleMenus()
-                                        ->placeholder('Voer hier een omschrijving in...')
                                         ->nullable()
                                         ->extraInputAttributes(['style' => 'min-height: 12rem;'])
                                         ->maxContentWidth('full')
@@ -257,24 +271,25 @@ class CreateChainWizard extends Page implements HasForms
                                 ])
 
                             ])
-                            ->statePath('actions.createTask')
-                            ->visible(fn(Get $get) => $get('action') === 'createTask')
+                            ->statePath('actions.' . ChainActionType::CreateTask->name)
+                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
                             ->columnSpan(6)
                             ->columns(2),
 
                         Forms\Components\Group::make()
                             ->schema([
                                 Forms\Components\Section::make()->schema([
-                                    Forms\Components\TextInput::make('code')
+                                    Forms\Components\TextInput::make('CustomCode')
                                         ->label('Aangepaste codeklasse')
                                         ->required()
                                 ])
 
                             ])
-                            ->statePath('actions.code')
-                            ->visible(fn(Get $get) => $get('action') === 'code')
+                            ->statePath('actions.' . ChainActionType::CustomCode->name)
+                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
                             ->columnSpan(6)
                             ->columns(2),
+
 
 
 
@@ -311,7 +326,7 @@ class CreateChainWizard extends Page implements HasForms
 
                             Placeholder::make('action')
                                 ->label('Actie: ')
-                                ->content(fn(Get $get): string => $get('action') ?? '')
+                                ->content(fn(Get $get): string => $get('action') ? ChainActionType::fromCaseName($get('action'))->getLabel() : '')
                                 ->extraAttributes(['class' => 'text-green-700']),
 
                             Placeholder::make('ip_whitelist')
@@ -331,27 +346,42 @@ class CreateChainWizard extends Page implements HasForms
                                 })
                                 ->extraAttributes(['class' => 'text-green-700'])
                                 ->visible(fn($get) => $get('trigger_type') === 'api'),
-                            // Important to render HTML
+
+                            Placeholder::make('teams')
+                                ->label('Teams')
+                                ->content(function (Get $get): HtmlString {
+                                    $teamIds = $get('teams');
+
+                                    $teamNames = \App\Models\Team::whereIn('id', $teamIds)->pluck('name')->toArray();
+
+                                    $listItems = collect($teamNames)
+                                        ->map(fn($name) => "<li>{$name}</li>")
+                                        ->implode('');
+
+                                    return new HtmlString("<ul class='list-disc ml-5'>{$listItems}</ul>");
+                                })
+                                ->extraAttributes(['class' => 'text-green-700']),
+
 
                             Placeholder::make('is_active')
                                 ->label('Actief: ')
                                 ->content(fn(Get $get): string => $get('is_active') ? 'Ja' : 'Nee')
                                 ->extraAttributes(['class' => 'text-green-700']),
-                        ])->columns(3),
+                        ])->columns(4),
 
                         Forms\Components\Group::make()->schema([
                             Forms\Components\Section::make()->schema([
-                                Placeholder::make('code')
+                                Placeholder::make('CustomCode')
                                     ->label('Codeklasse: ')
-                                    ->content(fn(Get $get): string => $get('code') ?? '')
+                                    ->content(fn(Get $get): string => $get(ChainActionType::CustomCode->name) ?? '')
                                     ->visible(fn($state) => filled($state))
                                     ->extraAttributes(['class' => 'text-green-700']),
                             ])
                         ])
-                            ->statePath('actions.code')
-                            ->visible(fn(Get $get) => $get('action') === 'code')
+                            ->statePath('actions.' . ChainActionType::CustomCode->name)
+                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
                             ->columnSpanFull()
-                            ->columns(3),
+                            ->columns(4),
 
                         Forms\Components\Group::make()->schema([
                             Forms\Components\Section::make()->schema([
@@ -394,16 +424,19 @@ class CreateChainWizard extends Page implements HasForms
                                     ->visible(fn(Get $get): bool => $get('task_type_id') === '1')
                                     ->extraAttributes(['class' => 'text-green-700']),
                             ])
-                                ->columns(3)
+                                ->columns(4)
 
                         ])
-                            ->statePath('actions.createTask')
-                            ->visible(fn(Get $get) => $get('action') === 'createTask')
+                            ->statePath('actions.' . ChainActionType::CreateTask->name)
+                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
                             ->columnSpanFull(),
 
 
                     ])
                     ->columns(8),
+
+
+                HasFilamentTeamFields::creatorField(),
             ])
                 ->nextAction(
                     fn(ComponentAction $action) => $action->label('Volgende'),
@@ -415,7 +448,7 @@ class CreateChainWizard extends Page implements HasForms
                         ->submit('create')
                 ),
 
-        ]);
+        ])->model(Chain::class);
     }
 
     /**
@@ -424,6 +457,11 @@ class CreateChainWizard extends Page implements HasForms
     public function save(): void
     {
         $data = $this->form->getState();
+        $chain = null;
+
+        // Extract and remove teams from $data
+        $teamIds = $data['teams'] ?? [];
+        unset($data['teams']);
 
         if ($this->record) {
             // ── Update existing Chain ──
@@ -433,6 +471,9 @@ class CreateChainWizard extends Page implements HasForms
             // Create a new Chain
             $chain = Chain::create($data);
         }
+
+        // Sync teams manually
+        $chain->teams()->sync($teamIds);
 
         Notification::make()
             ->title($this->record ? 'Opgeslagen' : 'Aangemaakt')

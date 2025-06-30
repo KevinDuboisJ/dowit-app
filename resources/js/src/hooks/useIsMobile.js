@@ -11,7 +11,6 @@ export const useIsMobile = () => {
 
       // Detect transition to mobile
       if (!isMobile && currentlyMobile) {
-        console.log('handle')
         hasTransitionedToMobile.current = true;
       }
 

@@ -8,6 +8,7 @@ use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\Pagination\CursorPaginator;
+use App\Enums\ChainActionType;
 
 class ListChains extends ListRecords
 {
@@ -30,7 +31,7 @@ class ListChains extends ListRecords
         $taskTypeIds = [];
 
         foreach ($records as $record) {
-            $task = $record->actions['createTask'] ?? null;
+            $task = $record->actions[ChainActionType::CreateTask->name] ?? null;
             if (!is_array($task)) continue;
 
             if (isset($task['space_id'])) {

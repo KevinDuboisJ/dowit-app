@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\PATIENTLIST\Patient;
+use App\Models\PATIENTLIST\Visit;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\TaskType;
 use App\Models\TaskStatus;
@@ -117,9 +117,9 @@ class Task extends Model
         return $this->belongsTo(TaskType::class);
     }
 
-    public function patient()
+    public function visit()
     {
-        return $this->belongsTo(Patient::class, 'patient_id');
+        return $this->belongsTo(Visit::class);
     }
 
     public function teams()
@@ -157,12 +157,12 @@ class Task extends Model
     public static function getRelationships()
     {
         return [
-            'patient',
+            'visit' => fn($query) => $query->with(['patient', 'room', 'bed']),
             'tags',
             'status',
             'taskType' => fn($query) => $query->with(['assets']),
             'space',
-            'comments' => fn($query) => $query->with(['user', 'status' => fn($query) => $query->select('id', 'name')]),
+            'comments' => fn($query) => $query->with(['creator', 'status' => fn($query) => $query->select('id', 'name')]),
             'assignees',
             'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
         ];
@@ -181,7 +181,7 @@ class Task extends Model
     public function addComment(string $comment, ?array $metadata = null): Comment
     {
         $comment = $this->comments()->create([
-            'user_id' => Auth::id() ?? config('app.system_user_id'),
+            'created_by' => Auth::id() ?? config('app.system_user_id'),
             'status_id' => $this->isDirty('status_id') ? $this->status_id : null,
             'needs_help' => $this->isDirty('needs_help') ? $this->needs_help : null,
             'content' => $comment ?? '',

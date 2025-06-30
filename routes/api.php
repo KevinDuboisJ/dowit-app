@@ -21,4 +21,4 @@ Route::get('/tooltip', [TooltipController::class, 'find'])->name('tooltip.find')
 Route::put('/users/edbid/{user:edb_id}', [UserController::class, 'updateByEdbId'])->name('users.edbid.update');
 Route::post('/users', [UserController::class, 'store'])->name('users.store');
 Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
-Route::post('/chains/{identifier}', [ChainController::class, 'handleApiChain'])->middleware('ip.whitelist');
+Route::post('/chains/{chain}', [ChainController::class, 'handleApiChain'])->middleware('ip.whitelist');

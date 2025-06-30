@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('settings', function (Blueprint $table) {
+         Schema::create('settings', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('code')->unique();
+            $table->string('code');
             $table->json('value');
-            $table->enum('type', ['global', 'team']);
+            $table->enum('scope', ['global', 'team']);
+            $table->foreignId('team_id');
             $table->timestamps();
         });
 

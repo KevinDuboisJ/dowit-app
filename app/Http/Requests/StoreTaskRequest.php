@@ -32,6 +32,7 @@ class StoreTaskRequest extends FormRequest
                 'string',
             ],
             'tags' => 'array',
+            // 'assets' => 'array',
             'space' => 'array',
             'space.*.value' => 'required|exists:spaces.spaces,id',
             'spaceTo' => 'array|min:0',
@@ -55,6 +56,7 @@ class StoreTaskRequest extends FormRequest
                 'space_id' => !empty($validated['space']) ? array_column($validated['space'], 'value')[0] : null,
                 'space_to_id' => !empty($validated['spaceTo']) ? array_column($validated['spaceTo'], 'value')[0] : null,
                 'status_id' => TaskStatus::Added->value,
+                // 'assets' => $validated['assets'],
                 'is_active' => true,
             ]
         ];

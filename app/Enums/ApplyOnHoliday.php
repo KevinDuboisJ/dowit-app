@@ -6,7 +6,6 @@ use Filament\Support\Contracts\HasLabel;
 
 enum ApplyOnHoliday implements HasLabel
 {
-
     case Yes;
     case No;
     case OnlyOnHolidays;

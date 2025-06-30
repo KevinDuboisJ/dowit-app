@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('asset_team', function (Blueprint $table) {
+        Schema::create('task_type_team', function (Blueprint $table) {
             // Surrogate PK
             $table->id();
 
             // FKs
-            $table->foreignId('asset_id')
+            $table->foreignId('task_type_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
@@ -25,7 +25,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             // Uniqueness constraint to prevent duplicates
-            $table->unique(['asset_id', 'team_id']);
+            $table->unique(['task_type_id', 'team_id']);
 
             $table->timestamps();
         });
@@ -33,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('asset_team');
+        Schema::dropIfExists('task_type_team');
     }
 };

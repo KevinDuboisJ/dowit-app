@@ -17,14 +17,14 @@ class Patient extends Model
 
         $query = "
             SELECT
-                adt_unipat.pat_id AS pat_id,
-                adt_visit.visit_id AS visit_id,
+                adt_unipat.pat_id AS patient_number,
+                adt_visit.visit_id AS visit_number,
                 adt_unipat.ext_id_1 AS ext_id_1,
                 spoken_language,
                 campus_id,
-                ward_id,
-                room_id,
-                bed_id,
+                ward_id as department_number,
+                room_id as room_number,
+                bed_id as bed_number,
                 adm_date,
                 adm_time,
                 dis_date,
@@ -62,7 +62,7 @@ class Patient extends Model
             $result = $results[0];
             $result->birthdate = self::formatBirthdate($result->birthdate);
             $result->gender = self::formatGender($result->gender);
-            $result->campus_id = self::formatGender($result->campus_id);
+            $result->campus_id = self::formatCampus($result->campus_id);
 
             // Check all columns for spaces at the start or end and remove them
             foreach ($result as $key => $value) {
@@ -102,35 +102,4 @@ class Patient extends Model
 
         return '';
     }
-
-    // public static function getByPatientId($patientId)
-    // {
-    //     $query = "
-    //         SELECT 
-    //             *, 
-    //             adt_unipat.sex AS patsex, 
-    //             unisuper.pat_id AS patid, 
-    //             unisuper.ext_id_1 AS insz 
-    //         FROM 
-    //             (((adt_unipat 
-    //             INNER JOIN unisuper ON unisuper.pat_id = adt_unipat.pat_id)
-    //             INNER JOIN adt_visit ON unisuper.pat_id = adt_visit.pat_id)
-    //             INNER JOIN ward_descr ON ward_descr.ward_id = adt_visit.ward_id)
-    //         LEFT JOIN 
-    //             postal_codes 
-    //             ON adt_unipat.postal_code = postal_codes.postal_code 
-    //             AND adt_unipat.country_code = postal_codes.country_code 
-    //             AND postal_language = 'NL'
-    //         LEFT JOIN 
-    //             country 
-    //             ON postal_codes.country_code = country.country_code
-    //         WHERE 
-    //             adt_visit.visit_id = ?
-    //         ORDER BY 
-    //             adt_unipat.from_date DESC, 
-    //             ward_descr.from_date DESC
-    //     ";
-
-    //     return DB::connection('oazis')->select($query, [$patientId]);
-    // }
 }

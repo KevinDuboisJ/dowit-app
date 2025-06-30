@@ -8,16 +8,13 @@ use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Models\PATIENTLIST\Room;
-use App\Models\PATIENTLIST\PatientRoom;
-use App\Models\PATIENTLIST\Patient;
 use App\Services\TaskAssignmentService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
-use Illuminate\Support\Arr;
+use App\Services\PatientService;
 
 class TaskController extends Controller
 {
@@ -62,48 +59,17 @@ class TaskController extends Controller
 
         DB::connection('patientlist')->beginTransaction();
 
-        // Create the Room if doesn't exist
-        $room = Room::firstOrCreate(
-          ['number' => $data['patient']['room_id']],
-          ['number' => $data['patient']['room_id']]
-        );
+        $data['patient']['admission'] = $this->mergeDateTime($data['patient']['adm_date'], $data['patient']['adm_time']);
+        $data['patient']['discharge'] = $this->mergeDateTime($data['patient']['dis_date'], $data['patient']['dis_time']);
 
-        // Create or Update the Patient
-        $patient = Patient::updateOrCreate(
-          ['patient_id' => $data['patient']['pat_id']], // Find by API patient ID
-          [
-            'visit_id' => $data['patient']['visit_id'],
-            'firstname' => $data['patient']['firstname'],
-            'lastname' => $data['patient']['lastname'],
-            'gender' => $data['patient']['gender'],
-            'birthdate' => $data['patient']['birthdate'],
-            'ext_id_1' => $data['patient']['ext_id_1'],
-            'campus_id' => $data['patient']['campus_id'],
-            'ward_id' => $data['patient']['ward_id'],
-            'room_id' => $room->id, // Link the current room
-            'bed_id' => $data['patient']['bed_id'],
-            'admission' => $this->mergeDateTime($data['patient']['adm_date'], $data['patient']['adm_time']),
-            'discharge' => $this->mergeDateTime($data['patient']['dis_date'], $data['patient']['dis_time']),
-          ]
-        );
+        $visit = PatientService::createOrUpdateVisit($data['patient']);
 
-        // Check and Update Room-Patient Relationship
-        $latestRoomRecord = PatientRoom::where('patient_id', $patient->id)
-          ->latest('created_at')
-          ->first();
-
-        if (!$latestRoomRecord || $latestRoomRecord->room_id !== $room->id) {
-          // If there's no record or the room has changed, add a new record
-          PatientRoom::create([
-            'patient_id' => $patient->id,
-            'room_id' => $room->id,
-          ]);
-        }
         // Create the task with validated data
-        $task = new Task([$data['task'], 'patient_id' => $patient->id]);
+        $task = new Task([...$data['task'], 'visit_id' => $visit->id]);
+        
       }
-
-      if (!isset($patient)) {
+    
+      if (!isset($visit)) {
         $task = new Task($data['task']);
       }
 
@@ -128,7 +94,7 @@ class TaskController extends Controller
       // Commit the transaction if all operations succeed
       DB::connection('mysql')->commit();
 
-      if (isset($patient)) {
+      if (isset($visit)) {
         DB::connection('patientlist')->commit();
       }
 
@@ -140,10 +106,14 @@ class TaskController extends Controller
 
       return response()->json($task);
     } catch (\Throwable $e) {
-
-      // Log the error for debugging purposes
       logger()->error('Task creation failed', [
-        'error' => $e->getMessage(),
+        'message' => $e->getMessage(),
+        'file'    => $e->getFile(),
+        'line'    => $e->getLine(),
+        'trace'   => $e->getTraceAsString(),
+        // optionally more context:
+        'code'    => $e->getCode(),
+        // 'previous' => $e->getPrevious(), // if needed
       ]);
 
       // Rollback both transactions if anything fails

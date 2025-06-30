@@ -65,22 +65,27 @@ class TeamUserResource extends Resource
                     ->label('Voornaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('lastname')
                     ->label('Achternaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('username')
                     ->label('Gebruikersnaam')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('email')
                     ->label('E-mail')
                     ->sortable()
                     ->searchable(),
+
                 TextColumn::make('teams.name')
                     ->label('Teams')
-                    ->limit(5)
-                    ->sortable(),
+                    ->limit(30) // Truncate display after 20 characters
+                    ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state),
+                    
                 TextColumn::make('last_login')
                     ->label('Laatste aanmelding')
                     ->datetime('d/m/Y H:m:s')
@@ -97,7 +102,7 @@ class TeamUserResource extends Resource
 
                         // Get the team ID from the 
                         $teamId = $livewire->parent->id; // or however you're passing the team ID
-    
+
                         // Detach the user from the team
                         $record->teams()->detach($teamId);
                     })

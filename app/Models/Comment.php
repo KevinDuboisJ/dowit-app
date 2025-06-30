@@ -25,25 +25,28 @@ class Comment extends Model
         ];
     }
 
-    public function scopeByUserTeams($query)
+    public function scopeByTeamsAndRecipients($query)
     {
         $user = Auth::user();
         $userTeamsIds = $user->teams->pluck('id')->toArray();
 
-        $query->whereHas('task.teams', function ($teamQuery) use ($userTeamsIds) {
-            $teamQuery->whereIn('teams.id', $userTeamsIds);
-        })
-            ->orWhere(function ($query) use ($userTeamsIds, $user) {
-                if (!empty($userTeamsIds)) {
-                    $query->whereRaw(
-                        implode(' OR ', array_map(function ($teamId) {
-                            return "JSON_CONTAINS(recipient_teams, '$teamId')";
-                        }, $userTeamsIds))
-                    );
-                }
+        $query->where(function ($query) use ($userTeamsIds, $user) {
+            $query->whereHas('task.teams', function ($teamQuery) use ($userTeamsIds) {
+                $teamQuery->whereIn('teams.id', $userTeamsIds);
+            })
+                ->orWhere('created_by', $user->id)
+                ->orWhere(function ($query) use ($userTeamsIds, $user) {
+                    if (!empty($userTeamsIds)) {
+                        $query->whereRaw(
+                            implode(' OR ', array_map(function ($teamId) {
+                                return "JSON_CONTAINS(recipient_teams, '$teamId')";
+                            }, $userTeamsIds))
+                        );
+                    }
 
-                $query->orWhereJsonContains('recipient_users', $user->id);
-            });
+                    $query->orWhereJsonContains('recipient_users', $user->id);
+                });
+        });
     }
 
     public function scopeByNotRead($query)
@@ -52,14 +55,9 @@ class Comment extends Model
             ->orWhereNull('read_by');
     }
 
-    public function user()
+    public function creator()
     {
-        return $this->BelongsTo(User::class);
-    }
-
-    public function assignees()
-    {
-        return $this->belongsToMany(User::class, 'comment_user');
+        return $this->BelongsTo(User::class, 'created_by');
     }
 
     protected function content(): Attribute

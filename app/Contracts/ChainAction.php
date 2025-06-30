@@ -12,5 +12,5 @@ interface ChainAction
      * @param  \App\Models\Chain  $chain
      * @return void
      */
-    public function handle($context, Chain $chain): void;
+    public function handle($context, Chain $chain);
 }

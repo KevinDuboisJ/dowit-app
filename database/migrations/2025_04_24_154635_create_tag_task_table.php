@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('task_id')->constrained()->onDelete('cascade');
             $table->foreignId('tag_id')->constrained()->onDelete('cascade');
             $table->unique(['task_id', 'tag_id']);
+            $table->foreignId('created_by')->constrained('users');
         });
     }
 

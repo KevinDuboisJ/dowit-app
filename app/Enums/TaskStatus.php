@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
+use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
 enum TaskStatus: int implements HasLabel
 {
+    use HasEnumCaseNames;
+
     case Added = 1;
     case Replaced = 2;
     case InProgress = 4;
@@ -23,10 +26,5 @@ enum TaskStatus: int implements HasLabel
             self::Completed => 'Afgehandeld',
             self::Skipped => 'Overgeslagen',
         };
-    }
-
-    public static function fromCaseName(string $caseName): self
-    {
-        return constant("self::$caseName");
     }
 }

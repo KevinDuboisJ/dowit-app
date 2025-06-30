@@ -11,14 +11,35 @@ use Filament\Forms\Components\Section;
 
 trait HasFilamentTeamFields
 {
-    public static function belongsToTeamsField(string $label = 'Teams', string $tooltip='Teams met toegang tot dit item'): Select
+    public static function belongsToTeamsField(string $label = 'Teams', string $tooltip = 'Teams met toegang tot dit item'): Select
     {
         return Select::make('teams')
             ->label($label)
             ->multiple()
-            ->relationship('teams', 'name')
-            ->options(fn() => Auth::user()->teams()->pluck('name', 'teams.id')->toArray())
+            ->relationship('teams', 'name', modifyQueryUsing: fn($query) => $query->whereIn(
+                'teams.id',
+                Auth::user()?->teams()->pluck('teams.id') ?? []
+            ),)
             ->default(fn() => Auth::user()->teams()->pluck('teams.id')->toArray())
+            ->preload()
+            ->hint(
+                new HtmlString(view('filament.components.hint-icon', [
+                    'tooltip' => $tooltip,
+                ])->render())
+            )
+            ->required();
+    }
+
+    public static function customPageBelongsToTeamsField(string $label = 'Teams', string $tooltip = 'Teams met toegang tot dit item'): Select
+    {
+        return Select::make('teams')
+            ->label($label)
+            ->multiple()
+            ->options(
+                fn() => Auth::user()?->teams->pluck('name', 'id')->toArray() ?? []
+            )
+            ->default(fn() => Auth::user()?->teams->pluck('id')->toArray())
+            ->preload()
             ->hint(
                 new HtmlString(view('filament.components.hint-icon', [
                     'tooltip' => $tooltip,

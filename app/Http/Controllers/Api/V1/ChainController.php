@@ -18,8 +18,31 @@ class ChainController extends Controller
 
     public function handleApiChain(Chain $chain, Request $request)
     {
-        dd($chain);
-        $this->chainService->execute($chain, $request);
+        try {
+            $this->chainService->execute($chain, $request);
+        } catch (\Exception $e) {
+
+            logger()->error('Chain execution failed', [
+                'chain_id' => $chain->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => method_exists($e, 'getUserMessage') ? $e->getUserMessage() : 'Er trad een onverwachte fout op.',
+            ], 400);
+
+        } catch (\Throwable $e) {
+            logger()->error('Unexpected chain failure', [
+                'chain_id' => $chain->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Er trad een onverwachte fout op.',
+            ], 500);
+        }
 
         return response()->json(['status' => 'ok']);
     }

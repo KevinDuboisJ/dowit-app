@@ -16,9 +16,12 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Forms\Form;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
 use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\ChainActionType;
 
 use App\Filament\Resources\ChainResource\Pages\CreateChainWizard;
 
@@ -50,7 +53,6 @@ class ChainResource extends Resource
 
     public static function table(Table $table): Table
     {
-
         return $table->columns([
             TextColumn::make('identifier')->label('Identificatie')
                 ->description(fn(Chain $record): string => $record->description),
@@ -64,8 +66,8 @@ class ChainResource extends Resource
                         return new HtmlString('Geen actie gevonden.');
                     }
 
-                    if (isset($record->actions['createTask'])) {
-                        $task = $record->actions['createTask'];
+                    if (isset($record->actions[ChainActionType::CreateTask->name])) {
+                        $task = $record->actions[ChainActionType::CreateTask->name];
 
                         $space    = \App\Filament\Resources\ChainResource::$spacesCache[$task['space_id'] ?? null] ?? null;
                         $campus   = \App\Filament\Resources\ChainResource::$campusesCache[$task['campus_id'] ?? null] ?? null;
@@ -86,10 +88,10 @@ class ChainResource extends Resource
                         $text .= '</div>';
                     }
 
-                    if (!empty($record->actions['code'])) {
+                    if (!empty($record->actions[ChainActionType::CustomCode->name])) {
                         $text = '<h4 class="text-green-800">1. Code</h4>';
                         $text .= '<div class="ml-4">';
-                        $text .= "<strong>Class:</strong> {$record->actions['code']['code']}";
+                        $text .= "<strong>Class:</strong> {$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}";
                         $text .= '</div>';
                     }
 
@@ -100,7 +102,15 @@ class ChainResource extends Resource
             IconColumn::make('is_active')
                 ->label('Active')
                 ->boolean(),
-        ])->openRecordUrlInNewTab();
+        ])
+            ->actions([
+                ActionGroup::make([
+                    EditAction::make()
+                        ->label('Bewerken'),
+
+                    DeleteAction::make(),
+                ])
+            ]);;
     }
 
     public static function getPages(): array

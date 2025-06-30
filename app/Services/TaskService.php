@@ -113,7 +113,7 @@ class TaskService
       $task->update(['status_id' => TaskStatus::Added->value]);
 
       $task->comments()->create([
-        'user_id' => config('app.system_user_id'),
+        'created_by' => config('app.system_user_id'),
         'content' => 'Status werd automatisch omgezet naar Toegevoegd',
         'created_at' => $comment->created_at->addSecond(),
       ]);
@@ -124,7 +124,6 @@ class TaskService
 
   public function fetchAndCombineTasks($request)
   {
-
     $hasFilterByStatus = false;
 
     // Get common settings

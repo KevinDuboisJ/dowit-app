@@ -13,9 +13,9 @@ use Illuminate\Support\Carbon;
 use App\Http\Requests\StoreAnnouncementRequest;
 use App\Services\TaskAssignmentService;
 use Illuminate\Contracts\Auth\Authenticatable;
-use App\Models\OAZIS\Patient;
 use App\Events\BroadcastEvent;
 use App\Services\TaskService;
+use App\Models\TaskType;
 
 class DashboardController extends Controller
 {
@@ -59,8 +59,8 @@ class DashboardController extends Controller
           });
       }),
 
-      'task_types' => Inertia::lazy(function () {
-        return DB::table('task_types')
+      'assets' => Inertia::lazy(function () {
+        return DB::table('tags')
           ->select('id', 'name')
           ->get()->map(function ($item) {
             return [
@@ -70,6 +70,14 @@ class DashboardController extends Controller
           });
       }),
 
+      'task_types' => Inertia::lazy(function () {
+        return TaskType::select('id', 'name')
+          ->get()
+          ->map(fn($item) => [
+            'value' => $item->id,
+            'label' => $item->name,
+          ]);
+      }),
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
         $task = new Task([
           'campus_id' => $request->input('campus') ?? null,

@@ -59,7 +59,7 @@ class StoreAnnouncementRequest extends FormRequest
     {
         $validated = $this->validated();
         return [
-            'user_id' => Auth::user()->id,
+            'created_by' => Auth::user()->id,
             'content' => $validated['announcement'],
             'start_date' => isset($validated['date']['from']) ? date('Y-m-d H:m:s', strtotime($validated['date']['from'])) : null,
             'end_date' => isset($validated['date']['to']) ? date('Y-m-d', strtotime($validated['date']['from'])) : null,

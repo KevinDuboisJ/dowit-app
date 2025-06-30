@@ -1,3 +1,13 @@
+To delete tasks in production with all dependencies.
+1. add constrain cascade delete to comment table and task_team
+2. tas_user and tag_task already have it be still CONFIRM
+
+Thing to do in production when pulling new version.
+1. In Newsfeed filter by Kevin Dubois and check if it also shows blank or error. I added the optional operator added '?' in newsItem.task?.name in case the task name is empty
+2. migrate the chain_team table
+3. change patient_id to visit_id in tasks table.
+
+
 1. Identifier: User gives a identifier in this serves for identifing the chain and for the api it helps creating only one endpoint api/v1/{identifier}
 2. description: in case user want to specify what the chain does.
 3. trigger_type: the user specifies if it is triggered via the APi or INTERNAL
@@ -8,10 +18,6 @@ For the internal trigger: add a TaskObserver with ChainService::execute('interna
 1. Bijlage toevoegen in task and taskplanner.
 3. Taak van sletuel, taken van nood kloppen
 3. Bijlage optie.
-
-
-Thing to do in production when pulling new version.
-1. Make sure the Chain table is equal to the test one
 
 
 • The hintIcon tooltip hides on click and escapes HTML, so a custom component is used to allow HTML and custom behavior.
@@ -34,26 +40,19 @@ When to update the user UI
 TO-DO's
   IMPORTANT: MAKE comments and task creation with richt text editor.
   1. Change icons in filament.
-  2. Clicking the help icon on taskplanner for exampler shows a border around but doesnt display the help text.
-  3. Create tabel with proposed teams with the task planner
-  38. Set mobile variable to somewhere global?
-  19. define the task types with Natascha
+  38. Set mobile variable to somewhere global
   48. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.
   53. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
   59. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
   60. Replace tippy.js with floatingUI
-  61. Fix the api route for laravel 11
-  62. Check basic functionaility works before pushing to production
-  63. Push and pull in production.
-  64. Get the HL7 message in a api route to test(check mirth to send this data)
   65. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
   66. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
   67. tiptap both in the react and the filament version seems to be removing the target property of the <a> tag
   69. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
-  70. Fix creatorField in hasFilamentField so that it uses created_by instead of dynamic generated
-  71. when searching locations omit characters like '-' or '_' so that receptie - onthaal for example can be found as receptie onthaal
   72. when creating task show loader until notification is showed that it was succesfully created
   73. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
+  78. An enduser can create a task in ad hoc and event
+
 
 Questions.
   1. How can i know if a patient left a room?
@@ -138,15 +137,6 @@ Holiday Seeder logic Overview:
   5. If a holiday's name changes, the seeder will treat it as a new holiday and create a new record.
   The previous record, with the outdated name, will not have its date updated, resulting in it being soft deleted as its date no longer matches the API data.
   This scenario is highly unlikely to occur but has been considered as a precaution. In the rare event that it does happen, and holidays are used as a foreign key for any other entity, the system must notify the user appropriately to ensure proper action can be taken.
-
-
-Completed.
-  • Fallover team cannot be selected in the multiselect
-  • Accept the asked help
-  • Refactored logic for edit permission. Also now a lock icon with tooltip is wshowed with message that only assigned usrs can edit.
-  • Users that are assigned to the task dont see the help icon or the accept help button.
-
-
 
 
 
@@ -241,19 +231,21 @@ Conclusion:
 Websockets are safe and effective for maintaining real-time sync between the server and clients, but they need proper handling to ensure users don’t miss updates. By implementing acknowledgment, resynchronization, and fallback mechanisms, you can ensure a robust and reliable system even in cases of network or server issues.
 
 
-improve this promt. I have a laravel 11 task management system and i want to add an chain module using laravel filament v3 that basically triggers a task based on certain event the table is named chains. For example first when certain action happen internally in the system like when a task is created with specific conditions like it has certain task type, create then another task or specify that is custom code that is written inside the laravel 11 app. And second most important via API that when certain endpoint is triggered also a task is created with certain condition or the same specify as before that is a custom code that wil be executed. For the api as security add only a IP whitelist field so that only those ip can trigger the endpoint (allow multiple IPs field). For the API for example a HL7 message wil be sended when an patient is admited, create for me also the custom code to process this. The idea is that the patient information liek this: $table->string('patient_id');
-            $table->string('visit_id');
-            $table->string('firstname')->nullable();
-            $table->string('lastname')->nullable();
-            $table->string('gender')->nullable();
-            $table->string('birthdate')->nullable();
-            $table->string('ext_id_1')->nullable();
-            $table->string('campus_id')->nullable();
-            $table->string('ward_id')->nullable();
-            $table->foreignId('room_id')->nullable();
-            $table->string('bed_id')->nullable();
-            $table->datetime('admission')->nullable();
-            $table->datetime('discharge')->nullable();
-are stored in the patient table. also there wil be a department table to track the departments where the patient is to track if a transfer happens also a room and bed table wil exist to track in what room and bed the patient is.  Also give me ideas of improvement if you see necessary to develope this idea.
 
+A02 EXAMPLE:
+MSH|^~\&|PRIMUZ||||20250625162125||ADT^A02|50000000016460774|P|2.5.1|50000000016460774||||BE
+EVN|A02|20250625162125||||20250625162100
+PID|1|9404284511|9404284511||WOLKENFELD^GITI||19940428000000|F|||BELGIËLEI 130 /A/09^^ANTWERPEN^^2018^BEL||+32483609842^^CP^gitiwolkenfeld@gmail.com||N|UND|||94042828801|592350037113||||||BEL||BEL||N
+PD1|1|||11489748^GUTFREUND^GERSON
+PV1|1|O|1623^134^03^002^0|C|71913345|1222^00M^02^002|003604^VANHANDENHOVE^INGA||003604^VANHANDENHOVE^INGA|MVAA||||1|||114897^GUTFREUND^GERSON||71913345||Z||||||||||||||||||11||J||1222|20250625120600
+PV2|1|Z^^^Z|5||||||20250625200000|5|||1||||||||0|||||||||||||||||CD VAAT SPATADERS O
+OBX|1|ST|DESCR^Description|HYPERSENSITIVITY|false||REMARK
+
+A03 EXAMPLE:
+MSH|^~\&|PRIMUZ||||20250626144530||ADT^A03^ADT_A03|50000000016481706|P|2.5.1|50000000016481706||||BE
+EVN|A03|20250626144530||||20250626144500
+PID|1|4811204505|4811204505||COORNAERT^MARIJKE EUGENIA||19481120000000|F|||TURNHOUTSEBAAN 178 /701^^BORGERHOUT (ANTWERPEN)^^2140^BEL||+3232378561^^PH^marijkecoornaert@gmail.com~+32487227372^^CP||N|UND|||48112030484|595262111091||||||BEL||BEL||N
+PV1|1|O|1622^02O^01^002^0|C|71931324||002316^REYNTJENS^BRUNO||002316^REYNTJENS^BRUNO|MOOG||||0|||119117^LEMMENS^LIESBETH||71931324||Z|||||||||||||||1|1||11||J|||20250626123300|20250626144500
+PV2|1|Z^^^Z|5|1|||||20250626180000|5|||1||||||||0|||||||||||||||||CD oog A catar ingr
+OBX|1|ST|DESCR^Description|HYPERSENSITIVITY|false||REMARK
 

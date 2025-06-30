@@ -13,7 +13,7 @@ export const NewsItem = ({ newsItem }) => {
       <div className="flex w-full flex-col">
         <div className="flex items-center">
           <div className="flex items-center">
-            <div className="font-semibold"> {`${newsItem.user?.firstname} ${newsItem.user?.lastname}`}</div>
+            <div className="font-semibold"> {`${newsItem.creator?.firstname} ${newsItem.creator?.lastname}`}</div>
           </div>
           <div
             className={cn(
@@ -29,13 +29,13 @@ export const NewsItem = ({ newsItem }) => {
       </div>
       <div className="flex w-full p-2">
         <Avatar className="rounded mr-3 top-0 ">
-          <AvatarImage src={newsItem.user?.image_path} alt={newsItem.user?.firstname} />
-          <AvatarFallback>{newsItem.user?.firstname.charAt(0)}</AvatarFallback>
+          <AvatarImage src={newsItem.creator?.image_path} alt={newsItem.creator?.firstname} />
+          <AvatarFallback>{newsItem.creator?.firstname.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="relative w-full p-3 py-2 text-sm text-muted-foreground border border-slate-100 rounded border-neutral-200 bg-slate-50
     after:content-[''] after:absolute after:z-10 after:left-[-10px] after:top-[5px] after:w-0 after:h-0 after:border-r-[10px] after:border-r-neutral-200 after:border-t-[10px] after:border-t-transparent after:border-b-[10px] after:border-b-transparent">
 
-          <span className="block">{newsItem?.task_id ? newsItem.task.name : 'Mededeling'}</span>
+          <span className="block">{newsItem?.task_id ? newsItem.task?.name : 'Mededeling'}</span>
           {newsItem.content?.length > 0 &&
             <RichText text={newsItem.content} className='text-gray-700'/>
           }

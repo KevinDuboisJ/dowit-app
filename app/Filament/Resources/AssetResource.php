@@ -15,9 +15,9 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Section;
 use App\Traits\HasFilamentTeamFields;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\DeleteAction;
 use Illuminate\Database\Eloquent\Model;
-use Filament\Forms\Components\Placeholder;
-use Illuminate\Support\HtmlString;
 
 class AssetResource extends Resource
 {
@@ -69,8 +69,8 @@ class AssetResource extends Resource
                     })
                     ->columnSpan(1),
 
-                    HasFilamentTeamFields::creatorField(),
-                    
+                HasFilamentTeamFields::creatorField(),
+
             ])->columns(3);
     }
 
@@ -88,12 +88,12 @@ class AssetResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->label('Bewerken'),
+
+                    DeleteAction::make(),
+                ])
             ]);
     }
 

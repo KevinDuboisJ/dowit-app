@@ -19,17 +19,14 @@ class NewsfeedController extends Controller
     $filters = $request->input('filters', []);
     $user = Auth::user();
 
+    // Main team based filtering is handled via the HasTeams trait
     $newsfeed = Comment::with([
-      'user',
+      'creator',
       'task' => fn($query) => $query->with(['assignees']),
-      'status' => fn($query) => $query->select('id', 'name')
+      'status' => fn($query) => $query->select('id', 'name'),
     ])
-      ->when(!Helper::containsFilter($filters, 'user_id') && !Helper::containsFilter($filters, 'team_id'), function ($query) use ($user) {
-
-        // Apply the default scope to filter by the user's teams
-        $query->byUserTeams($user);
-      })
-      ->when($filter = Helper::containsFilter($filters, 'user_id'), function ($query) use ($filter) {
+      ->ByTeamsAndRecipients()
+      ->when($filter = Helper::containsFilter($filters, 'created_by'), function ($query) use ($filter) {
         $this->applyFilters($query, $filter);
       })
       ->when($filter = Helper::containsFilter($filters, 'team_id'), function ($query) use ($filter) {
@@ -43,7 +40,8 @@ class NewsfeedController extends Controller
       ->when($filter = Helper::containsFilter($filters, 'status_id'), function ($query) use ($filter) {
         $this->applyFilters($query, $filter);
       })
-      ->orderBy('created_at', 'DESC')->paginate(5);
+      ->orderBy('created_at', 'DESC')
+      ->paginate(5);
 
     return Inertia::render('Newsfeed', [
       'newsfeed' => fn() => $newsfeed,

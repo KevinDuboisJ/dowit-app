@@ -2,18 +2,21 @@
 
 namespace App\Enums;
 
+use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
-enum OperationType implements HasLabel
+enum ChainActionType implements HasLabel
 {
+    use HasEnumCaseNames;
+    
     case CreateTask;
-    case Custom;
+    case CustomCode;
 
     public function getLabel(): ?string
     {
         return match ($this) {
             self::CreateTask => 'Taak aanmaken',
-            self::Custom => 'Aangepast script',
+            self::CustomCode => 'Aangepast script',
         };
     }
 }

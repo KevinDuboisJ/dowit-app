@@ -16,6 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   AvatarStack,
+  RichText,
 } from '@/base-components';
 
 import {
@@ -55,31 +56,32 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
   const renderTaskRow = (task) => {
     const priority = getPriority(task.created_at, task.priority, settings.TASK_PRIORITY.value);
     const statusColor = `text-${getColor(task.status.name)}`;
+    const description = task.description || '';
+    const plainText = description.replace(/<[^>]+>/g, ''); // strip HTML tags
 
     return (
       <div key={task.id} className='flex'>
 
         <div style={{ backgroundColor: priority.color }}
-          className="flex w-[32px] shadow-[3px_0_4px_rgba(0,0,0,0.2)] border-r border-r-black/10 transform transform transition duration-150 active:translate-x-1 cursor-pointer"
+          className="shrink-0 shadow-[2px_0_3px_rgba(0,0,0,0.1)] w-[32px] transform transform transition duration-150 active:translate-x-1 cursor-pointer"
           onClick={() => setSheetState({ open: true, taskId: task.id })}>
         </div>
         <div
-          className='w-full bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm p-4 w-80 rounded-tl-none rounded-bl-none '
+          className='flex-1 min-w-0 bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm px-4 py-3 rounded-tl-none rounded-bl-none'
         >
           <div className="flex items-center">
-            <div className='flex flex-col'>
+            <div className='flex flex-col w-full min-w-0'>
 
               {/* Task Title */}
-              <div className="text-lg font-bold">{task.name}</div>
+              <div className="text-lg font-bold leading-4">{task.name}</div>
 
               {/* Task description */}
-              <div className="text-gray-500 text-sm">{task.task_type.name}</div>
+              <RichText className="truncate text-gray-500 text-xs" text={
+                plainText.length > 60
+                  ? `${plainText.slice(0, 60)}...`
+                  : plainText
+              } />
 
-              {/* Priority */}
-              <div className='flex'>
-                <span className={`text-sm text-slate-500 font-medium ${statusColor}`}>{__(task.status.name)}</span>
-
-              </div>
             </div>
           </div>
 
@@ -94,7 +96,17 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
           </div>
         </div> */}
 
-          <div className="flex flex-col mt-4 space-y-1">
+          <div className="flex flex-col mt-3">
+
+            {/* Priority */}
+            <InfoRow
+              minWidth="50px"
+              icon={<Heroicon icon="Bolt" className="w-4 h-4 text-slate-500" />}
+              label="Status:"
+              value={<span className={`text-sm font-medium ml-1 ${statusColor}`}>{__(task.status.name)}</span>}
+            />
+
+
             {task?.patient &&
               <InfoRow
                 minWidth="50px"
@@ -122,10 +134,10 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
               />
             }
           </div>
-          <Separator className='my-3 bg-slate-200/60 dark:bg-darkmode-400' />
+          <Separator className='my-2 bg-slate-200/60 dark:bg-darkmode-400' />
 
           {/* Avatars */}
-          <div className="flex items-center mt-4">
+          <div className="flex items-center">
             <div className="flex -space-x-2">
 
               {task.needs_help > 0 && <Tippy content={'Hulp gevraagd'} options={{ allowHTML: true, offset: [30, 20] }}>
@@ -190,10 +202,12 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
         <Accordion className='h-full my-2 m-0 p-0 space-y-4 shadow-none' type='multiple' defaultValue={['item-1', 'item-2']}>
           {/* Assigned tasks */}
           <AccordionItem className='bg-lime-50/30 mb-0 p-0 border rounded-xl' value='item-1'>
-            <AccordionTrigger className='text-sm font-bold p-4 cursor-pointer hover:no-underline'>
-              <span>
+            <AccordionTrigger className='text-sm p-4 cursor-pointer hover:no-underline'>
+              <span className='flex'>
                 Aan mij toegewezen
-                <span className='ml-1 text-sm text-white bg-red-600 p-1 px-2 rounded-xl'>{todoTasks.length}</span>
+                <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 flex items-center justify-center rounded-full">
+                  {todoTasks.length}
+                </span>
               </span>
             </AccordionTrigger>
             <AccordionContent asChild>
@@ -206,10 +220,12 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
 
           {/* Open tasks */}
           <AccordionItem className='bg-blue-50/50 mb-0 p-0 border rounded-xl' value="item-2">
-            <AccordionTrigger className='text-sm font-bold p-4 cursor-pointer hover:no-underline'>
-              <span>
+            <AccordionTrigger className='text-sm p-4 cursor-pointer hover:no-underline'>
+              <span className='flex'>
                 Niet aan mij toegewezen
-                <span className="ml-1 text-sm text-white bg-red-600 p-1 px-2 rounded-xl">{openTasks.length}</span>
+                <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 px-2 flex items-center justify-center rounded-full">
+                  {openTasks.length}
+                </span>
               </span>
 
 
@@ -229,12 +245,12 @@ export const TaskMobileView = ({ todoTasks, openTasks, setTasks, setSheetState, 
 
 const InfoRow = ({ icon = null, label, value, minWidth = '90px' }) => {
   return (
-    <div className="flex items-start text-gray-700">
+    <div className="flex items-start">
       <div style={{ minWidth: minWidth }} className="flex items-center space-x-1 min-w-0">
         {icon}
         <span className="text-sm text-slate-500">{label}</span>
       </div>
-      {isValidElement(value) ? value : <span className="text-sm font-medium text-slate-500">{value}</span>}
+      {isValidElement(value) ? value : <span className="text-sm font-medium ml-1">{value}</span>}
     </div>
   );
 };

@@ -22,24 +22,73 @@ class CreatePatientListSchema extends Migration
         // Create the patients table
         Schema::connection('patientlist')->create('patients', function ($table) {
             $table->id();
-            $table->string('patient_id');
-            $table->string('visit_id');
+            $table->string('number')->unique();
             $table->string('firstname')->nullable();
             $table->string('lastname')->nullable();
             $table->string('gender')->nullable();
             $table->string('birthdate')->nullable();
-            $table->string('ext_id_1')->nullable();
-            $table->string('campus_id')->nullable();
-            $table->string('ward_id')->nullable();
+            $table->timestamps();
+        });
+
+        // Create visits table
+        Schema::connection('patientlist')->create('visits', function ($table) {
+            $table->id();
+            $table->string('number');
+            $table->foreignId('patient_id');
+            $table->foreignId('space_id')->nullable();
+            $table->foreignId('campus_id')->nullable();
+            $table->foreignId('department_id')->nullable();
             $table->foreignId('room_id')->nullable();
-            $table->string('bed_id')->nullable();
-            $table->datetime('admission')->nullable();
+            $table->foreignId('bed_id')->nullable();
+            $table->datetime('admission');
             $table->datetime('discharge')->nullable();
             // $table->string('adm_date');
             // $table->string('adm_time');
             // $table->string('dis_date');
             // $table->string('dis_time');
             //$table->boolean('dismissed');
+            $table->timestamps();
+
+            // Uniqueness constraint to prevent duplicates
+            $table->unique(['number', 'patient_id']);
+        });
+
+        // Create departments table
+        Schema::connection('patientlist')->create('departments', function ($table) {
+            $table->id();
+            $table->string('number');
+            $table->timestamps();
+        });
+
+        // Create beds table
+        Schema::connection('patientlist')->create('beds', function ($table) {
+            $table->id();
+            $table->foreignId('room_id');
+            $table->string('number');
+            $table->datetime('occupied')->nullable();
+            $table->datetime('cleaned')->nullable();
+            $table->timestamps();
+
+            // Uniqueness constraint to prevent duplicates
+            $table->unique(['room_id', 'number']);
+        });
+
+
+
+
+        Schema::connection('patientlist')->create('bed_visits', function ($table) {
+            $table->id();
+            $table->foreignId('bed_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('visit_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('start_date');
+            $table->timestamp('stop_date')->nullable();
+            $table->timestamps();
+        });
+
+        // Create rooms
+        Schema::connection('patientlist')->create('rooms', function ($table) {
+            $table->id();
+            $table->string('number')->unique();
             $table->timestamps();
         });
 
@@ -48,21 +97,6 @@ class CreatePatientListSchema extends Migration
             $table->id();
             $table->string('migration');
             $table->integer('batch');
-        });
-
-        // Create patient_room table
-        Schema::connection('patientlist')->create('patient_room', function ($table) {
-            $table->id();
-            $table->foreignId('patient_id');
-            $table->foreignId('room_id');
-            $table->timestamps();
-        });
-
-        // Create rooms
-        Schema::connection('patientlist')->create('rooms', function ($table) {
-            $table->id();
-            $table->string('number');
-            $table->timestamps();
         });
     }
 
@@ -73,15 +107,18 @@ class CreatePatientListSchema extends Migration
      */
     public function down()
     {
+        Schema::connection('patientlist')->dropIfExists('visits');
         Schema::connection('patientlist')->dropIfExists('patients');
-        Schema::connection('patientlist')->dropIfExists('patient_room');
+        Schema::connection('patientlist')->dropIfExists('departments');
+        Schema::connection('patientlist')->dropIfExists('beds');
+        Schema::connection('patientlist')->dropIfExists('bed_visits');
         Schema::connection('patientlist')->dropIfExists('rooms');
         Schema::connection('patientlist')->dropIfExists('migrations');
     }
 }
 
 
-// Keys: 'pat_id', 'visit_id', 'firstname', 'lastname', 'ext_id_1', 'spoken_language','campus_id','ward_id','room_id','bed_id', 'adm_date', 'adm_time', 'dis_date', 'dis_time'
+// Keys: 'pat_id', 'visit_number', 'firstname', 'lastname', 'ext_id_1', 'spoken_language','campus_id','ward_id','room_id','bed_id', 'adm_date', 'adm_time', 'dis_date', 'dis_time'
 
 // Example of patient 01:
 // {#1956 ▼ // app\Http\Controllers\Pages\DashboardController.php:24
@@ -166,7 +203,7 @@ class CreatePatientListSchema extends Migration
 //   +"lastrncheckdate": "2022-10-2500:00:00.000"
 //   +"alpha_street": "GEMEENTESTRAAT"
 //   +"postal_code_sub": "0"
-//   +"visit_id": "71551560"
+//   +"visit_number": "71551560"
 //   +"visit_type": "1"
 //   +"adm_date": "2025-01-0900:00:00.000"
 //   +"adm_time": "1900-01-0110:09:00.000"

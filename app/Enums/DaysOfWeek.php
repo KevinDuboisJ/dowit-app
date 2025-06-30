@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
+use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
 enum DaysOfWeek implements HasLabel
 {
+    use HasEnumCaseNames;
+
     case Monday;
     case Tuesday;
     case Wednesday;
@@ -25,10 +28,5 @@ enum DaysOfWeek implements HasLabel
             self::Saturday => 'Zaterdag',
             self::Sunday => 'Zondag',
         };
-    }
-
-    public static function fromName(string $name)
-    {
-        return constant("self::$name");
     }
 }

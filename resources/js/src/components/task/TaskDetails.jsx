@@ -60,9 +60,7 @@ export const TaskDetails = ({ task }) => {
       <div className="space-y-5 my-2">
         <div className="space-y-3 border rounded-lg p-4 bg-white shadow-xs dark:bg-darkmode-500 dark:border-darkmode-400">
 
-          <p className="text-sm text-muted-foreground">
-            <RichText text={task.description} className='whitespace-nowrap text-sm px-3'/>
-          </p>
+          <RichText text={task.description} className='text-sm text-gray-900'/>
           
           <InfoRow
             icon={<Heroicon icon="Flag" variant="solid" className="w-4 h-4 text-slate-400" />}
@@ -76,11 +74,11 @@ export const TaskDetails = ({ task }) => {
             value={format(parseISO(task.start_date_time), "PP HH:mm")}
           />
 
-          {task?.patient &&
+          {task?.visit &&
             <InfoRow
               icon={<Heroicon icon="UserCircle" variant="solid" className="w-4 h-4 text-slate-400" />}
               label="Wie:"
-              value={`${task.patient.firstname} ${task.patient.lastname} (${task.patient.birthdate}) (${task.patient.gender}) - ${task.patient.room_id}, ${task.patient.bed_id}`}
+              value={`${task.visit.patient.firstname} ${task.visit.patient.lastname} (${task.visit.patient.birthdate}) (${task.visit.patient.gender}) - ${task.visit.room.number}, ${task.visit.bed.number}`}
             />
           }
 
@@ -128,7 +126,7 @@ export const TaskDetails = ({ task }) => {
 
         <div>
           <div className="flex text-base font-medium">
-            Procedures
+            Bestanden
           </div>
 
           <AssetList assets={task.task_type.assets} />
@@ -159,16 +157,15 @@ export const TaskDetails = ({ task }) => {
 
 const InfoRow = ({ icon = null, label, value, minWidth = '150px', className, style }) => {
   return (
-    <div style={style} className={cn('flex items-center text-gray-900', className)}>
+    <div style={style} className={cn('flex flex-col sm:flex-row sm:items-center text-gray-900 gap-1 sm:gap-0', className)}>
       {/* Left Section: Icon + Label */}
       <div style={{ minWidth: minWidth }} className="flex items-center space-x-1 min-w-0">
         {icon}
         <span className="text-sm text-slate-500">{label}</span>
       </div>
 
-
       {/* Right Section: Value */}
-      {isValidElement(value) ? value : <span className="text-sm text-ellipsis overflow-hidden whitespace-nowrap">{value}</span>}
+      {isValidElement(value) ? value : <span className="text-sm">{value}</span>}
 
     </div>
   );

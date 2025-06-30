@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Forms\Set;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Forms\Components\Checkbox;
@@ -41,7 +42,6 @@ use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\RichEditor;
 use App\Traits\HasFilamentTeamFields;
-use Filament\Tables\Actions\DeleteAction;
 use App\Models\Team;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
@@ -126,15 +126,13 @@ class TaskPlannerResource extends Resource
                     ->searchable(['name', '_spccode'])
                     ->getSearchResultsUsing(function (string $search) {
                         return Space::query()
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('_spccode', 'like', "%{$search}%")
+                            ->byUserInput($search) // ← use your scope here
                             ->limit(50)
                             ->get()
                             ->mapWithKeys(fn($space) => [
                                 $space->id => "{$space->name} ({$space->_spccode})",
                             ]);
                     })
-                    ->required()
                     ->live(),
 
                 Select::make('space_to_id')
@@ -144,8 +142,7 @@ class TaskPlannerResource extends Resource
                     ->searchable(['name', '_spccode'])
                     ->getSearchResultsUsing(function (string $search) {
                         return Space::query()
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('_spccode', 'like', "%{$search}%")
+                            ->byUserInput($search) // ← use your scope here
                             ->limit(50)
                             ->get()
                             ->mapWithKeys(fn($space) => [
@@ -328,12 +325,11 @@ class TaskPlannerResource extends Resource
 
                                         // 1) Compute suggested & existing team IDs
                                         $suggested   = $get('teams') ?? [];
+                                        $existing    = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
 
-                                        if (empty($suggested)) {
+                                        if (empty($suggested) && empty($existing)) {
                                             return new HtmlString('<span class="text-sm text-gray-500">Er is geen teamtaaktoewijzingsregel voor uw selectie</span>');
                                         }
-
-                                        $existing    = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
 
                                         $toAdd     = array_diff($suggested, $existing);
                                         $toRemove  = array_diff($existing,  $suggested);
@@ -468,8 +464,13 @@ class TaskPlannerResource extends Resource
                 ActionGroup::make([
                     Tables\Actions\EditAction::make()
                         ->label('Bewerken'),
-                    Action::make('Activeren')
-                        ->label('Activeren')
+                    Action::make('Execute')
+                        ->label('Taak uitvoeren')
+                        ->modalDescription('Start een taak volgens de ingestelde plannerconfiguratie voor specifieke medewerkers')
+                        ->modalAlignment('center')
+                        ->modalWidth('md')
+                        ->modalIcon('heroicon-o-exclamation-triangle')
+                        ->modalSubmitActionLabel('Bevestigen')
                         ->icon('heroicon-o-cog')
                         ->form([
                             Section::make([
@@ -487,8 +488,8 @@ class TaskPlannerResource extends Resource
                             $record->assignments = $data['assignments'];
                             $taskPlannerService->triggerTask($record, TaskStatus::Added, Carbon::now());
                         })
-                        ->modalAutofocus(false)
-                        ->requiresConfirmation(),
+                        ->modalAutofocus(false),
+
                     DeleteAction::make(),
                 ]),
 

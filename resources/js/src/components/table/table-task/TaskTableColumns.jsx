@@ -17,6 +17,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     // Hidden grouping column (DO NOT set a header)
     columnHelper.accessor('capabilities.isAssignedToCurrentUser',
       {
+        size: 10,
         id: 'assignedGroup',
         header: () => null, // Remove header
         cell: () => null, // Prevent rendering in cells
@@ -27,7 +28,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     columnHelper.accessor('priority', {
       id: 'priority',
       header: '',
-      size: 40,
+      size: 20,
       cell: (cell) => {
         const data = cell.row.original;
         const priorityInfo = getPriority(data.created_at, data.priority, settings.TASK_PRIORITY.value);
@@ -44,7 +45,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     columnHelper.accessor('status.name', {
       id: 'status',
       header: 'Status',
-      size: 100,
+      size: 75,
       cell: ({ cell, row }) => {
         return row.original.needs_help ? (
           <Tippy content="Hulp gevraagd" options={{ allowHTML: true }}>
@@ -66,28 +67,49 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
 
     // Start Date Column
     columnHelper.accessor('start_date_time', {
-      header: 'Tijd',
-      size: 130,
+      header: 'Tijdstip',
+      size: 80,
       cell: ({ cell, row }) => {
         const dateStr = cell.getValue();
-        return <div className="whitespace-nowrap text-sm">{format(parseISO(dateStr), 'PP HH:mm')}</div>;
+        return <span className="text-gray-900">
+          {format(parseISO(dateStr), 'dd MMM')}
+          <span className="text-gray-500 ml-1">
+            {format(parseISO(dateStr), 'HH:mm')}
+          </span>
+        </span>
       },
     }),
 
     // Task Name Column
     columnHelper.accessor('name', {
       header: 'Taak',
-      size: 150,
-      cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
+      size: 300,
+      maxSize: 400,
+      cell: (cell) => {
+
+        const description = cell.row.original.description || '';
+        const plainText = description.replace(/<[^>]+>/g, ''); // strip HTML tags
+
+        return <div className='flex flex-col'>
+          <div className='font-bold leading-4 text-sm whitespace-nowrap'>
+            {cell.getValue()}
+          </div>
+          <RichText className="text-gray-500 text-xs whitespace-nowrap" text={
+            plainText.length > 60
+              ? `${plainText.slice(0, 60)}...`
+              : plainText
+          } />
+        </div>
+      },
     }),
 
     // Task Type Column
-    columnHelper.accessor('task_type.name', {
-      id: 'task_type',
-      header: 'Taaktype',
-      size: 150,
-      cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
-    }),
+    // columnHelper.accessor('task_type.name', {
+    //   id: 'task_type',
+    //   header: 'Taaktype',
+    //   size: 150,
+    //   cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
+    // }),
 
     // Assigned Users Column
     columnHelper.accessor('assignees', {
@@ -100,21 +122,25 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       },
     }),
 
-    columnHelper.accessor('comments', {
-      id: 'comment',
-      header: 'Recente commentaar',
-      cell: ({ cell }) => {
-        return <RichText text={cell.getValue()?.[0]?.content} className='whitespace-nowrap text-sm'></RichText>;
-      },
-    }),
+    // columnHelper.accessor('comments', {
+    //   id: 'comment',
+    //   header: 'Recente commentaar',
+    //   cell: ({ cell }) => {
+    //     return <RichText text={cell.getValue()?.[0]?.content} className='whitespace-nowrap text-sm'></RichText>;
+    //   },
+    // }),
 
     // Action Button Column
     columnHelper.display({
       id: 'action',
+      size: 200,
       meta: {
-        align: 'center'
+        align: 'right'
       },
-      cell: (cell) => <TaskActionButton task={cell.row.original} user={user} handleTaskUpdate={handleTaskUpdate} handleTasksRecon={handleTasksRecon} />,
+      cell: (cell) =>
+        <div className='px-2'>
+          <TaskActionButton task={cell.row.original} user={user} handleTaskUpdate={handleTaskUpdate} handleTasksRecon={handleTasksRecon} />
+        </div>,
     }),
 
   ], []);

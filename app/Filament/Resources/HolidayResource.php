@@ -37,8 +37,10 @@ class HolidayResource extends Resource
         return $form
             ->schema([
                 TextInput::make('name')
+                    ->label('Naam')
                     ->required(),
                 DatePicker::make('date')
+                    ->label('Datum')
                     ->required()
                     ->native(false),
             ]);

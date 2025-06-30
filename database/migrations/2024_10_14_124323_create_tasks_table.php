@@ -23,13 +23,14 @@ return new class extends Migration
             $table->longText('description')->nullable();
             $table->foreignId('campus_id');
             $table->foreignId('task_type_id');
-            $table->foreignId('patient_id')->nullable();
-            $table->foreignId('space_id');
+            $table->foreignId('visit_id')->nullable();
+            $table->foreignId('space_id')->nullable();
             $table->foreignId('space_to_id')->nullable();
             $table->foreignId('status_id');
             $table->enum('priority', ['low', 'medium', 'high'])->nullable();
             $table->boolean('needs_help')->default(false);
             $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
         });
 

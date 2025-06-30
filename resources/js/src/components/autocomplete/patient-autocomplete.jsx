@@ -79,7 +79,7 @@ const PatientAutocomplete = ({ onValueChange = null }) => {
   if (!loading && Object.keys(selectedPatient).length > 0) {
     return (
       <Badge className="flex items-center justify-between text-sm text-slate-500 font-normal h-8 bg-white" variant="outline">
-        {`${selectedPatient.firstname} ${selectedPatient.lastname} (${selectedPatient.birthdate}) (${selectedPatient.gender}) - ${selectedPatient.room_id}, ${selectedPatient.bed_id}`}
+        {`${selectedPatient.firstname} ${selectedPatient.lastname} (${selectedPatient.birthdate}) (${selectedPatient.gender}) - ${selectedPatient.room_number}, ${selectedPatient.bed_number}`}
         <Heroicon
           icon="XMark"
           className="w-3 h-3 ml-2 font-normal text-slate-500 cursor-pointer"

@@ -74,7 +74,6 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
     autoResetExpanded: false,
   });
 
-
   return (
     <div className="flex flex-col h-full min-h-0 intro-y">
       <table>
@@ -84,7 +83,11 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
               {headerGroup.headers.map((header) => {
                 return (
                   header.id !== 'assignedGroup' && (
-                    <TableHead key={header.id} style={{ width: header.getSize() === 'width' ? header.getSize() : `${header.getSize()}px` }} className='bg-zinc-50 text-sm text-primary'>
+                    <TableHead key={header.id} style={{
+                      width: typeof header.getSize() === 'number' ? `${header.getSize()}px` : header.getSize(),
+                      maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : header.column.columnDef.maxSize
+                    }}
+                      className='bg-zinc-50 text-sm text-primary'>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -119,8 +122,8 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
                           <span className='text-sm font-medium !text-slate-700'>
                             {row.groupingValue === 'true' ? 'Aan mij toegewezen' : 'Niet aan mij toegewezen'}
                           </span>
-                          <span className="text-sm !text-white ml-2 bg-red-600 p-1 px-2 rounded-xl">
-                          {row.subRows.length === 1 && row.subRows[0].original?.isDummy ? 0 : row.subRows.length}
+                          <span className="text-[10px] !text-white ml-2 bg-green-700 min-w-[1.5rem] h-6 w-6 px-2 flex items-center justify-center rounded-full">
+                            {row.subRows.length === 1 && row.subRows[0].original?.isDummy ? 0 : row.subRows.length}
                           </span>
                         </div>
                       </TableCell>
@@ -145,7 +148,7 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
                                 cell.column.id !== 'assignedGroup' && (
                                   <TableCell
                                     key={cell.id}
-                                    style={{ width: cell.column.getSize() === 'width' ? cell.column.getSize() : `${cell.column.getSize()}px` }}
+                                    style={{ width: typeof cell.column.getSize() === 'number' ? `${cell.column.getSize()}px` : cell.column.getSize() }}
                                     className={`h-[60px] ${cell.column.id !== 'action' ? 'cursor-pointer' : ''}`}
                                     align={(cell.column.columnDef.meta)?.align}
                                     onClick={

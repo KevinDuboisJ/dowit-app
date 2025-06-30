@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('trigger_type');
             $table->json('trigger_conditions')->nullable();
             $table->json('actions')->nullable();
-            $table->string('custom_code_class')->nullable();
             $table->json('ip_whitelist')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
             $table->softDeletes();
         });

@@ -123,7 +123,7 @@ const Newsfeed = ({ newsfeed: initNewsfeed, teammates, statuses, teams }) => {
       <div className='flex flex-col h-full min-h-0 fadeInUp box p-3 gap-y-2'>
         <div className='flex items-center space-x-2'>
           <Select onValueChange={(e) => {
-            handleSearch('user_id', '=', e)
+            handleSearch('created_by', '=', e)
           }}
             defaultValue={null}
           >

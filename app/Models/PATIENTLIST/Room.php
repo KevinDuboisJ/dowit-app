@@ -14,4 +14,9 @@ class Room extends Model
     {
         return $this->hasMany(PatientRoom::class);
     }
+
+    public function beds()
+    {
+        return $this->hasMany(Bed::class);
+    }
 }

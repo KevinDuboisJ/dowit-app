@@ -6,6 +6,7 @@ import { __ } from '@/stores';
 import { RichText, Heroicon, Separator } from '@/base-components';
 
 export const TaskActivity = ({ comments }) => {
+
   if (!comments || comments.length === 0) {
     return (
       <div className="h-full">
@@ -27,7 +28,7 @@ export const TaskActivity = ({ comments }) => {
                 index={index}
                 lastIndex={comments.length - 1}
               />
-              {comment.user_id === 1 ? (
+              {comment.created_by === 1 ? (
                 <TextBox activity={comment} />
               ) : (
                 <UpdateBox activity={comment} />
@@ -149,7 +150,7 @@ const UpdateBox = ({ activity }) => {
 
           <div className="flex items-center space-x-1">
             <p className="text-sm text-gray-600 font-medium">
-              {`${activity.user?.firstname} ${activity.user?.lastname}`}
+              {`${activity.creator?.firstname} ${activity.creator?.lastname}`}
             </p>
             <p className="text-sm text-gray-600">- {formatDate(activity.created_at)}</p>
           </div>

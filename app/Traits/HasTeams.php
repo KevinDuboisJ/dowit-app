@@ -32,7 +32,16 @@ trait HasTeams
             $model = new static;
 
             $query->where(function ($query) use ($model, $user) {
-                $model->scopeByOwnOrBelongsToUserTeams($query, $user);
+
+                $query->where(function ($q) use ($user, $model) {
+                    $model->scopeByBelongsToTeamIds($q, $user->teams->pluck('id')->toArray());
+                    
+                    if (method_exists($model, 'scopeByCreator')) {
+                        $q->orWhere(function ($subQuery) use ($user, $model) {
+                            $model->scopeByCreator($subQuery, $user);
+                        });
+                    }
+                });
 
                 // If the model has an 'assignees' relationship, include assigned tasks
                 if (method_exists($model, 'assignees')) {
@@ -52,38 +61,33 @@ trait HasTeams
         return $this->belongsToMany(Team::class);
     }
 
-    // Team.php
     public function users()
     {
         return $this->belongsToMany(User::class);
     }
 
-    public function scopeByOwnOrBelongsToUserTeams(Builder $query, User $user): Builder
-    {
-        return $query->where(function ($q) use ($user) {
-            $this->scopeByCreator($q, $user)
-                ->orWhere(function ($q2) use ($user) {
-                    $this->scopeByBelongsToTeamIds($q2, $user->teams->pluck('id')->toArray());
-                });
-        });
-    }
-
-    public function scopeByCreator(Builder $query, User $user): Builder
-    {
-        return $query->where('created_by', $user->id);
-    }
+    // public function scopeByOwnOrBelongsToUserTeams(Builder $query, User $user): Builder
+    // {
+    //     return $query->where(function ($q) use ($user) {
+    //         $this->scopeByCreator($q, $user)
+    //             ->orWhere(function ($q2) use ($user) {
+    //                 $this->scopeByBelongsToTeamIds($q2, $user->teams->pluck('id')->toArray());
+    //             });
+    //     });
+    // }
 
     public function scopeByBelongsToTeamIds(Builder $query, array $teamIds): Builder
     {
-        // No team IDs → short-circuit to an always-false where clause. If the given array is empty, this will match no records
         if (count($teamIds) === 0) {
             return $query->whereRaw('0 = 1');
         }
 
-        $query->whereHas('teams', function ($query) use ($teamIds) {
-            $query->whereIn('team_id', $teamIds);
-        });
+        $relation = method_exists($this, 'teamRelationPath')
+            ? $this->teamRelationPath()
+            : 'teams';
 
-        return $query;
+        return $query->whereHas($relation, function ($q) use ($teamIds) {
+            $q->whereIn('teams.id', $teamIds);
+        });
     }
 }

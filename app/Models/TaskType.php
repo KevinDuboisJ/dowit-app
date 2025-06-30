@@ -5,17 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Asset;
+use App\Traits\HasTeams;
+use App\Traits\HasCreator;
 
 class TaskType extends Model
 {
-    use HasFactory;
+    use HasFactory, HasCreator, HasTeams;
 
     protected $fillable = ['name', 'team_id'];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function tasks()
     {

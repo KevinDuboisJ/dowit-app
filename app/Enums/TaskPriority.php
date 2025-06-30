@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
+use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
 enum TaskPriority implements HasLabel
 {
+    use HasEnumCaseNames;
+
     case Low;
     case Medium;
     case High;
@@ -18,10 +21,5 @@ enum TaskPriority implements HasLabel
             self::Medium => 'Gemiddeld',
             self::High => 'Hoog',
         };
-    }
-
-    public static function fromCaseName(string $caseName): self
-    {
-        return constant("self::$caseName");
     }
 }
