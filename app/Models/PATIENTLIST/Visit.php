@@ -45,4 +45,14 @@ class Visit extends Model
     {
         return $this->belongsTo(Space::class);
     }
+
+    public function bedVisits()
+    {
+        return $this->hasMany(BedVisit::class);
+    }
+
+    public function scopeOrderByLatestVisit($query)
+    {
+        return $query->latest('admission');
+    }
 }

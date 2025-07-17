@@ -1,36 +1,41 @@
-import { router } from '@inertiajs/react';
-import { __ } from '@/stores';
-import { useLoader } from '@/hooks';
-import {
-  AnnouncementSheet,
-  TaskSheet,
-  FilterBar,
-  TaskTable
-} from '@/components';
+import {router} from '@inertiajs/react'
+import {__} from '@/stores'
+import {useLoader} from '@/hooks'
+import {AnnouncementSheet, TaskSheet, FilterBar, TaskTable} from '@/components'
 
-export const TaskDesktopView = ({filtersRef, tasks, setTasks, setSheetState, handleTasksRecon, handleTaskUpdate}) => {
-
-  const { loading, setLoading, Loader } = useLoader();
+export const TaskDesktopView = ({
+  filtersRef,
+  tasks,
+  setTasks,
+  setSheetState,
+  handleTasksRecon,
+  handleTaskUpdate
+}) => {
+  const {loading, setLoading, Loader} = useLoader()
 
   return (
-    <>
+    <div className="flex flex-col h-full min-h-0 p-4 fadeInUp space-y-2">
       <div className="flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3">
         <FilterBar
           filtersRef={filtersRef}
-          onApplyFilters={({ activeFilters }) => {
+          onApplyFilters={({activeFilters}) => {
             setLoading(true)
-            router.get('/', { filters: activeFilters }, {
-              only: ['tasks'],
-              queryStringArrayFormat: 'indices',
-              preserveState: true,
-              onSuccess: ({ props }) => {
-                setTasks(props.tasks.data);
-                setLoading(false)
-              },
-              onError: (error) => {
-                console.log(error)
+            router.get(
+              '/',
+              {filters: activeFilters},
+              {
+                only: ['tasks'],
+                queryStringArrayFormat: 'indices',
+                preserveState: true,
+                onSuccess: ({props}) => {
+                  setTasks(props.tasks.data)
+                  setLoading(false)
+                },
+                onError: error => {
+                  console.log(error)
+                }
               }
-            });
+            )
           }}
         />
         <div className="ml-auto space-x-2">
@@ -41,7 +46,7 @@ export const TaskDesktopView = ({filtersRef, tasks, setTasks, setSheetState, han
       {/* Loading Overlay */}
       {loading && (
         <div className="absolute inset-0 flex justify-center items-center bg-gray-100 bg-opacity-50 z-30 transition-opacity duration-300">
-          <Loader width={150} height={150} className="z-40" />
+          <Loader width={80} height={80} className="z-40" />
         </div>
       )}
       <TaskTable
@@ -51,6 +56,6 @@ export const TaskDesktopView = ({filtersRef, tasks, setTasks, setSheetState, han
         handleTasksRecon={handleTasksRecon}
         handleTaskUpdate={handleTaskUpdate}
       />
-    </>
+    </div>
   )
 }

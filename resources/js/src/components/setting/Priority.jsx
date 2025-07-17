@@ -12,7 +12,7 @@ export const PriorityText = ({ state, color }) => {
 export const PriorityCircle = ({ state, color }) => {
   return (
     <Tippy content={state} >
-      <div style={{ backgroundColor: color }} className="whitespace-nowrap w-4 h-4 mx-auto rounded-full"></div>
+      <div style={{ backgroundColor: color }} className="w-4 h-4 mx-auto rounded-full"></div>
     </Tippy>
   )
 }

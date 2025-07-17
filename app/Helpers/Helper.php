@@ -104,7 +104,27 @@ class Helper
 
     public static function sanitizeHtml($html)
     {
+        // 1. Create default config
         $config = HTMLPurifier_Config::createDefault();
+
+        // 2. Allow base64 (data:) images along with the usual schemes
+        $config->set('URI.AllowedSchemes', [
+            'http'   => true,
+            'https'  => true,
+            'mailto' => true,
+            'ftp'    => true,
+            'nntp'   => true,
+            'news'   => true,
+            'data'   => true,
+        ]); // allow data: URIs for base64 images :contentReference[oaicite:0]{index=0}
+
+        $config->set('HTML.TargetBlank',       true); // adds target="_blank" :contentReference[oaicite:1]{index=1}
+        $config->set('Attr.AllowedFrameTargets', array('_blank'));
+        $config->set('HTML.Nofollow',          true); // adds rel="nofollow" :contentReference[oaicite:2]{index=2}
+        $config->set('HTML.TargetNoopener',    true); // adds rel="noopener" :contentReference[oaicite:3]{index=3}
+        $config->set('HTML.TargetNoreferrer',  true); // adds rel="noreferrer" :contentReference[oaicite:4]{index=4}
+
+        // 5. Purify and return
         $purifier = new HTMLPurifier($config);
         return $purifier->purify($html);
     }

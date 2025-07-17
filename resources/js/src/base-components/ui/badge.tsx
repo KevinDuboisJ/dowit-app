@@ -20,6 +20,8 @@ const badgeVariants = cva(
           "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         success:
           "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
+        warning:
+          "border-transparent bg-orange-100 text-orange-800 shadow-sm hover:bg-orange-200",
 
         Added:
           "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",

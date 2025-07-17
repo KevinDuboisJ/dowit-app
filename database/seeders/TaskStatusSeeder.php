@@ -12,7 +12,7 @@ class TaskStatusSeeder extends Seeder
         $statuses = [
             'Added',
             'Replaced',
-            'Assigned',
+            'Scheduled',
             'InProgress',
             'WaitingForSomeone',
             'Completed',

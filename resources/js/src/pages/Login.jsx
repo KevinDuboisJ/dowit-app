@@ -20,10 +20,10 @@ const Login = ({ users, errors }) => {
   return (
     <div className={`flex items-center justify-center h-screen bg-cover bg-center before:absolute before:h-screen before:w-screen before:bg-white bg-white before:content-[""] before:opacity-20`}
       style={{ backgroundImage: `url(${background})` }}>
-      <div className='flex flex-col p-5 justify-center items-center w-96'>
+      <div className='flex flex-col p-5 justify-center items-center w-96 height: 100vh; overflow: auto;'>
         <img alt="Dowit" className="" src={Logo} width="w-auto" />
 
-        <div className='w-full p-1 z-10 '>
+        <div className='w-full p-1 z-10 min-height: 100vh; display: flex; align-items: center; justify-content: center;'>
           <form className='flex flex-col' onSubmit={handleSubmit}>
             <h1 className='text-sm font-light leading-6'>Aanmelden<Tooltip name='loginUser' placement='bottom' /></h1>
             <h2 className='font-bold text-xl'> {import.meta.env.VITE_APP_NAME} </h2>

@@ -29,7 +29,9 @@ class DashboardController extends Controller
 
     return Inertia::render('Dashboard', [
       'tasks' => fn() => $taskService->fetchAndCombineTasks($request),
+
       'settings' => fn() => $settings,
+
       'statuses' => fn() => DB::table('task_statuses')
         ->select('id', 'name')
         ->whereIn('id', [1, 2, 4, 5, 6, 12])
@@ -92,7 +94,7 @@ class DashboardController extends Controller
             ->map(fn($id) => ['id' => (int) $id])
         );
 
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task, Auth::user()->teams->pluck('id')->all())->get();
+        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task)->get();
       }),
 
       'patients' => Inertia::lazy(function () use ($request) {
@@ -101,30 +103,27 @@ class DashboardController extends Controller
           'task_type_id' => $request->input('taskType') ?? null,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
-        ]), Auth::user()->teams->pluck('id')->all())->get();
+        ]))->get();
       }),
 
-      'announcements' => fn() => DB::table('comments')
-        ->select('id', 'content', 'start_date', 'end_date', 'recipient_teams', 'recipient_users', 'read_by')
+      'announcements' => Comment::with('creator')
         ->where(function ($query) use ($userTeamsIds) {
           if (!empty($userTeamsIds)) {
-            $query->whereRaw(
-              implode(' OR ', array_map(function ($teamId) {
-                return "JSON_CONTAINS(recipient_teams, '$teamId')";
-              }, $userTeamsIds))
-            );
+            $query->whereRaw(implode(' OR ', array_map(function ($teamId) {
+              return "JSON_CONTAINS(recipient_teams, '$teamId')";
+            }, $userTeamsIds)));
           }
-
-          $query->orWhereJsonContains('recipient_users', Auth::user()->id);
+          $query->orWhereJsonContains('recipient_users', Auth::id());
         })
         ->where(function ($query) {
-          $query->whereJsonDoesntContain('read_by', Auth::user()->id)
+          $query->whereJsonDoesntContain('read_by', Auth::id())
             ->orWhereNull('read_by');
         })
         ->where(function ($query) {
-          $query->where('start_date', '<=', Carbon::now()->toDateString())
-            ->where(function ($subQuery) {
-              $subQuery->where('end_date', '>=', Carbon::now()->toDateString())
+          $today = Carbon::now()->toDateString();
+          $query->where('start_date', '<=', $today)
+            ->where(function ($q2) use ($today) {
+              $q2->where('end_date', '>=', $today)
                 ->orWhereNull('end_date');
             });
         })

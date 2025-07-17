@@ -32,7 +32,7 @@ trait HasTeams
             $model = new static;
 
             $query->where(function ($query) use ($model, $user) {
-
+                // logger($user->teams->pluck('id')->toArray());
                 $query->where(function ($q) use ($user, $model) {
                     $model->scopeByBelongsToTeamIds($q, $user->teams->pluck('id')->toArray());
                     
@@ -65,16 +65,6 @@ trait HasTeams
     {
         return $this->belongsToMany(User::class);
     }
-
-    // public function scopeByOwnOrBelongsToUserTeams(Builder $query, User $user): Builder
-    // {
-    //     return $query->where(function ($q) use ($user) {
-    //         $this->scopeByCreator($q, $user)
-    //             ->orWhere(function ($q2) use ($user) {
-    //                 $this->scopeByBelongsToTeamIds($q2, $user->teams->pluck('id')->toArray());
-    //             });
-    //     });
-    // }
 
     public function scopeByBelongsToTeamIds(Builder $query, array $teamIds): Builder
     {

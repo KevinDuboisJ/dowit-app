@@ -55,9 +55,6 @@ class StoreTaskRequest extends FormRequest
                 'campus_id' => $validated['campus'],
                 'space_id' => !empty($validated['space']) ? array_column($validated['space'], 'value')[0] : null,
                 'space_to_id' => !empty($validated['spaceTo']) ? array_column($validated['spaceTo'], 'value')[0] : null,
-                'status_id' => TaskStatus::Added->value,
-                // 'assets' => $validated['assets'],
-                'is_active' => true,
             ]
         ];
 

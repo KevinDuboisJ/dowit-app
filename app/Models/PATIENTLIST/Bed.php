@@ -14,4 +14,9 @@ class Bed extends Model
     {
         return $this->belongsTo(Room::class);
     }
+
+    public function bedVisits()
+    {
+        return $this->hasMany(BedVisit::class);
+    }
 }

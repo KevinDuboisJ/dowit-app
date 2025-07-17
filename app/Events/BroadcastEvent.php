@@ -81,25 +81,6 @@ class BroadcastEvent implements ShouldBroadcastNow
             // 'broadcasted_channels' => collect($this->broadcastOn())->map(fn($channel) => (string) $channel)->toArray(),
         ]; 
 
-        // Extract the values for the extra keys from $this->model
-        // $extraData = array_intersect_key(
-        //     $this->model->toArray(),
-        //     array_flip($this->extraKeys)
-        // );
-
-        // if ($this->model instanceof Task) {
-
-        //     if ($this->eventType === 'task_created') {
-        //         $payload['data'] = ['id' => $this->model->id];
-        //         // $payload['data'] = $this->model->fresh(Task::getRelationships())->toArray();
-        //     }
-
-        //     if ($this->eventType === 'task_updated') {
-        //         // Include the task ID and any other relevant data in the broadcast payload
-        //         $payload['data'] = ['id' => $this->model->id];
-        //     }
-        // }
-
         if ($this->model instanceof Comment) {
             // Include the task ID and any other relevant data in the broadcast payload
             $payload['data'] = [

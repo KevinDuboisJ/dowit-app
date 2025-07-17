@@ -6,8 +6,8 @@ use App\Models\TaskAssignmentRule;
 use App\Models\Team;
 use App\Models\Task;
 use Illuminate\Support\Collection;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class TaskAssignmentService
 {
@@ -38,13 +38,14 @@ class TaskAssignmentService
     if ($teams->isEmpty()) {
       $task->teams()->attach(config('app.system_team_id'));
     }
+
+    $task->load('teams');
   }
 
-  public static function getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(Task $task, array $allowedTeamsScopeIds)
+  public static function getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(Task $task)
   {
-    return Team::whereHas('taskAssignmentRules', function ($query) use ($task, $allowedTeamsScopeIds) {
-      $query->byBelongsToTeamIds($allowedTeamsScopeIds)
-        ->byTaskMatch($task);
+    return Team::whereHas('taskAssignmentRules', function ($query) use ($task) {
+        $query->byTaskMatch($task);
     })
       ->byTeamsUserBelongsTo()
       ->distinct();

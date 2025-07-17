@@ -2,7 +2,6 @@
   > .fadeInRight {
     /* z-index: calc(50 - #{$i}); */
     opacity: 0;
-    position: relative;
     transform: translateX(35px);
     animation: fadeInRight-animation 0.5s ease-out;
     animation-fill-mode: forwards;
@@ -10,7 +9,6 @@
   }
   > .fadeInUp {
     opacity: 0;
-    position: relative;
     transform: translateY(35px);
     animation: fadeInUp-animation 0.5s ease-out;
     animation-fill-mode: forwards;

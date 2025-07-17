@@ -5,26 +5,38 @@ const sideMenu = {
       type: 'title',
       title: 'MENU'
     },
+
     {
       icon: 'Home',
       title: 'Dashboard',
       pathname: '/'
     },
+
     {
       icon: 'Newspaper',
       title: 'Newsfeed',
       pathname: '/newsfeed'
     },
+
     {
       icon: 'DocumentText',
       title: 'Bestanden',
       pathname: '/assets'
     },
+
     {
       type: 'title',
       title: 'ADMIN',
       roles: ['1', '2']
     },
+
+    {
+      icon: 'Squares2X2',
+      pathname: '/beds',
+      title: 'Bedden',
+      roles: ['1', '2'],
+    },
+
     {
       icon: 'Cog6Tooth',
       pathname: '/adm',

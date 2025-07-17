@@ -11,6 +11,7 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use Illuminate\Support\Facades\Cache;
 use App\Casts\Interval;
+use App\Models\PATIENTLIST\Patient;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -79,11 +80,6 @@ class TaskPlanner extends Model
         return $this->belongsTo(TaskType::class);
     }
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class, 'team_id');
-    }
-
     public function tasks()
     {
         return $this->hasMany(Task::class, 'task_planner_id');
@@ -112,6 +108,11 @@ class TaskPlanner extends Model
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class);
     }
 
     public function getNextRunDate(?Carbon $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon
@@ -224,7 +225,7 @@ class TaskPlanner extends Model
 
         // Check for the next available day in the list
         foreach ($dayNumbers as $dayNumber) {
-            if ($currentDate->dayOfWeek <= $dayNumber) {
+            if ($currentDate->dayOfWeek < $dayNumber) {
                 return $currentDate->copy()->next($dayNumber)->setTimeFrom($currentDate);
             }
         }

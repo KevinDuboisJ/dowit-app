@@ -4,7 +4,6 @@ namespace App\Filament\Resources\ChainResource\Pages;
 
 use App\Enums\ChainActionType;
 use App\Filament\Resources\ChainResource;
-use App\Models\Task;
 use App\Models\Chain;
 use Filament\Actions\Action;
 use Filament\Forms;

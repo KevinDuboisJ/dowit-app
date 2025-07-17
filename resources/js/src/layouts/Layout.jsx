@@ -75,7 +75,7 @@ const Layout = ({ children: { props: { user } }, children }) => {
   return (
 
     <div className="flex flex-col h-full">
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* BEGIN: Side Menu */}
         <SideMenu user={user} sideMenuLinks={sideMenuLinks} mobileMenu={mobileMenu} handleLinkClick={handleLinkClick} activeDropdowns={activeDropdowns} />
         {/* END: Side Menu */}

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('icon')->nullable();
+            $table->integer('creation_time_offset')->nullable();
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
         });

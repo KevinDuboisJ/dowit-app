@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use App\Helpers\Helper;
 use App\Models\TaskStatus;
+use App\Traits\HasCreator;
 use Illuminate\Support\Facades\Auth;
 
 class Comment extends Model
 {
-    use HasFactory;
+    use HasFactory, HasCreator;
 
     protected function casts(): array
     {
@@ -53,11 +54,6 @@ class Comment extends Model
     {
         $query->whereJsonDoesntContain('read_by', Auth::user()->id)
             ->orWhereNull('read_by');
-    }
-
-    public function creator()
-    {
-        return $this->BelongsTo(User::class, 'created_by');
     }
 
     protected function content(): Attribute

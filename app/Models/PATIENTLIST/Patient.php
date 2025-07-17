@@ -2,6 +2,7 @@
 
 namespace App\Models\PATIENTLIST;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
@@ -13,13 +14,34 @@ class Patient extends Model
         return $this->hasMany(Visit::class);
     }
 
-    public function currentRoom()
+    public function visit()
     {
-        return $this->belongsTo(Room::class, 'current_room_id');
+        return $this->hasOne(Visit::class);
     }
 
-    public function roomHistory()
+    public static function getByPatientVisitId(string $search): ?Patient
     {
-        return $this->hasMany(PatientRoom::class);
+        return Patient::query()
+            ->whereHas('visit', function ($query) use ($search) {
+                $query->where('number', $search);
+            })
+            ->with(['visit' => function ($query) use ($search) {
+                $query->where('number', $search)->with(['bed', 'bed.room'])->take(1);
+            }])
+            ->first();
+    }
+
+    public static function getByPatientName(string $search): Collection
+    {
+        return Patient::query()
+            ->with(['visit.bed', 'visit.bed.room'])
+            ->where(function ($query) use ($search) {
+                $query->where('firstname', 'like', "%{$search}%")
+                    ->orWhere('lastname', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"])
+                    ->latest('admission');
+            })
+            ->limit(40)
+            ->get();
     }
 }

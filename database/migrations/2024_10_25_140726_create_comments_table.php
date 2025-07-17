@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('task_id')->nullable()->constrained('tasks')->onDelete('cascade');
             $table->foreignId('status_id')->nullable();
             $table->boolean('needs_help')->nullable();
-            $table->text('content')->nullable();
+            $table->longText('content')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->json('metadata')->nullable();

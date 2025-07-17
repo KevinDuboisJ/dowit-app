@@ -2,8 +2,8 @@
 
 namespace App\Models\PATIENTLIST;
 
+use App\Models\Campus;
 use Illuminate\Database\Eloquent\Model;
-
 
 class Room extends Model
 {
@@ -13,6 +13,16 @@ class Room extends Model
     public function patients()
     {
         return $this->hasMany(PatientRoom::class);
+    }
+
+    public function campus()
+    {
+        return $this->belongsTo(Campus::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function beds()

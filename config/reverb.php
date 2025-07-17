@@ -33,17 +33,21 @@ return [
             'port' => env('REVERB_SERVER_PORT', 6002),
             'hostname' => env('REVERB_HOST'),
             'options' => [
-                'tls' => [ 
+                'tls' => [
                     /*
                     * Path to the local certificate file on disk. It must be a PEM encoded file which
                     * can contain certificates for intermediate CAs and the leaf certificate.
                     */
-                   'local_cert' => 'C:\wamp64\bin\apache\apache2.4.54.2\conf\ssl.crt\server.crt',
-           
-                   /*
+                    'local_cert' => 'C:\wamp64\bin\apache\apache2.4.54.2\conf\ssl.crt\server.crt',
+
+                    /*
                     * Path to the local private key file on disk.
                     */
-                   'local_pk' => 'C:\wamp64\bin\apache\apache2.4.54.2\conf\ssl.key\server.key',
+                    'local_pk' => 'C:\wamp64\bin\apache\apache2.4.54.2\conf\ssl.key\server.key',
+
+                    // Disable asking for client certificates
+                    'verify_peer' => false,
+                    'request_client_certificate' => false,
 
                 ],
                 'allowed_origins' => ['*'],

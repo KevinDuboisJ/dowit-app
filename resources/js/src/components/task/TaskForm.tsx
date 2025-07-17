@@ -252,7 +252,7 @@ export function TaskForm({ task, handleTaskUpdate, handleTasksRecon, setActiveTa
               )}
             />
             <div className="ml-auto">
-              {loading ? <Loader width={96} height={96} className='relative top-[-50px] left-[60px]' /> : <Button type="submit">Opslaan</Button>}
+              {loading ? <Loader/> : <Button type="submit">Opslaan</Button>}
             </div>
 
           </form>

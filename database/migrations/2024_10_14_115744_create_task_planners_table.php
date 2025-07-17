@@ -17,6 +17,7 @@ return new class extends Migration
             $table->longtext('description')->nullable();
             $table->dateTime('start_date_time'); // Task start date and time
             $table->foreignId('campus_id');
+            $table->foreignId('patient_id');
             $table->foreignId('space_id')->nullable();
             $table->foreignId('space_to_id')->nullable();
             $table->foreignId('task_type_id');

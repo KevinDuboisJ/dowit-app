@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { __ } from '@/stores';
 import helpAnimation from '@json/animation-help.json';
 import Lottie from "lottie-react";
-import { Loader, AvatarStack, Tippy, RichText } from '@/base-components';
+import { AvatarStack, Tippy, RichText } from '@/base-components';
 import { TaskActionButton, getPriority } from '@/components';
 
 export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
@@ -28,7 +28,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     columnHelper.accessor('priority', {
       id: 'priority',
       header: '',
-      size: 20,
+      size: 60,
       cell: (cell) => {
         const data = cell.row.original;
         const priorityInfo = getPriority(data.created_at, data.priority, settings.TASK_PRIORITY.value);
@@ -49,7 +49,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
       cell: ({ cell, row }) => {
         return row.original.needs_help ? (
           <Tippy content="Hulp gevraagd" options={{ allowHTML: true }}>
-            <span className="relative whitespace-nowrap text-sm">
+            <span className="relative text-sm">
               <HelpAnimation
                 needsHelp={row.original.needs_help}
                 isAssignedToCurrentUser={row.original.capabilities.isAssignedToCurrentUser}
@@ -58,7 +58,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
             </span>
           </Tippy>
         ) : (
-          <span className="relative whitespace-nowrap text-sm">
+          <span className="relative text-sm">
             {__(cell.getValue())}
           </span>
         )
@@ -91,10 +91,10 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
         const plainText = description.replace(/<[^>]+>/g, ''); // strip HTML tags
 
         return <div className='flex flex-col'>
-          <div className='font-bold leading-4 text-sm whitespace-nowrap'>
+          <div className='font-bold leading-4 text-sm'>
             {cell.getValue()}
           </div>
-          <RichText className="text-gray-500 text-xs whitespace-nowrap" text={
+          <RichText className="text-gray-500 text-xs" text={
             plainText.length > 60
               ? `${plainText.slice(0, 60)}...`
               : plainText
@@ -108,7 +108,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     //   id: 'task_type',
     //   header: 'Taaktype',
     //   size: 150,
-    //   cell: (cell) => <div className='whitespace-nowrap text-sm'>{cell.getValue()}</div>,
+    //   cell: (cell) => <div className='text-sm'>{cell.getValue()}</div>,
     // }),
 
     // Assigned Users Column
@@ -126,7 +126,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
     //   id: 'comment',
     //   header: 'Recente commentaar',
     //   cell: ({ cell }) => {
-    //     return <RichText text={cell.getValue()?.[0]?.content} className='whitespace-nowrap text-sm'></RichText>;
+    //     return <RichText text={cell.getValue()?.[0]?.content} className='text-sm'></RichText>;
     //   },
     // }),
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\PATIENTLIST\BedVisit;
 use App\Models\PATIENTLIST\Visit;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\TaskType;
@@ -13,12 +14,23 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Carbon;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
+use App\Enums\TaskStatus as EnumsTaskStatus;
 
 class Task extends Model
 {
     use HasCreator, HasTeams;
 
+    // protected function serializeDate(\DateTimeInterface $date): string
+    // {
+    //     return Carbon::parse($date)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+    // }
+
     protected $appends = ['capabilities'];
+
+    protected $casts = [
+        'needs_help' => 'boolean', // Cast tinyint(1) to boolean
+        'start_date_time' => 'datetime', // Cast tinyint(1) to boolean
+    ];
 
     protected static function boot()
     {
@@ -30,22 +42,77 @@ class Task extends Model
         });
     }
 
-    protected $casts = [
-        'needs_help' => 'boolean', // Cast tinyint(1) to boolean
-        'start_date_time' => 'datetime', // Cast tinyint(1) to boolean
-    ];
+    // Set the default task status, or mark it as scheduled if start_date_time is in the future
+    protected static function booted()
+    {
+        static::saving(function ($task) {
+            if ($task->start_date_time > Carbon::now()) {
+                $task->status_id = EnumsTaskStatus::Scheduled;
+            } elseif (! $task->status) {
+                $task->status_id = EnumsTaskStatus::Added;
+            }
+        });
+    }
 
-    // protected function serializeDate(\DateTimeInterface $date): string
-    // {
-    //     return Carbon::parse($date)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
-    // }
+    public function status()
+    {
+        return $this->belongsTo(TaskStatus::class, 'status_id');
+    }
+
+    public function space()
+    {
+        return $this->belongsTo(Space::class);
+    }
+
+    public function taskType()
+    {
+        return $this->belongsTo(TaskType::class);
+    }
+
+    public function visit()
+    {
+        return $this->belongsTo(Visit::class);
+    }
+
+    public function bedVisit()
+    {
+        return $this->belongsTo(BedVisit::class);
+    }
+
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class, 'task_team');
+    }
+
+    public function assignees()
+    {
+        return $this->belongsToMany(User::class, 'task_user');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
+    }
 
     public function scopeByActive($query)
     {
-        $query->where(function ($query) {
-            $query->where('start_date_time', '<=', carbon::now())
-                ->where('is_active', true);
-        });
+        return $query->whereNotIn('status_id', [EnumsTaskStatus::Scheduled, EnumsTaskStatus::Completed]);
+    }
+
+    protected function capabilities(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => [
+                'can_update' => auth()->user()?->can('update', $this),
+                'can_assign' => auth()->user()?->can('assign', $this),
+                'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
+            ],
+        );
     }
 
     public function scopeByAssignedOrTeams($query)
@@ -91,67 +158,14 @@ class Task extends Model
         });
     }
 
-    protected function capabilities(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => [
-                'can_update' => auth()->user()?->can('update', $this),
-                'can_assign' => auth()->user()?->can('assign', $this),
-                'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
-            ],
-        );
-    }
-
-    public function status()
-    {
-        return $this->belongsTo(TaskStatus::class, 'status_id');
-    }
-
-    public function space()
-    {
-        return $this->belongsTo(Space::class);
-    }
-
-    public function taskType()
-    {
-        return $this->belongsTo(TaskType::class);
-    }
-
-    public function visit()
-    {
-        return $this->belongsTo(Visit::class);
-    }
-
-    public function teams()
-    {
-        return $this->belongsToMany(Team::class, 'task_team');
-    }
-
-    public function assignees()
-    {
-        return $this->belongsToMany(User::class, 'task_user');
-    }
-
-    public function tags()
-    {
-        return $this->belongsToMany(Tag::class);
-    }
-
-    public function comments()
-    {
-        return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
-    }
-
     public function activate()
     {
-        $this->update(['is_active' => true]);
+        $this->update(['status_id' => EnumsTaskStatus::Added]);
     }
 
-    public function deactivateIfScheduledForFuture(): void
+    public function isScheduled()
     {
-        if ($this->start_date_time >= Carbon::now()) {
-            $this->is_active = false;
-        }
+        return $this->status_id === EnumsTaskStatus::Scheduled;
     }
 
     public static function getRelationships()
@@ -162,7 +176,6 @@ class Task extends Model
             'status',
             'taskType' => fn($query) => $query->with(['assets']),
             'space',
-            'comments' => fn($query) => $query->with(['creator', 'status' => fn($query) => $query->select('id', 'name')]),
             'assignees',
             'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
         ];

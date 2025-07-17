@@ -1,14 +1,72 @@
+www.svgator.com
+
+  TO-DO's
+  1. Change icons in filament.
+  2. Set mobile variable to somewhere global
+  3. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.
+  4. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
+  5. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
+  6. Replace tippy.js with floatingUI
+  7. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
+  8. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
+  10. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
+  12. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
+  13. An enduser can create a task in ad hoc and event
+  15. Besmette kamer kunnen doorgeven (= taaksubtyes "besmet")
+      Belangrijk:
+      Team koppelen met dienstcode
+      Enkel kamers op afdeling mogen gewijzigd worden
+
+
+Patient transport TO-DO's
+1.Show patient column with the same information as in the selection of the patientList in the custom field && show patient_id field on edit and also fill with the data
+1. Bij opname van een patiënt wordt de startdatum ingesteld → frequentie: dagelijks.
+   Het systeem verwijdert automatisch de planning zodra de patiënt is ontslagen → het taakplanner kijk of het patient nog op een bed ligt → inactive zetten
+2. Manuele stop mogelijk indien de patiënt nog opgenomen is, maar de behandeling is afgerond.
+  • Filter inactive 
+3. Mogelijkheid om patiënten op naam te zoeken in plaats van op opnamenummer. taskplanner en adhoc
+4. Voeg in de Taskplanner een extra knop toe waarmee gebruikers specifieke datums kunnen overslaan.
+5. Taskplanner tasktype, zoals: verwittigen, in rolstoel, te voet begeleid, krukken (zoals bij 'Arta detail' in Patiëntentransport Antwerpen).
+6. Optie voor retourtransport → momenteel nog niet nodig.
+7. Brainstorm over hoe uitzonderingen bij het bewerken van taken best kunnen worden afgehandeld.
+  • Optie toevoegen 'uitzondering inplannen' data clone van de huidige taakplanner  → startdatum default waarde is de 'ingelpland voor' datum van de huidige taakplanner. 
+  • In the hoofdtaakplanner → weergave van de startdatums van de gecloned taakplanners
+  • Taakplanner zonder teams mag niet worden opgeslagen. → DONE✓
+  • Bij activatie van een taak: werk de volgende uitvoeringsdatum van de Taskplanner bij.
+
+8.  Naam laten zien van wie het melding heeft gemaakt → DONE✓
+9. Ze krijgen 25 minuten op voorhand een taak. → Voeg een kolom toe om te bepalen hoeveel minuten op voorhand een taak moet worden aangemaakt, op basis van de startdatum van de Taskplanner.
+10. Bewerken van een patientransport is bestemmingslocatie niet zichtbaar als het bestemmingslocatie niet gekozen is
+11. Per teams button laten zien om prefill taak planner te maken.
+12. Check task id 11820, it seems that the task is being created to soon with the start_date_time in the future.
+
+
+
+
+1. it get all data from oazis for all occupied beds.
+2. it get all the bed_visits records that have vacated_at set to null 
+3. it compares both tables. if bed_id, room_id and visit_id is the same it skips it.
+4. if the record is not more in the data from oazis. update bed_visit with the stop date (Fetch patient and visit data apart to get the latest data?) AND create the task
+Info: If a person was assigned to the wrong bed and this was already recorded in the bed_visits table, a task will be created. A task will also be created if the bed or room number changes due to updates in the Primuz/Oazis database. Note that the script is not designed to track the Primuz/Oazis room and bed tables one-to-one, so new beds or rooms will be created if the number of it is updated.
+5. Else create a new bed_visit as there is no need to update cause if something changes in beed or room in oazis data it means new bed visit.
+
+
 To delete tasks in production with all dependencies.
-1. add constrain cascade delete to comment table and task_team
+1. add constrain cascade delete to comment table and task_team. cant add constrain to comments as there task_id is optional
 2. tas_user and tag_task already have it be still CONFIRM
 
 Thing to do in production when pulling new version.
 1. In Newsfeed filter by Kevin Dubois and check if it also shows blank or error. I added the optional operator added '?' in newsItem.task?.name in case the task name is empty
 2. migrate the chain_team table
-3. change patient_id to visit_id in tasks table.
+3. change patient_id to visit_id in tasks table and also add the bed_id foreign key.
 
 
-1. Identifier: User gives a identifier in this serves for identifing the chain and for the api it helps creating only one endpoint api/v1/{identifier}
+
+
+
+
+
+  1. Identifier: User gives a identifier in this serves for identifing the chain and for the api it helps creating only one endpoint api/v1/{identifier}
 2. description: in case user want to specify what the chain does.
 3. trigger_type: the user specifies if it is triggered via the APi or INTERNAL
 4. actions user can currently only select 'custom' and add extra field custom_code_class->label is 'interface'
@@ -36,22 +94,7 @@ When to update the user UI
   1. A task can be replaced or added by the task planner
   2. a User updates the task.
   
-
-TO-DO's
-  IMPORTANT: MAKE comments and task creation with richt text editor.
-  1. Change icons in filament.
-  38. Set mobile variable to somewhere global
-  48. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.
-  53. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
-  59. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
-  60. Replace tippy.js with floatingUI
-  65. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
-  66. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
-  67. tiptap both in the react and the filament version seems to be removing the target property of the <a> tag
-  69. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
-  72. when creating task show loader until notification is showed that it was succesfully created
-  73. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
-  78. An enduser can create a task in ad hoc and event
+  
 
 
 Questions.
@@ -169,7 +212,7 @@ is websocket safe and used to maintain data sync between server and client? or c
 ChatGPT said:
 ChatGPT
 Websockets are widely used to maintain real-time synchronization between the server and the client, making them a popular choice for applications requiring live updates, such as chat apps, collaborative tools, or dashboards. However, their reliability depends on implementation details and network conditions.
-
+1174
 Are Websockets Safe?
 Websockets are generally safe and reliable when implemented correctly:
 

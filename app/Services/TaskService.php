@@ -13,6 +13,7 @@ use App\Enums\TaskStatus;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Enums\TaskStatus as TaskStatusEnum;
+use App\Models\OAZIS\Patient;
 
 class TaskService
 {
@@ -20,7 +21,7 @@ class TaskService
     TaskStatusEnum::Replaced->value,
     TaskStatusEnum::Completed->value,
     TaskStatusEnum::Skipped->value,
-];
+  ];
 
   public function updateTask(Task $task, array $data)
   {
@@ -47,8 +48,15 @@ class TaskService
       $this->handleUserAssignments($task, $data, $metadata);
       $comment = $task->addComment($data['comment'] ?? '', $metadata);
       $this->handleAutoStatusReset($task, $data, $comment);
+
+      if ($task->status_id === TaskStatusEnum::Completed->value || $task->status_id === TaskStatusEnum::Skipped->value) {
+        $task->is_active = false;
+      }
+
       $task->save();
     });
+
+    PatientService::handleFinalCleanTask($task);
 
     $task->load(Task::getRelationships());
     Cache::put("task_{$task->id}", $task, now()->addMinutes(3));
@@ -127,7 +135,16 @@ class TaskService
     $hasFilterByStatus = false;
 
     // Get common settings
-    $relationships = Task::getRelationships();
+    $relationships = [
+      'visit' => fn($query) => $query->with(['patient', 'room', 'bed']),
+      'tags',
+      'status',
+      'taskType' => fn($query) => $query->with(['assets']),
+      'space',
+      'assignees',
+      'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
+    ];
+    
     $filters = $request->filled('filters') ? $request->input('filters') : null;
     $sorters = $request->filled('sorters') ? $request->input('sorters') : null;
 
@@ -159,8 +176,6 @@ class TaskService
       ->orderBy('start_date_time', 'desc')
       ->select('tasks.*')
       ->get();
-
-
 
     // Get team tasks (paginated with joins for sorting)
     $teamTasks = Task::query()

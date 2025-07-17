@@ -37,7 +37,8 @@ class TaskTypeResource extends Resource
                 Section::make('')
                     ->schema([
                         TextInput::make('name')
-                            ->label('Naam'),
+                            ->label('Naam')
+                            ->required(),
 
                         IconPicker::make('icon')
                             ->label('Icoon')
@@ -52,6 +53,13 @@ class TaskTypeResource extends Resource
                             ->extraAttributes([
                                 'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
                             ]),
+
+                        TextInput::make('creation_time_offset')
+                            ->label('Taakcreatie bespoedigen')
+                            ->default(0)
+                            ->numeric()
+                            ->required()
+                            ->helperText('Aantal minuten om de taakcreatie te bespoedigen.'),
                     ])
                     ->extraAttributes([
                         'class' => 'h-full',
@@ -82,7 +90,11 @@ class TaskTypeResource extends Resource
 
                 IconColumn::make('icon')
                     ->label('Icoon')
-                    ->view('filament.components.icon-picker-column')
+                    ->view('filament.components.icon-picker-column'),
+
+                TextColumn::make('creation_time_offset')
+                    ->label('Taakcreatie bespoedigen')
+                    ->formatStateUsing(fn($state) => $state . ' minuten')
 
             ])
             ->filters([

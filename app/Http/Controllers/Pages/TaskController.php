@@ -12,6 +12,7 @@ use App\Services\TaskAssignmentService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Events\BroadcastEvent;
+use App\Models\Comment;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
 use App\Services\PatientService;
@@ -28,7 +29,7 @@ class TaskController extends Controller
   public function find($id)
   {
     // Attempt to fetch the task from the cache
-    $task = Cache::get("task_{$id}");
+    $task = Cache::get("task:{$id}");
 
     // If not in cache, fetch from the database and optionally cache it
     if (!$task) {
@@ -40,10 +41,19 @@ class TaskController extends Controller
       $task = Task::with($relationships)->findOrFail($id);
 
       // Cache for 3 minutes
-      Cache::put("task_{$id}", $task, now()->addMinutes(3));
+      Cache::put("task:{$id}", $task, now()->addMinutes(3));
     }
 
     return response()->json($task);
+  }
+
+  public function comments($id)
+  {
+    if (!request()->expectsJson()) {
+      abort(404);
+    }
+
+    return response()->json( Comment::with(['creator', 'status' => fn($query) => $query->select('id', 'name')])->where('task_id', $id)->orderBy('created_at', 'desc')->get());
   }
 
   public function store(StoreTaskRequest $request)
@@ -66,15 +76,11 @@ class TaskController extends Controller
 
         // Create the task with validated data
         $task = new Task([...$data['task'], 'visit_id' => $visit->id]);
-        
       }
-    
+
       if (!isset($visit)) {
         $task = new Task($data['task']);
       }
-
-      // Set inactive if the task has to be triggered in the future
-      $task->deactivateIfScheduledForFuture();
 
       // Save in db
       $task->save();
@@ -100,7 +106,7 @@ class TaskController extends Controller
 
       $task->load(Task::getRelationships());
 
-      if ($task->is_active) {
+      if (!$task->isScheduled()) {
         broadcast(new BroadcastEvent($task, 'task_created', 'dashboard'));
       }
 
@@ -142,7 +148,15 @@ class TaskController extends Controller
 
       return response()->json(['data' => $tasks, 'updatedTask' => $result['task']]);
     } catch (\Exception $e) {
-      logger()->error('Task update failed', ['error' => $e->getMessage()]);
+      logger()->error(
+        [
+          'message' => 'Task update failed: ' . $e->getMessage(),
+          'file'    => $e->getFile(),
+          'line'    => $e->getLine(),
+          'trace'   => $e->getTraceAsString(),
+        ]
+      );
+
       return response()->json([
         'message' => 'Gelieve dit te melden bij de helpdesk: #' . $request->attributes->get('log_id'),
       ], 422);
@@ -166,25 +180,5 @@ class TaskController extends Controller
       $mergedDateTime = null; // Both are null
     }
     return $mergedDateTime;
-  }
-
-  private static function getTasksTemplate($task)
-  {
-    return Task::with(Task::getRelationships())
-      ->byAssignedOrTeams()
-      ->where('id', $task->id)
-      ->get()
-      ->map(function ($task) {
-        return array_merge(
-          $task->toArray(),
-          [
-            'capabilities' => [
-              'can_update' => Auth::user()->can('update', $task),
-              'can_assign' => Auth::user()->can('assign', $task),
-              'isAssignedToCurrentUser' => Auth::user()->can('isAssignedToCurrentUser', $task),
-            ],
-          ]
-        );
-      });
   }
 }

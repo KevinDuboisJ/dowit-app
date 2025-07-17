@@ -1,10 +1,12 @@
 <?php
 
+use Database\Seeders\CampusSeeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
+require_once database_path('migrations/2022_01_11_121314_create_campuses_table.php');
 class CreatePatientListSchema extends Migration
 {
     /**
@@ -35,18 +37,11 @@ class CreatePatientListSchema extends Migration
             $table->id();
             $table->string('number');
             $table->foreignId('patient_id');
-            $table->foreignId('space_id')->nullable();
             $table->foreignId('campus_id')->nullable();
             $table->foreignId('department_id')->nullable();
-            $table->foreignId('room_id')->nullable();
             $table->foreignId('bed_id')->nullable();
-            $table->datetime('admission');
+            $table->datetime('admission')->nullable();
             $table->datetime('discharge')->nullable();
-            // $table->string('adm_date');
-            // $table->string('adm_time');
-            // $table->string('dis_date');
-            // $table->string('dis_time');
-            //$table->boolean('dismissed');
             $table->timestamps();
 
             // Uniqueness constraint to prevent duplicates
@@ -65,31 +60,34 @@ class CreatePatientListSchema extends Migration
             $table->id();
             $table->foreignId('room_id');
             $table->string('number');
-            $table->datetime('occupied')->nullable();
-            $table->datetime('cleaned')->nullable();
+            $table->datetime('occupied_at')->nullable();
+            $table->datetime('cleaned_at')->nullable();
             $table->timestamps();
 
             // Uniqueness constraint to prevent duplicates
             $table->unique(['room_id', 'number']);
         });
 
-
-
-
         Schema::connection('patientlist')->create('bed_visits', function ($table) {
             $table->id();
             $table->foreignId('bed_id')->constrained()->cascadeOnDelete();
             $table->foreignId('visit_id')->constrained()->cascadeOnDelete();
-            $table->timestamp('start_date');
-            $table->timestamp('stop_date')->nullable();
+            $table->datetime('occupied_at');
+            $table->datetime('vacated_at')->nullable();
+            $table->datetime('cleaned_at')->nullable();
             $table->timestamps();
         });
 
         // Create rooms
         Schema::connection('patientlist')->create('rooms', function ($table) {
             $table->id();
-            $table->string('number')->unique();
+            $table->string('number');
+            $table->foreignId('campus_id');
+            $table->foreignId('department_id');
             $table->timestamps();
+
+            // Uniqueness constraint to prevent duplicates
+            $table->unique(['campus_id', 'number']);
         });
 
         // Create the migrations table
@@ -98,6 +96,12 @@ class CreatePatientListSchema extends Migration
             $table->string('migration');
             $table->integer('batch');
         });
+
+        $migration = new CreateCampusesTable('patientlist');
+        $migration->up();
+
+        // Run seeder
+        (new CampusSeeder('patientlist'))->run();
     }
 
     /**
@@ -114,6 +118,7 @@ class CreatePatientListSchema extends Migration
         Schema::connection('patientlist')->dropIfExists('bed_visits');
         Schema::connection('patientlist')->dropIfExists('rooms');
         Schema::connection('patientlist')->dropIfExists('migrations');
+        (new CreateCampusesTable('patientlist'))->down();
     }
 }
 

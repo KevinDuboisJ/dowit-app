@@ -11,9 +11,15 @@ class CreateCampusesTable extends Migration
      *
      * @return void
      */
+
+    public function __construct($connection = 'mysql')
+    {
+        $this->connection = $connection;
+    }
+
     public function up()
     {
-        Schema::create('campuses', function (Blueprint $table) {
+        Schema::connection($this->connection)->create('campuses', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('acronym')->nullable();
@@ -33,7 +39,7 @@ class CreateCampusesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('campuses');
+        Schema::connection($this->connection)->dropIfExists('campuses');
         // Schema::table('campus', function($table) {
         //     $table->dropColumn('address');
         // });

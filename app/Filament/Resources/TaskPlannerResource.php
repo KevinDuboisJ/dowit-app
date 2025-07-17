@@ -20,6 +20,7 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use App\Enums\DaysOfWeek;
 use App\Enums\TaskStatus;
+use App\Filament\Components\PatientAutocomplete;
 use App\Models\Space;
 use App\Models\Task;
 use Illuminate\Support\Carbon;
@@ -45,6 +46,7 @@ use App\Traits\HasFilamentTeamFields;
 use App\Models\Team;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
+use Illuminate\Database\Eloquent\Builder;
 
 class TaskPlannerResource extends Resource
 {
@@ -72,7 +74,7 @@ class TaskPlannerResource extends Resource
                     ->required(),
 
                 DateTimePicker::make('start_date_time')
-                    ->label('Startdatum')
+                    ->label('Tijdstip')
                     ->required()
                     ->seconds(false)
                     ->after(function ($state, ?string $context, ?TaskPlanner $record) {
@@ -106,7 +108,6 @@ class TaskPlannerResource extends Resource
                     ->maxContentWidth('full')
                     ->columnSpanFull(),
 
-
                 Select::make('task_type_id')
                     ->label('Taaktype')
                     ->relationship('taskType', 'name')
@@ -118,6 +119,13 @@ class TaskPlannerResource extends Resource
                     ->relationship('campus', 'name')
                     ->required()
                     ->live(),
+
+                // PatientAutocomplete::make('patient_id')
+                //     ->label('Patiënt')
+                //     ->visible(
+                //         fn(Get $get): bool => $get('task_type_id') === '1'
+                //     )
+                //     ->dehydrateStateUsing(fn($state) => $state['id']),
 
                 Select::make('space_id')
                     ->label('locatie')
@@ -149,7 +157,6 @@ class TaskPlannerResource extends Resource
                                 $space->id => "{$space->name} ({$space->_spccode})",
                             ]);
                     })
-                    ->required()
                     ->visible(
                         fn(Get $get): bool => $get('task_type_id') === '1'
                     ),
@@ -309,68 +316,51 @@ class TaskPlannerResource extends Resource
                                     ->extraAttributes(['class' => 'custom-checkbox-label']),
 
                                 Select::make('teams')
-                                    ->label('')
+                                    ->label('Teams')
                                     ->relationship(name: 'teams', titleAttribute: 'name',)
                                     // when the form is hydrated (create or edit), compute IDs
-                                    ->hidden(function (Get $get, Set $set, $livewire) {
-                                        $set('teams', self::computeSuggestedIds($get, $livewire));
+                                    ->hidden(function (Set $set, Get $get, $livewire) {
+                                        $arrOfTeamIds = self::computeSuggestedIds($get, $livewire);
+                                        $set('teams', $arrOfTeamIds);
                                         return false;
                                     })
+                                    ->validationAttribute('Teams')
+                                    ->requiredWithout('assignments.users')
                                     ->multiple()
-                                    ->extraAttributes(['class' => 'hidden']),
-
-                                Placeholder::make('team_diff')
-                                    ->label('Teams')
-                                    ->content(function (Get $get, $livewire = null): HtmlString {
-
-                                        // 1) Compute suggested & existing team IDs
-                                        $suggested   = $get('teams') ?? [];
-                                        $existing    = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
-
-                                        if (empty($suggested) && empty($existing)) {
-                                            return new HtmlString('<span class="text-sm text-gray-500">Er is geen teamtaaktoewijzingsregel voor uw selectie</span>');
-                                        }
-
-                                        $toAdd     = array_diff($suggested, $existing);
-                                        $toRemove  = array_diff($existing,  $suggested);
-                                        $unchanged = array_intersect($existing, $suggested);
-
-                                        // 2) Batch‐fetch all names in one go
-                                        $allIds = array_unique(array_merge($toAdd, $toRemove, $unchanged));
-                                        $names  = Team::whereIn('id', $allIds)
-                                            ->pluck('name', 'id')
-                                            ->all();
-
-                                        // 3) Build lines with your custom span markup
-                                        $lines = [];
-                                        foreach ($toAdd as $id) {
-                                            $lines[] = sprintf(
-                                                '<li>• <span class="text-sm/5 text-green-600">%s +</span></li>',
-                                                e($names[$id] ?? '–')
-                                            );
-                                        }
-                                        foreach ($toRemove as $id) {
-                                            $lines[] = sprintf(
-                                                '<li>• <span class="text-sm/5 text-red-600">%s −</span></li>',
-                                                e($names[$id] ?? '–')
-                                            );
-                                        }
-                                        foreach ($unchanged as $id) {
-                                            $lines[] = sprintf(
-                                                '<li>• <span class="text-sm/5 text-gray-700">%s</span></li>',
-                                                e($names[$id] ?? '–')
-                                            );
-                                        }
-
-                                        return new HtmlString('<ul class="space-y-1">' . implode('', $lines) . '</ul>');
-                                    })
+                                    ->extraAttributes(['class' => 'hidden'])
                                     ->hint(
                                         new HtmlString(view('filament.components.hint-icon', [
                                             'tooltip' => 'Toont de teams waaraan deze taakplanner een taak toewijst, op basis van de huidige toewijzingsregels<br><br>
                                             <span class="text-green-600">Groen</span> = toegevoegd<br><span class="text-red-600 mr-1">Rood</span> = verwijderd<br>
                                             <span class="text-gray-500 mr-2">Grijs</span> = ongewijzigd',
                                         ])->render())
-                                    ),
+                                    )
+                                    ->view('filament.components.teams', function (Get $get, $livewire) {
+                                        // Suggested IDs based on current form state
+                                        $suggested = $get('teams') ?? [];
+
+                                        // Existing team IDs on the record
+                                        $existing  = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
+
+                                        // Calculate diff
+                                        $toAdd     = array_diff($suggested, $existing);
+                                        $toRemove  = array_diff($existing,  $suggested);
+                                        $unchanged = array_intersect($existing, $suggested);
+
+                                        // Batch fetch all names in one go
+                                        $allIds = array_unique(array_merge($toAdd, $toRemove, $unchanged));
+                                        $names  = Team::whereIn('id', $allIds)->pluck('name', 'id')->all();
+
+                                        return [
+                                            'suggested' => $suggested,
+                                            'existing'  => $existing,
+                                            'toAdd'     => $toAdd,
+                                            'toRemove'  => $toRemove,
+                                            'unchanged' => $unchanged,
+                                            'names'     => $names,
+                                        ];
+                                    }),
+
 
                                 // \Filament\Forms\Components\Actions::make([
                                 //     \Filament\Forms\Components\Actions\Action::make('createRule')
@@ -383,9 +373,6 @@ class TaskPlannerResource extends Resource
                                 //             return TaskAssignmentRuleResource::form($form);
                                 //         })
                                 // ]),
-
-
-
 
                             ]),
 
@@ -415,32 +402,53 @@ class TaskPlannerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->query(fn() => TaskPlanner::query()->with('teams'))
             ->columns([
-
                 TextColumn::make('name')->label('Naam'),
+                TextColumn::make('teams.id')
+                    ->label('Teams/Medewerkers')
+                    ->getStateUsing(function ($record) {
+                        // 1) Get team names
+                        $teamNames = $record->teams->pluck('name')->toArray();
 
-                TextColumn::make('teams')
-                    ->label('Teams')
-                    ->getStateUsing(fn($record) => $record->teams->pluck('name')->implode(', ')),
+                        // 2) Decode the assignments JSON
+                        $assignments = is_string($record->assignments)
+                            ? json_decode($record->assignments, true)
+                            : $record->assignments;
 
-                TextColumn::make('frequency')->label('Frequentie'),
+                        // 3) Fetch user names if there are assigned user IDs
+                        $userNames = [];
+                        if (!empty($assignments['users'])) {
+                            $userNames = \App\Models\User::whereIn('id', $assignments['users'])
+                                ->get()
+                                ->map(fn($user) => "{$user->firstname} {$user->lastname}")
+                                ->toArray();
+                        }
 
-                ViewColumn::make('interval')
+                        // 4) Merge teams + employees
+                        return collect($teamNames)
+                            ->merge($userNames);
+                    })
+                    ->listWithLineBreaks()
+                    ->bulleted(),
+
+                ViewColumn::make('frequency')
+                    ->label('Frequentie')
                     ->view('filament.tables.columns.interval')
-                    ->label('Interval')
-                    ->state(function ($record) {
-                        return [
-                            'interval' => $record->interval,
-                            'frequency' => $record->frequency->name ?? null,
-                        ];
-                    }),
+                    ->state(fn($record) => [
+                        'frequency' => $record->frequency,
+                        'interval'  => $record->interval,
+                    ]),
 
                 TextColumn::make('campus.name')->label('Campus'),
 
                 TextColumn::make('space.name')->label('Locatie'),
 
-                TextColumn::make('taskType.name')->label('Taaktype'),
+                TextColumn::make('taskType.name')
+                    ->label('Taaktype')
+                    ->getStateUsing(
+                        fn($record) => "<div class='leading-none'>{$record->taskType?->name} <br><span class='text-xs text-gray-500 dark:text-gray-400'>{$record->patient?->firstname} {$record->patient?->lastname}</sapn></div>"
+                    )
+                    ->html(),
 
                 TextColumn::make('tags.name')->label('Tags')->badge(),
 
@@ -499,6 +507,13 @@ class TaskPlannerResource extends Resource
             ->defaultSort('is_active', 'desc');
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['patient']);
+    }
+
+
     public static function getRelations(): array
     {
         return [];
@@ -534,7 +549,7 @@ class TaskPlannerResource extends Resource
                     ->map(fn($id) => ['id' => (int) $id])
             );
 
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task, Auth::user()->teams->pluck('id')->toArray())
+        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task)
             ->byTeamsUserBelongsTo()
             ->pluck('id')
             ->toArray();

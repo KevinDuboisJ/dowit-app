@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Services\PatientService;
 use Illuminate\Support\Facades\Log;
 use App\Events\BroadcastEvent;
+use App\Models\Chain;
 
 class HandlePatientVisits extends Command
 {
@@ -14,13 +15,13 @@ class HandlePatientVisits extends Command
 
     public function handle(PatientService $patientService)
     {
-        try {
-            
-            $patientService->getOccupiedRooms();
+        $chain = Chain::firstWhere([
+            'identifier' => 'patient-opname',
+            'is_active' => true,
+        ]);
 
-        } catch (\Exception $e) {
-            Log::debug('HandlePatientVisits exception: ' . $e->getMessage());
-            Log::debug('Exception trace: ' . $e->getTraceAsString());
+        if ($chain) {
+            $patientService->getOccupiedRooms($chain);
         }
     }
 }

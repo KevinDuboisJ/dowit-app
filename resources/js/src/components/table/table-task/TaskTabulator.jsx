@@ -38,7 +38,7 @@ const PriorityCell = ({ cell, settings }) => {
     <Tippy className="cursor-help" content={getPriority(row.created_at, row.priority, settings.TASK_PRIORITY.value).state}>
       <div className="flex flex-col w-full">
         <div
-          className="whitespace-nowrap w-4 h-4 mx-auto rounded-full"
+          className="w-4 h-4 mx-auto rounded-full"
           style={{ backgroundColor: getPriority(row.created_at, row.priority, settings.TASK_PRIORITY.value).color }}
         />
       </div>
@@ -52,7 +52,7 @@ const StatusCell = ({ cell }) => {
 
   return (
     <Tippy content='Hulp gevraagd' options={{ allowHTML: true }}>
-      <span className={`whitespace-nowrap text-sm text-${row.status.color}`}>
+      <span className={`text-sm text-${row.status.color}`}>
         {row.needs_help && !row.capabilities.isAssignedToCurrentUser && (
           <Lottie className="absolute top-0 left-1 w-6 h-6 mr-2 cursor-help" animationData={helpAnimation} loop={true} autoplay={true} />
         )}
@@ -187,7 +187,7 @@ export const TaskTabulator = ({
           minWidth: '80',
           vertAlign: 'middle',
           formatter: (cell) =>
-            `<div class='whitespace-nowrap text-sm'>${format(
+            `<div class='text-sm'>${format(
               parseISO(cell.getValue()),
               'PP HH:mm'
             )}</div>`,
@@ -198,7 +198,7 @@ export const TaskTabulator = ({
           minWidth: '85',
           vertAlign: 'middle',
           formatter: (cell) =>
-            `<div class='whitespace-nowrap text-sm'>${cell.getValue()}</div>`,
+            `<div class='text-sm'>${cell.getValue()}</div>`,
         },
         {
           title: 'Taaktype',
@@ -206,7 +206,7 @@ export const TaskTabulator = ({
           minWidth: '110',
           vertAlign: 'middle',
           formatter: (cell) =>
-            `<div class='whitespace-nowrap text-sm'>${cell.getValue()}</div>`,
+            `<div class='text-sm'>${cell.getValue()}</div>`,
         },
         {
           title: 'Wie',
@@ -218,7 +218,7 @@ export const TaskTabulator = ({
             const patient = cell.getValue();
             if (patient) {
               const { firstname, lastname } = patient;
-              return `<div class='whitespace-nowrap text-sm'>${firstname} ${lastname}</div>`;
+              return `<div class='text-sm'>${firstname} ${lastname}</div>`;
             }
             return '';
           },
@@ -241,7 +241,7 @@ export const TaskTabulator = ({
           formatter: (cell) => {
             cell.getElement().style.whiteSpace = 'pre-wrap';
             const comment = cell.getValue()?.[0]?.content ?? '';
-            return `<div class='whitespace-nowrap text-sm'>${comment}</div>`;
+            return `<div class='text-sm'>${comment}</div>`;
           },
         },
         {

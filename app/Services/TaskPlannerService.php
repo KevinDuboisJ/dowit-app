@@ -26,11 +26,11 @@ class TaskPlannerService
   public function getPlannedTasksToActivate(): Collection
   {
     return Task::with(Task::getRelationships())->where('start_date_time', '<=', Carbon::now())
-      ->where('is_active', false) // Adjust if 'is_inactive' is a boolean or equivalent column
+      ->where('status_id', TaskStatus::Scheduled)
       ->get();
   }
 
-  public function getTodayTaskPlanners($nextRunAtDatetime = null): Collection
+  public function getTodayTaskPlanners(): Collection
   {
     // Cache tasks for the day to avoid querying every minute
     // This will not refresh the cache if it already exists. Instead, it will return the cached value if it exists, or generate and store the new cache if it doesn't
@@ -92,11 +92,21 @@ class TaskPlannerService
     return $firstTaskPlanner ? $firstTaskPlanner->next_run_at : null;
   }
 
+  protected function creationTimeOffSet(TaskPlanner $taskPlanner, Task $task)
+  {
+    $offset = -abs($taskPlanner->taskType->creation_time_offset);
+
+    if ($offset) {
+      $task->start_date_time = $task->start_date_time->addMinutes($offset);
+    }
+  }
+
   public function triggerTask(TaskPlanner $taskPlanner, TaskStatus $status, Carbon|null $startDateTime = null)
   {
     try {
       DB::transaction(function () use ($taskPlanner, $status, $startDateTime) {
-        // 1. Create the new task from recurrence
+
+        // Create the new task from taskplanner
         $task = new Task([
           'task_planner_id' => $taskPlanner->id,
           'description' => $taskPlanner->description,
@@ -111,12 +121,6 @@ class TaskPlannerService
 
         $task->save();
 
-        // Add Initial comment
-        // $task->comments()->create([
-        //   'user_id' => $taskPlanner->created_by,
-        //   'content' => $taskPlanner->comment
-        // ]);
-
         // Handle assignations
         $this->handleAssignations($taskPlanner, $task);
 
@@ -128,8 +132,14 @@ class TaskPlannerService
 
         broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
       });
-    } catch (Exception $e) {
-      log::info('triggerTask exception: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+      Log::debug([
+        'message' => 'An error occurred in triggerTask: ' . $e->getMessage(),
+        'file'    => $e->getFile(),
+        'line'    => $e->getLine(),
+        'trace'   => $e->getTraceAsString(),
+      ]);
+      throw $e; // Rethrow so outer catch can also catch it
     }
   }
 

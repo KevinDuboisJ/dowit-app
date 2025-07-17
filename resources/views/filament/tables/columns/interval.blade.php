@@ -3,23 +3,40 @@
 
     $interval = $getState()['interval'] ?? null;
     $frequency = $getState()['frequency'] ?? null;
+
+    // Helper map for week numbers
+    $weekLabels = [
+        1 => '1e week',
+        2 => '2e week',
+        3 => '3e week',
+        4 => '4e week',
+    ];
+
+    // Resolve the selected week label
+    $weekLabel = isset($interval['week_number'])
+        ? ($weekLabels[$interval['week_number']] ?? $interval['week_number'].'e week')
+        : '?'; 
 @endphp
 
-@if (!empty($interval))
-    @if ($frequency === 'WeekdayInMonth' && is_array($interval))
-        <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
-            <div>Week van de maand: {{ $interval['week_number'] ?? '?' }}</div>
-            <div>Dag: {{ DaysOfWeek::fromCaseName($interval['day_of_week'] ?? '')?->getLabel() ?? '?' }}</div>
-        </div>
-    @elseif (is_array($interval))
+<div class="flex flex-col leading-none">
+{{-- Frequency --}}
+@if ($frequency->name)
     <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
+        {{ $frequency->getLabel() }}
+    </div>
+@endif
+     
+@if (!empty($interval))
+<div class="text-xs text-gray-500 dark:text-gray-400">
+    @if ($frequency->name === 'WeekdayInMonth' && is_array($interval))
+        {{ DaysOfWeek::fromCaseName($interval['day_of_week'] ?? '')?->getLabel() ?? '?' }}, {{ $weekLabel }}</small>
+    @elseif (is_array($interval))
         @foreach ($interval as $value)
             {{ DaysOfWeek::fromCaseName($value)?->getLabel() }}@if (!$loop->last), @endif
         @endforeach
-    </div>
     @else
-        <span class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
-            {{DaysOfWeek::fromCaseName($interval)?->getLabel() }}
-        </span>
+        {{ DaysOfWeek::fromCaseName($interval)?->getLabel() }}
     @endif
+</div>
 @endif
+</div>

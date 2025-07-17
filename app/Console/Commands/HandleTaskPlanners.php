@@ -49,7 +49,6 @@ class HandleTaskPlanners extends Command
                     // $taskPlannerService->handleEachXDay($taskPlanner);
 
                     if ($taskPlanner->next_run_at->equalTo($nextRunAt)) {
-
                         // Handle the action
                         $taskPlannerService->handleAction($taskPlanner);
 
@@ -58,12 +57,17 @@ class HandleTaskPlanners extends Command
 
                         // Update the next_due_date in recurrence
                         $taskPlanner->updateNextRunDate();
+
                     }
                 }
             }
-        } catch (\Exception $e) {
-            Log::debug('HandleTaskPlanners exception: ' . $e->getMessage());
-            Log::debug('Exception trace: ' . $e->getTraceAsString());
+        } catch (\Throwable $e) {
+            Log::debug([
+                'message' => 'An error occurred while handling task planners: ' . $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
         }
     }
 }

@@ -24,20 +24,18 @@ class Space extends Model
 
   public function scopeByUserInput(Builder $query, ?string $userInput): Builder
   {
-    return $query->when($userInput, function ($query, $userInput) {
-      // Normalize user input: remove +, -, _, and spaces
-      $normalizedInput = strtolower(preg_replace('/[+\-_ ]+/', '', trim(strip_tags($userInput))));
-      $words = array_filter(preg_split('/\s+/', $normalizedInput));
 
-      $query->where(function ($query) use ($words) {
-        foreach ($words as $word) {
-          $query->whereRaw(
-            "REPLACE(REPLACE(REPLACE(REPLACE(LOWER(spaces.name), '+', ''), '-', ''), '_', ''), ' ', '') LIKE ?",
-            ["%{$word}%"]
-          );
+    return $query->when($userInput, function ($query, $userInput) {
+
+      $userInput = trim(strip_tags($userInput));
+      $searchWords = array_filter(explode(' ', $userInput)); // Remove empty words
+
+      $query->where(function ($query) use ($searchWords) {
+        foreach ($searchWords as $word) {
+          $query->where('spaces.name', 'LIKE', "%{$word}%");
         }
       })
-        ->orWhere('spaces._spccode', 'LIKE', "%{$userInput}%");
+        ->orWhere('spaces._spccode', 'LIKE', "%{$userInput}%"); // Check full input in `_spccode`
     });
   }
 

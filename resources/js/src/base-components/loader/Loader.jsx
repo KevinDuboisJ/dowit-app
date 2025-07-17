@@ -1,27 +1,22 @@
-import React from 'react';
-import Lottie from 'lottie-react';
-import loading from './loading.json';
+import Lottie from 'lottie-react'
+import loading from './loading.json'
 
-
-export const Loader = ({ height = 64, width = 64, className }) => {
-
+export const Loader = ({height = 50, width = 50, className}) => {
   const options = {
     loop: true,
     autoplay: true,
     style: {
+      position: 'relative',
+      top: '-10px',
       height: height,
       width: width
     },
     animationData: loading,
     rendererSettings: {
       preserveAspectRatio: 'xMidYMid slice',
-      width: "100%",
-      height: "100%",
-      viewBoxSize:"200 0 1920 1080"
+      viewBoxSize: '500 300 900 500' // crop into the center
     }
   }
 
-  return (
-    <Lottie  className={className} {...options} />
-  )
+  return <Lottie className={className} {...options} />
 }

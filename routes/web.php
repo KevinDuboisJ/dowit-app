@@ -3,6 +3,7 @@
 use App\Http\Controllers\Pages\LoginController;
 use App\Http\Controllers\Pages\DashboardController;
 use App\Http\Controllers\Pages\AssetController;
+use App\Http\Controllers\Pages\BedController;
 use App\Http\Controllers\Pages\NewsfeedController;
 use App\Http\Controllers\Pages\HelpController;
 use App\Http\Controllers\Pages\TaskController;
@@ -37,6 +38,7 @@ Route::get('adm/login', function () {
 Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function () {
 
   Route::get('/tasks/{id}', [TaskController::class, 'find'])->name('task.find');
+  Route::get('/tasks/{id}/comments', [TaskController::class, 'comments'])->name('task.comments');
   Route::match(['get', 'post'], '/', [DashboardController::class, 'index'])->name('dashboard.index');
   Route::post('users/search', [UserController::class, 'search'])->name('user.search');
   Route::post('teams/search', [TeamController::class, 'search'])->name('team.search');
@@ -49,6 +51,7 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
   // Route::post('/task/{task}/create/comment', [TaskController::class, 'addComment'])->name('task.addComment');
   Route::post('/patient/visitid', [PatientController::class, 'getPatient'])->name('task.getPatient');
   Route::match(['get', 'post'], '/newsfeed', [NewsfeedController::class, 'index'])->name('newsfeed.index');
+  Route::get('/beds', [BedController::class, 'index'])->middleware('auth');
   Route::get('/assets', [AssetController::class, 'index'])->name('asset.index');
   Route::any('help', [HelpController::class, 'index']);
   Route::post('logout', [LoginController::class, 'logout'])->name('logout');

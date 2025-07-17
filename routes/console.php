@@ -8,6 +8,7 @@ use App\Console\Commands\HandleTaskPlanners;
 use App\Console\Commands\FailoverHolidaySeed;
 use App\Console\Commands\FailoverTaskPlanners;
 use App\Console\Commands\SeedHolidayDatabase;
+use App\Console\Commands\HandlePatientVisits;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,3 +41,4 @@ Schedule::command(HandleTaskPlanners::class)->everyMinute(); // Handle task plan
 Schedule::command(FailoverTaskPlanners::class)->everyOddHour(); // Handle missed tasks everyFiveMinutes
 Schedule::command(SeedHolidayDatabase::class)->yearly(); // Seed holidays
 Schedule::command(FailoverHolidaySeed::class)->yearlyOn(1, 2, '00:00'); // Runs January 2nd
+Schedule::command(HandlePatientVisits::class)->everyTwoMinutes(); // 

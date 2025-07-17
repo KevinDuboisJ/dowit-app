@@ -29,7 +29,7 @@ class FailoverTaskPlanners extends Command
                 $taskPlanner->updateNextRunDate();
             }
         } catch (\Exception $e) {
-            Log::info('HandleMissedTasks exception: ' . $e->getMessage());
+            Log::info('FailoverTaskPlanners exception: ' . $e->getMessage());
         }
     }
 }

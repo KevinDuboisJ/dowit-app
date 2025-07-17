@@ -11,7 +11,7 @@ class Patient extends Model
     protected $connection = 'oazis'; // Specify the connection (optional if default is sqlsrv)
     protected $table = 'adt_unipat';   // Specify the table name
 
-    public static function getByPatientId(string $patientId): null|object
+    public static function getByPatientVisitId(string $value): null|object
     {
         $result = null;
 
@@ -50,28 +50,34 @@ class Patient extends Model
                     AND p.postal_language = 'NL' 
                     AND p.postal_code_sub = (SELECT MIN(postal_code_sub) FROM postal_codes p3 WHERE p.postal_code = p3.postal_code) 
                     AND p.u_datim = (SELECT MAX(u_datim) FROM postal_codes p2 WHERE p.postal_code = p2.postal_code)
-            WHERE 
+              WHERE 
                 adt_visit.visit_id = ?
+    
             ORDER BY 
                 adt_unipat.from_date DESC
         ";
 
-        $results = DB::connection('oazis')->select($query, [$patientId]);
-        
-        if (!empty($results[0])) {
-            $result = $results[0];
-            $result->birthdate = self::formatBirthdate($result->birthdate);
-            $result->gender = self::formatGender($result->gender);
-            $result->campus_id = self::formatCampus($result->campus_id);
+        $results = DB::connection('oazis')->select($query, [$value]);
 
-            // Check all columns for spaces at the start or end and remove them
-            foreach ($result as $key => $value) {
-                if (is_string($value)) {
-                    $result->$key = trim($value); // Removes only leading and trailing spaces
-                }
-            }
+        if (!empty($results[0])) {
+            $result = self::transformData($results[0]);
         }
 
+        return $result;
+    }
+
+    public static function transformData($result)
+    {
+        $result->birthdate = self::formatBirthdate($result->birthdate);
+        $result->gender = self::formatGender($result->gender);
+        $result->campus_id = self::formatCampus($result->campus_id);
+
+        // Check all columns for spaces at the start or end and remove them
+        foreach ($result as $key => $value) {
+            if (is_string($value)) {
+                $result->$key = trim($value); // Removes only leading and trailing spaces
+            }
+        }
         return $result;
     }
 
