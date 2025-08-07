@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Carbon;
 
 enum TaskStatus: int implements HasLabel
 {
@@ -28,5 +29,12 @@ enum TaskStatus: int implements HasLabel
             self::Completed => 'Afgehandeld',
             self::Skipped => 'Overgeslagen',
         };
+    }
+
+    public static function fromStartDateTime(Carbon $startDateTime): self
+    {
+        return $startDateTime->isFuture()
+            ? self::Scheduled
+            : self::Added;
     }
 }

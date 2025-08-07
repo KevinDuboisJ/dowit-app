@@ -19,7 +19,8 @@ use App\Enums\TaskPlannerFrequency;
 use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use App\Enums\DaysOfWeek;
-use App\Enums\TaskStatus;
+use App\Enums\TaskStatus as TaskStatusEnum;
+use App\Enums\TaskTypeEnum;
 use App\Filament\Components\PatientAutocomplete;
 use App\Models\Space;
 use App\Models\Task;
@@ -36,6 +37,8 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Section;
 use App\Models\User;
 use App\Models\Asset;
+use App\Models\PATIENTLIST\Patient;
+use App\Models\PATIENTLIST\Visit;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Placeholder;
 use App\Services\TaskAssignmentService;
@@ -44,9 +47,21 @@ use Filament\Forms\Components\Group;
 use Filament\Forms\Components\RichEditor;
 use App\Traits\HasFilamentTeamFields;
 use App\Models\Team;
+use Filament\Forms\Components\DatePicker;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
+use Coolsam\Flatpickr\Forms\Components\Flatpickr;
+use Filament\Support\Enums\Alignment;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\Layout\Panel;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\View;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class TaskPlannerResource extends Resource
 {
@@ -62,7 +77,6 @@ class TaskPlannerResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -73,22 +87,23 @@ class TaskPlannerResource extends Resource
                     ->nullable()
                     ->required(),
 
-                DateTimePicker::make('start_date_time')
-                    ->label('Tijdstip')
+                Flatpickr::make('next_run_at')
+                    ->label('Uitvoerstijdstip')
                     ->required()
+                    ->time(true)
                     ->seconds(false)
+                    ->displayFormat(' j F Y H:i')
                     ->after(function ($state, ?string $context, ?TaskPlanner $record) {
                         // Apply 'after' validation only in the 'create' context or in the 'edit' context when the value has been changed by the user
                         $now = now();
 
                         if ($context === 'edit') {
                             // Validate only if the value has changed
-                            return $record->start_date_time !== $state ? $now : null;
+                            return $record->next_run_at !== $state ? $now : null;
                         }
 
                         return $now;
-                    })
-                    ->native(false),
+                    }),
 
                 TiptapEditor::make('description')
                     ->label('Omschrijving')
@@ -120,12 +135,19 @@ class TaskPlannerResource extends Resource
                     ->required()
                     ->live(),
 
-                // PatientAutocomplete::make('patient_id')
-                //     ->label('Patiënt')
-                //     ->visible(
-                //         fn(Get $get): bool => $get('task_type_id') === '1'
-                //     )
-                //     ->dehydrateStateUsing(fn($state) => $state['id']),
+                PatientAutocomplete::make('visit_id')
+                    ->label('Patiënt')
+                    ->required()
+                    ->visible(
+                        fn(Get $get): bool => in_array((int) $get('task_type_id'), TaskTypeEnum::getPatientTransportIds())
+                    )
+                    ->afterStateHydrated(function ($component, $state) {
+                        if ($state) {
+                            $patient = Visit::with(['patient', 'bed.room'])->byIsAdmitted()->find($state);
+                            $component->state($patient);
+                        }
+                    })
+                    ->dehydrateStateUsing(fn($state) => $state['id']),
 
                 Select::make('space_id')
                     ->label('locatie')
@@ -145,7 +167,6 @@ class TaskPlannerResource extends Resource
 
                 Select::make('space_to_id')
                     ->label('Bestemmingslocatie')
-                    ->native(false)
                     ->relationship('spaceTo', 'name')
                     ->searchable(['name', '_spccode'])
                     ->getSearchResultsUsing(function (string $search) {
@@ -158,8 +179,9 @@ class TaskPlannerResource extends Resource
                             ]);
                     })
                     ->visible(
-                        fn(Get $get): bool => $get('task_type_id') === '1'
-                    ),
+                        fn(Get $get): bool => in_array((int) $get('task_type_id'), TaskTypeEnum::getPatientTransportIds())
+                    )
+                    ->live(),
 
                 // TextInput doesn't automatically convert an array to a string, unlike the TextColumn. To Solve this i use formatStateUsing
 
@@ -169,6 +191,7 @@ class TaskPlannerResource extends Resource
             Group::make()->schema([
                 Section::make([
                     Grid::make()->schema([
+
                         Select::make('frequency')
                             ->label('Frequentie')
                             ->options(TaskPlannerFrequency::class)
@@ -241,6 +264,16 @@ class TaskPlannerResource extends Resource
                             })
                             ->key('dynamicFields'),
                     ])->columns(2),
+
+                    Flatpickr::make('excluded_dates')
+                        ->label('Uitgesloten datums')
+                        ->multiplePicker()
+                        ->displayFormat(' j F Y')
+                        ->hint(
+                            new HtmlString(view('filament.components.hint-icon', [
+                                'tooltip' => 'De planner slaat deze datums over en plant geen taken op deze dagen',
+                            ])->render())
+                        ),
 
                     Select::make('assets')
                         ->label('Bestanden')
@@ -326,6 +359,7 @@ class TaskPlannerResource extends Resource
                                     })
                                     ->validationAttribute('Teams')
                                     ->requiredWithout('assignments.users')
+                                    ->validationMessages(['required_without' => 'Een taaktoewijzingsregel is vereist wanneer er geen medewerkers zijn geselecteerd'])
                                     ->multiple()
                                     ->extraAttributes(['class' => 'hidden'])
                                     ->hint(
@@ -381,7 +415,8 @@ class TaskPlannerResource extends Resource
                                 Section::make('')
                                     ->schema([
                                         Toggle::make('is_active')
-                                            ->label('Actief'),
+                                            ->label('Actief')
+                                            ->default(true),
                                     ]),
 
                             ])
@@ -402,7 +437,10 @@ class TaskPlannerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+
             ->columns([
+
+
                 TextColumn::make('name')->label('Naam'),
                 TextColumn::make('teams.id')
                     ->label('Teams/Medewerkers')
@@ -418,7 +456,7 @@ class TaskPlannerResource extends Resource
                         // 3) Fetch user names if there are assigned user IDs
                         $userNames = [];
                         if (!empty($assignments['users'])) {
-                            $userNames = \App\Models\User::whereIn('id', $assignments['users'])
+                            $userNames = User::whereIn('id', $assignments['users'])
                                 ->get()
                                 ->map(fn($user) => "{$user->firstname} {$user->lastname}")
                                 ->toArray();
@@ -428,8 +466,7 @@ class TaskPlannerResource extends Resource
                         return collect($teamNames)
                             ->merge($userNames);
                     })
-                    ->listWithLineBreaks()
-                    ->bulleted(),
+                    ->listWithLineBreaks(),
 
                 ViewColumn::make('frequency')
                     ->label('Frequentie')
@@ -439,22 +476,32 @@ class TaskPlannerResource extends Resource
                         'interval'  => $record->interval,
                     ]),
 
-                TextColumn::make('campus.name')->label('Campus'),
-
-                TextColumn::make('space.name')->label('Locatie'),
+                TextColumn::make('campus.name')
+                    ->label('Locatie')
+                    ->getStateUsing(
+                        fn($record) => "<div>{$record->campus?->name}</div> <div class='text-xs text-gray-500 dark:text-gray-400'>{$record->space?->name}</div>"
+                    )
+                    ->html(),
 
                 TextColumn::make('taskType.name')
                     ->label('Taaktype')
                     ->getStateUsing(
-                        fn($record) => "<div class='leading-none'>{$record->taskType?->name} <br><span class='text-xs text-gray-500 dark:text-gray-400'>{$record->patient?->firstname} {$record->patient?->lastname}</sapn></div>"
+                        function ($record) {
+                            $subHtmlData = "";
+                            if ($record->visit) {
+                                $subHtmlData = "<div class='text-xs text-gray-500 dark:text-gray-400'>{$record->visit->patient?->firstname} {$record->visit->patient?->lastname} ({$record->visit->patient?->gender}) - {$record->visit->bed?->room?->number} {$record->visit->bed?->number}<br>{$record->visit->number}</div>";
+                            }
+                            return "<div>{$record->taskType?->name}</div> $subHtmlData";
+                        }
                     )
                     ->html(),
 
                 TextColumn::make('tags.name')->label('Tags')->badge(),
-
                 TextColumn::make('on_holiday')->label('Feestdagen'),
 
-                TextColumn::make('next_run_at')->label('Ingepland voor'),
+                TextColumn::make('next_run_at')
+                    ->label('Ingepland voor')
+                    ->dateTime('j F Y H:i'),
 
                 IconColumn::make('is_active')
                     ->label('Actief')
@@ -466,42 +513,104 @@ class TaskPlannerResource extends Resource
                         '0' => 'gray',
                         '1' => 'success',
                     }),
+
+
+                // ViewColumn::make('records')
+                //     ->label('')
+                //     ->view('filament.components.task-planner-active-tasks-rows'),
+
+
             ])
-            ->filters([])
+
+            ->filters([
+                // Filter to show only inactive records
+                Filter::make('inactief')
+                    ->label('Toon inactieve')
+                    ->baseQuery(function (Builder $query) {
+                        return $query->withoutGlobalScope('active')->where('is_active', false);
+                    }),
+            ], layout: FiltersLayout::AboveContent)
+
             ->actions([
                 ActionGroup::make([
                     Tables\Actions\EditAction::make()
                         ->label('Bewerken'),
-                    Action::make('Execute')
-                        ->label('Taak uitvoeren')
-                        ->modalDescription('Start een taak volgens de ingestelde plannerconfiguratie voor specifieke medewerkers')
+
+                    Action::make('ExecuteNow')
+                        ->label('Taakplanner nu uitvoeren')
+                        ->modalDescription('Deze actie voert de taak nu uit in plaats van op de geplande datum. De volgende uitvoeringsdatum wordt automatisch aangepast')
                         ->modalAlignment('center')
                         ->modalWidth('md')
                         ->modalIcon('heroicon-o-exclamation-triangle')
                         ->modalSubmitActionLabel('Bevestigen')
                         ->icon('heroicon-o-cog')
+                        ->action(function (TaskPlanner $record, TaskPlannerService $taskPlannerService) {
+                            $taskPlannerService->reschedule($record);
+                            $taskPlannerService->createTask($record, TaskStatusEnum::Added, Carbon::now());
+                        })
+                        ->modalFooterActionsAlignment(Alignment::Center)
+                        ->modalAutofocus(false),
+
+                    Action::make('createOneTimeTask')
+                        ->label('Genereer eenmalige taak')
+                        ->modalDescription('Deze actie maakt een ingeplande taak aan op basis van de gekozen taakplanner. De volgende geplande datum van de taakplanner wordt niet automatisch aangepast')
+                        ->modalAlignment('center')
+                        ->modalWidth('md')
+                        ->modalIcon('heroicon-o-exclamation-triangle')
+                        ->modalSubmitActionLabel('Bevestigen')
+                        ->icon('heroicon-o-pencil-square')
                         ->form([
                             Section::make([
+
+                                Flatpickr::make('next_run_at')
+                                    ->label('Ingepland voor')
+                                    ->required()
+                                    ->time(true)
+                                    ->seconds(false)
+                                    ->displayFormat(' j F Y H:i')
+                                    ->after(now())
+                                    ->default(function (Model $record) {
+                                        return $record->next_run_at;
+                                    }),
+
+                                Select::make('action')
+                                    ->label('Actie')
+                                    ->options(TaskPlannerAction::class)
+                                    ->default(fn(Taskplanner $record) => $record->action->name)
+                                    ->selectablePlaceholder(false)
+                                    ->required()
+                                    ->hint(
+                                        new HtmlString(view('filament.components.hint-icon', [
+                                            'tooltip' => '<b>Toevoegen</b>: Als een taak al bestaat en nog niet is afgehandeld, wordt er een extra bij gemaakt.<br><br><b>Vervangen</b>: Als een taak al bestaat en nog niet is afgehandeld, wordt deze vervangen door de nieuwe taak.',
+                                        ])->render())
+                                    ),
+
                                 select::make('assignments.users')
                                     ->label('Toewijzing')
                                     ->getSearchResultsUsing(fn(string $search): array => User::byTeams()->where('firstname', 'like', "{$search}%")->orWhere('lastname', 'like', "{$search}%")->limit(50)->get()->pluck('full_name', 'id')->toArray())
                                     ->getOptionLabelsUsing(fn(array $values): array => User::whereIn('id', $values)->get()->pluck('full_name', 'id')->toArray())
+                                    ->default(fn(Taskplanner $record) => $record->assignments['users'])
                                     ->multiple()
                                     ->placeholder('Wijs persoon toe'),
 
                             ])->columns(1),
                         ])
-                        ->action(function (TaskPlanner $record, TaskPlannerService $taskPlannerService, array $data) {
-                            $record->action = TaskPlannerAction::Add->name;
+                        ->action(function (TaskPlanner $record, array $data, TaskPlannerService $taskPlannerService) {
+                            $record->next_run_at = $data['next_run_at'];
+                            $record->action = $data['action'];
                             $record->assignments = $data['assignments'];
-                            $taskPlannerService->triggerTask($record, TaskStatus::Added, Carbon::now());
+                            $taskPlannerService->createTask($record, TaskStatusEnum::fromStartDateTime($data['next_run_at']));
                         })
+                        ->modalFooterActionsAlignment(Alignment::Center)
                         ->modalAutofocus(false),
+
 
                     DeleteAction::make(),
                 ]),
 
             ])
+            ->view('filament.components.task-planner-table')
+            ->poll('30s')
             ->bulkActions([])
             ->defaultSort('next_run_at', 'asc')
             ->defaultSort('is_active', 'desc');
@@ -510,9 +619,16 @@ class TaskPlannerResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['patient']);
+            ->with([
+                'visit.bed.room',
+                'visit.patient',
+                'space',
+                'tasks' => fn($query) => $query->byActive()->orWhere(fn($query) => $query->byScheduled())->orderBy('start_date_time')->with('status'),
+            ])
+            ->withGlobalScope('active', function (Builder $builder) {
+                $builder->where('is_active', true);
+            });
     }
-
 
     public static function getRelations(): array
     {

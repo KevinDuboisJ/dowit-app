@@ -46,8 +46,6 @@ class StoreTaskRequest extends FormRequest
             // Ensure task_planner_id is not provided.
             'data.attributes.task_planner_id' => 'prohibited',
 
-            // Validate that start_date_time is a valid datetime string.
-
             // Validate name and description as strings.
             'data.attributes.name' => 'required|string',
             'data.attributes.description' => 'required|string',

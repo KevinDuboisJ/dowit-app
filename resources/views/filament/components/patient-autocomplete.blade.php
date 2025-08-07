@@ -13,50 +13,34 @@
     :field="$field">
 
     <div x-data="{
-    searchValue: '',
-    patient: $wire.entangle('{{ $getStatePath() }}'),
-    patientList: [],
+    searchValue: @js(
+        $getState()
+            ? ($getState()['patient']['firstname'] . ' ' . $getState()['patient']['lastname'] . ' (' . ($getState()['patient']['gender'] ?? '') . ') - ' . ($getState()['bed']['room']['number'] ?? '') . ', ' . ($getState()['bed']['number'] ?? ''))
+            : ''
+    ),
+    visit: $wire.entangle('{{ $getStatePath() }}'),
+    visitList: [],
     loading: false,
     showDropdown: false,
-    patientNotFound: 'Geen patiënt gevonden',
     async fetchPatient() {
         if (this.searchValue.length === 8 || (isNaN(this.searchValue) && this.searchValue.length > 2)) {
             this.loading = true;
 			this.startLottie();
 						
             try {
-                const response = await fetch('/patient/visitid', {
+                const response = await fetch('/visit/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     },
-                    body: JSON.stringify({ visitId: this.searchValue })
+                    body: JSON.stringify({ search: this.searchValue })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    const dataIsFilled = data && Object.keys(data).length > 0;
-                    console.log(data);
-                    if (Array.isArray(data)) {
-                        this.patientList = data;
-                        this.showDropdown = true;
-                    } else {
-                        console.log(dataIsFilled)
-                        console.log(data)
-                        if (dataIsFilled) {
-                            this.patient = data;
-                        }
-
-                        if(!dataIsFilled) {
-                            this.searchValue = this.patientNotFound;
-                        }
-
-
-                        this.patientList = [];
-                     
-                    }
-
+                    this.visitList = data;
+                    this.showDropdown = true;
                     this.loading = false;
 			        this.stopLottie();
                 }
@@ -65,18 +49,30 @@
             }
 
         } else {
-        this.patientList = [];
-        this.patient = null;
+        this.visitList = [];
+        this.visit = null;
         this.showDropdown = false
         }
     },
+
     clear() {
         this.searchValue = '';
-        this.patient = null;
-        this.patientList = [];
+        this.visit = null;
+        this.visitList = [];
     },
 
-		startLottie() {
+     formatPatientDisplay(visit) {
+        if (!visit || !visit.patient) return '';
+        const p = visit.patient;
+        const name = `${p.firstname ?? ''} ${p.lastname ?? ''}`;
+        const gender = p.gender ? ` (${p.gender})` : '';
+        const room = visit.bed?.room?.number ?? '';
+        const bedNum = visit.bed?.number ?? '';
+        const bedInfo = (room || bedNum) ? ` - ${room}, ${bedNum}` : '';
+        return `${name}${gender}${bedInfo}`.trim();
+    },
+
+	startLottie() {
         if (this.$refs.lottieContainer && !this.lottieInstance) {
             this.lottieInstance = lottie.loadAnimation({
                 container: this.$refs.lottieContainer,
@@ -116,15 +112,11 @@
                 x-model="searchValue"
                 @input.debounce.500ms="fetchPatient"
                 placeholder="Zoek een patiënt"
-                :value="patient
-                  ? `${patient.firstname ?? ''} ${patient.lastname ?? ''} (${patient.gender ?? ''}) - ${patient.visit?.bed?.room?.number ?? ''}, ${patient.visit?.bed?.number ?? ''}`
-                  : searchValue"
-                :maxlength="maxLength()"
-                :readonly="patient || searchValue === patientNotFound">
+                :maxlength="maxLength()">
 
             <!-- Dropdown arrow -->
             <div
-                x-show="patientList?.length && !patient"
+                x-show="visitList?.length && !visit"
                 @click="showDropdown = true"
                 class="absolute cursor-pointer inset-y-0 right-2 flex items-center">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2"
@@ -133,7 +125,7 @@
                 </svg>
             </div>
 
-            <button x-show="(searchValue && !patientList?.length) || patient" type="button" class="text-gray-500 hover:text-red-600 absolute inset-y-0 right-2 flex items-center" @click="clear()">✕</button>
+            <button x-show="(searchValue && !visitList?.length) || visit" type="button" class="text-gray-500 hover:text-red-600 absolute inset-y-0 right-2 flex items-center" @click="clear()">✕</button>
 
             <!-- Dropdown list -->
             <template x-if="showDropdown">
@@ -141,16 +133,16 @@
                     @click.outside="showDropdown = false"
                     class="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-48 overflow-y-auto">
 
-                    <template x-if="!patientList?.length">
-                        <div class="px-4 py-2 text-sm text-gray-500" x-text="patientNotFound">
+                    <template x-if="!visitList?.length">
+                        <div class="px-4 py-2 text-sm text-gray-500" x-text="'Geen patiënt gevonden'">
                         </div>
                     </template>
 
-                    <template x-for="(p, index) in patientList" :key="index">
+                    <template x-for="(v, index) in visitList" :key="index">
                         <div
-                            @click="patient = p; showDropdown = false;"
+                            @click="visit = v; showDropdown = false; searchValue = formatPatientDisplay(v);"
                             class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                            x-text="`${p.firstname ?? ''} ${p.lastname ?? ''} (${p.gender ?? ''}) - ${p.visit?.bed?.room?.number ?? ''}, ${p.visit?.bed?.number ?? ''}`"></div>
+                            x-text="formatPatientDisplay(v)"></div>
                     </template>
                 </div>
             </template>

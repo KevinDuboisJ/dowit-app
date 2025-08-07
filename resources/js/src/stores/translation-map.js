@@ -1,5 +1,6 @@
 const NL = {
   'added': 'Toegevoegd',
+  'scheduled': 'Gepland',
   'replaced': 'Vervangen',
   'inprogress': 'In verwerking',
   'waitingforsomeone': 'Wacht op iemand',

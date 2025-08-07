@@ -6,7 +6,6 @@ use App\Models\PATIENTLIST\BedVisit;
 use App\Models\PATIENTLIST\Visit;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\TaskType;
-use App\Models\TaskStatus;
 use App\Models\Space;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +13,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Carbon;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
-use App\Enums\TaskStatus as EnumsTaskStatus;
+use App\Enums\TaskStatus as TaskStatusEnum;
 
 class Task extends Model
 {
@@ -29,7 +28,13 @@ class Task extends Model
 
     protected $casts = [
         'needs_help' => 'boolean', // Cast tinyint(1) to boolean
-        'start_date_time' => 'datetime', // Cast tinyint(1) to boolean
+        'start_date_time' => 'datetime',
+    ];
+
+    private const ACTIVE_STATUSES = [
+        TaskStatusEnum::Added->value,
+        TaskStatusEnum::InProgress->value,
+        TaskStatusEnum::WaitingForSomeone->value,
     ];
 
     protected static function boot()
@@ -42,14 +47,12 @@ class Task extends Model
         });
     }
 
-    // Set the default task status, or mark it as scheduled if start_date_time is in the future
     protected static function booted()
     {
+        // Set the default task status
         static::saving(function ($task) {
-            if ($task->start_date_time > Carbon::now()) {
-                $task->status_id = EnumsTaskStatus::Scheduled;
-            } elseif (! $task->status) {
-                $task->status_id = EnumsTaskStatus::Added;
+            if ($task->status_id === null) {
+                $task->status_id = TaskStatusEnum::fromStartDateTime($task->start_date_time)->value;
             }
         });
     }
@@ -99,11 +102,6 @@ class Task extends Model
         return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
     }
 
-    public function scopeByActive($query)
-    {
-        return $query->whereNotIn('status_id', [EnumsTaskStatus::Scheduled, EnumsTaskStatus::Completed]);
-    }
-
     protected function capabilities(): Attribute
     {
         return Attribute::make(
@@ -113,6 +111,16 @@ class Task extends Model
                 'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
             ],
         );
+    }
+
+    public function scopeByScheduled($query)
+    {
+        return $query->where('status_id', TaskStatusEnum::Scheduled->value);
+    }
+
+    public function scopeByActive($query)
+    {
+        return $query->whereIn('status_id', self::ACTIVE_STATUSES);
     }
 
     public function scopeByAssignedOrTeams($query)
@@ -160,12 +168,12 @@ class Task extends Model
 
     public function activate()
     {
-        $this->update(['status_id' => EnumsTaskStatus::Added]);
+        $this->update(['status_id' => TaskStatusEnum::Added]);
     }
 
     public function isScheduled()
     {
-        return $this->status_id === EnumsTaskStatus::Scheduled;
+        return $this->status_id === TaskStatusEnum::Scheduled;
     }
 
     public static function getRelationships()

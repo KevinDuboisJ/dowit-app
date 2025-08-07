@@ -123,7 +123,7 @@ export const TaskDetails = ({task}) => {
                 />
               }
               label="Wie:"
-              value={`${task.visit.patient.firstname} ${task.visit.patient.lastname} (${task.visit.patient.gender}) - ${task.visit.room.number}, ${task.visit.bed.number}`}
+              value={`${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}`}
             />
           )}
 

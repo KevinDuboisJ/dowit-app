@@ -18,10 +18,10 @@
         : '?'; 
 @endphp
 
-<div class="flex flex-col leading-none">
+<div class="flex flex-col">
 {{-- Frequency --}}
 @if ($frequency->name)
-    <div class="fi-ta-text-item-label text-sm leading-6 text-gray-950 dark:text-white">
+    <div class="fi-ta-text-item-label text-sm text-gray-950 dark:text-white">
         {{ $frequency->getLabel() }}
     </div>
 @endif

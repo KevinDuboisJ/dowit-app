@@ -1,108 +1,140 @@
-import { useState, useEffect } from 'react'
-import axios from "axios";
-import {
-  Heroicon,
-  Badge,
-  Input,
-  Loader,
-} from '@/base-components';
+import {useState, useEffect, useRef} from 'react'
+import axios from 'axios'
+import {Input, Loader} from '@/base-components'
 
-const PatientAutocomplete = ({ onValueChange = null }) => {
-
-  const [selectedPatient, setSelectedPatient] = useState({});
-  const [loading, setLoading] = useState(false);
+const PatientAutocomplete = ({onValueChange = null}) => {
+  const [searchValue, setSearchValue] = useState('')
+  const [visitList, setVisitList] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [selectedVisit, setSelectedVisit] = useState({})
+  const [showDropdown, setShowDropdown] = useState(false)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     return () => {
-      // Cleanup logic (runs on unmount)
       if (onValueChange) {
         onValueChange({})
       }
-    };
-  }, []);
+    }
+  }, [])
 
+  useEffect(() => {
+    const handleClickOutside = e => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const clear = () => {
+    setSearchValue('')
+    setSelectedVisit({})
+    setVisitList([])
+    setShowDropdown(false)
+    if (onValueChange) onValueChange({})
+  }
 
-    setSelectedPatient({});
+  const formatPatientDisplay = visit => {
+    if (!visit?.patient) return ''
 
-    if (onValueChange) {
-      onValueChange({})
-    }
-  };
+    const {firstname = '', lastname = '', gender} = visit.patient
+    const room = visit.bed?.room?.number ?? ''
+    const bed = visit.bed?.number ?? ''
 
-  const handlePatientSearch = async (visitId) => {
+    const name = `${firstname} ${lastname}`.trim()
+    const genderLabel = gender ? ` (${gender})` : ''
+    const bedLabel = room || bed ? ` - ${room}, ${bed}` : ''
 
-    if (visitId.length === 8) {
-      // Set loading to true before starting the fetch
-      setLoading(true);
+    return `${name}${genderLabel}${bedLabel}`
+  }
 
+  const handleSearch = async value => {
+    setSearchValue(value)
+    setSelectedVisit({})
+
+    if (value.length === 8 || (isNaN(value) && value.length > 2)) {
+      setLoading(true)
       try {
-        const response = await axios.post(
-          `/patient/visitid`,
-          {
-            visitId: visitId,
-          });
+        const {data} = await axios.post('/visit/search', {search: value})
 
-        if (response.status === 200) {
-
-          setSelectedPatient(response.data);
-          onValueChange(response.data)
-
+        if (Array.isArray(data)) {
+          setVisitList(data)
+          setShowDropdown(true)
+        } else if (data && typeof data === 'object') {
+          setVisitList([data])
+          setShowDropdown(false)
+          setSelectedVisit(data)
+          if (onValueChange) onValueChange(data)
         } else {
-          console.warn('Unexpected response status:', response.status);
+          setVisitList([])
         }
-
-      } catch (error) {
-        console.error('Failed to update row:', error);
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
       }
-      finally {
-        // Set loading to false after the fetch is complete
-        setLoading(false);
-      }
+    } else {
+      setVisitList([])
+      setShowDropdown(false)
     }
   }
 
-  if (loading) {
-    return (
-      <Badge className="flex items-center justify-between text-sm text-slate-500 font-normal h-8 bg-white" variant="outline">
-        <Loader />
-        <Heroicon
-          icon="XMark"
-          className="w-3 h-3 ml-2 font-normal text-slate-500 cursor-pointer"
-          onClick={clear}
-        />
-      </Badge>
-    )
-  }
-
-  if (!loading && Object.keys(selectedPatient).length > 0) {
-    return (
-      <Badge className="flex items-center justify-between text-sm text-slate-500 font-normal h-8 bg-white" variant="outline">
-        {`${selectedPatient.firstname} ${selectedPatient.lastname} (${selectedPatient.birthdate}) (${selectedPatient.gender}) - ${selectedPatient.room_number}, ${selectedPatient.bed_number}`}
-        <Heroicon
-          icon="XMark"
-          className="w-3 h-3 ml-2 font-normal text-slate-500 cursor-pointer"
-          onClick={clear}
-        />
-      </Badge>
-    )
+  const handleSelect = visit => {
+    console.log('Selected visit:', visit)
+    setSelectedVisit(visit)
+    setSearchValue(formatPatientDisplay(visit))
+    setShowDropdown(false)
+    if (onValueChange) onValueChange(visit)
   }
 
   return (
-    <Input
-      type="text"
-      className="text-sm text-slate-500 bg-white"
-      placeholder="Voer het patiënt opnamenummers in (8 cijfers)"
-      maxLength={8}
-      autoComplete="off"
-      onChange={(e) => {
-        handlePatientSearch(e.target.value); // Trigger patient search
-      }}
-    />
-  );
+    <div className="relative" ref={containerRef}>
+      <Input
+        type="text"
+        className="w-full text-sm bg-white"
+        placeholder="Zoek een patiënt (naam of opnamenummer)"
+        maxLength={searchValue.match(/^\d+$/) ? 8 : undefined}
+        autoComplete="off"
+        value={searchValue}
+        onChange={e => handleSearch(e.target.value)}
+      />
+
+      {/* Loader */}
+      {loading && (
+          <Loader width={40} height={40} className="!absolute !-top-[2px] !right-2"/>
+      )}
+
+      {searchValue && !loading && (
+        <button
+          type="button"
+          className="absolute top-1 right-2 text-gray-500 hover:text-red-600"
+          onClick={clear}
+        >
+          ✕
+        </button>
+      )}
+
+      {/* Dropdown */}
+      {showDropdown && visitList.length > 0 && (
+        <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-48 overflow-y-auto">
+          {visitList.map((visit, index) => (
+            <div
+              key={index}
+              className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+              onClick={() => handleSelect(visit)}
+            >
+              {formatPatientDisplay(visit)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
-PatientAutocomplete.displayName = "PatientAutocomplete"
+PatientAutocomplete.displayName = 'PatientAutocomplete'
 
-export { PatientAutocomplete }
+export {PatientAutocomplete}

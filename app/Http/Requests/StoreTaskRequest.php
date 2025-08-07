@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TaskTypeEnum;
 use Illuminate\Foundation\Http\FormRequest;
-use App\Enums\TaskStatus;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class StoreTaskRequest extends FormRequest
 {
@@ -21,15 +22,14 @@ class StoreTaskRequest extends FormRequest
             'startDateTime' => 'required|date',
             'taskType' => 'required|exists:task_types,id',
             'campus' => 'required|exists:campuses,id',
-            'patient' => 'sometimes|array',
-            'patient.pat_id'  => [
+            'visit' => 'sometimes|array',
+            'visit.id'  => [
                 'sometimes',
-                'required_with:patient',
-                'required_if:taskType,1', // Only required if taskType equals 1 and the key is present.
-                'string',
-            ],
-            'patient.*'  => [
-                'string',
+                'required_with:visit',
+                Rule::requiredIf(function () {
+                    return in_array(request('task_type_id'), TaskTypeEnum::getPatientTransportIds());
+                }),
+                'numeric',
             ],
             'tags' => 'array',
             // 'assets' => 'array',
@@ -62,8 +62,8 @@ class StoreTaskRequest extends FormRequest
             $data['tags'] = $validated['tags'];
         }
 
-        if (isset($validated['patient'])) {
-            $data['patient'] = $validated['patient'];
+        if (isset($validated['visit'])) {
+            $data['visit'] = $validated['visit'];
         }
 
         return $data;

@@ -121,8 +121,9 @@ class Hl7AdmissionAction implements ChainAction
         default => null
       };
     }
-    
-    $visit = PatientService::createOrUpdateVisit($data);
+
+    // This code has to be adjusted for createOrUpdateVisitByContext
+    // $visit = PatientService::createOrUpdateVisit($data);
 
     $task = Task::create(
       [
@@ -181,14 +182,14 @@ class Hl7AdmissionAction implements ChainAction
   {
     $data['visit_number'] = $f[18] ?? null;
     if (!empty($f[43])) {
-      $data['admission'] = Carbon::createFromFormat('YmdHis', $f[43])->toDateTimeString();
+      $data['admitted_at'] = Carbon::createFromFormat('YmdHis', $f[43])->toDateTimeString();
     }
   }
 
   private function parsePV1Discharge(array $f, array &$data): void
   {
     if (!empty($f[44])) {
-      $data['discharge'] = Carbon::createFromFormat('YmdHis', $f[44])->toDateTimeString();
+      $data['discharged_at'] = Carbon::createFromFormat('YmdHis', $f[44])->toDateTimeString();
     }
   }
 

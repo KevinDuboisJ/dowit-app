@@ -102,6 +102,11 @@ class Helper
         return array_filter($filters, fn($filter) => isset($filter['field']) && $filter['field'] === $value);
     }
 
+    public static function trimOrNull($value)
+    {
+        return $value === null ? null : trim($value);
+    }
+
     public static function sanitizeHtml($html)
     {
         // 1. Create default config

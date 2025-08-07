@@ -14,34 +14,47 @@ class Patient extends Model
         return $this->hasMany(Visit::class);
     }
 
-    public function visit()
-    {
-        return $this->hasOne(Visit::class);
-    }
+    // public function latestVisit()
+    // {
+    //     return $this->hasOne(Visit::class)->latestOfMany();
+    // }
 
-    public static function getByPatientVisitId(string $search): ?Patient
-    {
-        return Patient::query()
-            ->whereHas('visit', function ($query) use ($search) {
-                $query->where('number', $search);
-            })
-            ->with(['visit' => function ($query) use ($search) {
-                $query->where('number', $search)->with(['bed', 'bed.room'])->take(1);
-            }])
-            ->first();
-    }
+    // public function scopeByIsAdmitted($query)
+    // {
+    //     return $query->whereHas('latestVisit', fn($q) => $q->whereNull('discharged_at'));
+    // }
 
-    public static function getByPatientName(string $search): Collection
-    {
-        return Patient::query()
-            ->with(['visit.bed', 'visit.bed.room'])
-            ->where(function ($query) use ($search) {
-                $query->where('firstname', 'like', "%{$search}%")
-                    ->orWhere('lastname', 'like', "%{$search}%")
-                    ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"])
-                    ->latest('admission');
-            })
-            ->limit(40)
-            ->get();
-    }
+    // public function scopeByVisitNumber($query, string $number)
+    // {
+    //     return $query
+    //         ->whereHas('latestVisit', fn($q) => $q->where('number', $number))
+    //         ->with([
+    //             'latestVisit' => fn($q) => $q
+    //                 ->where('number', $number)
+    //                 ->with(['bed', 'bed.room'])
+    //                 ->take(1)
+    //         ]);
+    // }
+
+    // public static function getByAdmittedPatientVisitId(string $search): ?Patient
+    // {
+    //     return self::query()
+    //         ->byVisitNumber($search)
+    //         ->byIsAdmitted()
+    //         ->first();
+    // }
+
+    // public static function getByAdmittedPatientName(string $search): Collection
+    // {
+    //     return self::query()
+    //         ->with(['latestVisit.bed.room'])
+    //         ->byIsAdmitted()
+    //         ->where(function ($query) use ($search) {
+    //             $query->where('firstname', 'like', "%{$search}%")
+    //                 ->orWhere('lastname', 'like', "%{$search}%")
+    //                 ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"]);
+    //         })
+    //         ->limit(40)
+    //         ->get();
+    // }
 }

@@ -82,7 +82,7 @@ class ChainResource extends Resource
                             'Taaktype'     => $taskType['name'] ?? '-',
                             'Omschrijving' => \Illuminate\Support\Str::limit($description, 50),
                         ])
-                            ->map(fn($v, $k) => "<strong>$k:</strong> $v")
+                            ->map(fn($v, $k) => "<span class='text-sm font-semibold'>$k:</span> <span class='text-sm'>$v</span>")
                             ->implode('<br>');
 
                         $text .= '</div>';
@@ -91,7 +91,7 @@ class ChainResource extends Resource
                     if (!empty($record->actions[ChainActionType::CustomCode->name])) {
                         $text = '<h4 class="text-green-800">1. Code</h4>';
                         $text .= '<div class="ml-4">';
-                        $text .= "<strong>Class:</strong> {$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}";
+                        $text .= "<span class='text-sm font-semibold'>Class:</span> <span class='text-sm'>{$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}</span>";
                         $text .= '</div>';
                     }
 

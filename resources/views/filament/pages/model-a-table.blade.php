@@ -10,7 +10,7 @@
         @foreach ($records as $record)
             <tr>
                 <td class="border px-4 py-2">{{ $record->name }}</td>
-                <td class="border px-4 py-2">{{ $record->team->name }}</td>
+                <td class="border px-4 py-2">test</td>
             </tr>
         @endforeach
     </tbody>
