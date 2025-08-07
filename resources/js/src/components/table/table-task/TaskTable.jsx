@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo} from 'react'
 import {
   useReactTable,
   getCoreRowModel,
   getGroupedRowModel,
-  flexRender,
-} from '@tanstack/react-table';
-import { cn } from '@/utils';
-import { MdOutlineKeyboardArrowDown, MdOutlineKeyboardArrowRight } from 'react-icons/md';
+  flexRender
+} from '@tanstack/react-table'
+import {cn} from '@/utils'
 import {
-  useTaskTableColumns,
-  AnnouncementFeed
-} from '@/components';
+  MdOutlineKeyboardArrowDown,
+  MdOutlineKeyboardArrowRight
+} from 'react-icons/md'
+import {useTaskTableColumns, AnnouncementFeed} from '@/components'
 import {
   Table,
   TableBody,
@@ -18,112 +18,147 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  ScrollArea,
-} from "@/base-components"
+  ScrollArea
+} from '@/base-components'
 
-export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksRecon }) => {
-
-  const [grouping, setGrouping] = useState(['assignedGroup']);
-  const [expanded, setExpanded] = useState(true); // Controls expanded rows
-  const columns = useTaskTableColumns({ tasks, handleTaskUpdate, handleTasksRecon });
+export const TaskTable = ({
+  tasks,
+  setSheetState,
+  handleTaskUpdate,
+  handleTasksRecon
+}) => {
+  const [grouping, setGrouping] = useState(['assignedGroup'])
+  const [expanded, setExpanded] = useState(true) // Controls expanded rows
+  const columns = useTaskTableColumns({
+    tasks,
+    handleTaskUpdate,
+    handleTasksRecon
+  })
 
   // This is a hack to ensure that the group headers are always shown
   // even if there are no tasks in that group. This is necessary because
   // the grouping feature in react-table hides the group headers if there are no tasks.
   const groupedTasks = useMemo(() => {
+    const hasAssignedGroupTrue = tasks.some(
+      task => task.capabilities.isAssignedToCurrentUser === true
+    )
+    const hasAssignedGroupFalse = tasks.some(
+      task => task.capabilities.isAssignedToCurrentUser === false
+    )
 
-    const hasAssignedGroupTrue = tasks.some(task => task.capabilities.isAssignedToCurrentUser === true);
-    const hasAssignedGroupFalse = tasks.some(task => task.capabilities.isAssignedToCurrentUser === false);
-
-    const result = [...tasks];
+    const result = [...tasks]
 
     if (!hasAssignedGroupTrue) {
       result.unshift({
         id: '__dummy_true__',
-        capabilities: { isAssignedToCurrentUser: true },
-        isDummy: true,
-      });
+        capabilities: {isAssignedToCurrentUser: true},
+        isDummy: true
+      })
     }
 
     if (!hasAssignedGroupFalse) {
       result.push({
         id: '__dummy_false__',
-        capabilities: { isAssignedToCurrentUser: false },
-        isDummy: true,
-      });
+        capabilities: {isAssignedToCurrentUser: false},
+        isDummy: true
+      })
     }
 
-    return result;
-  }, [tasks]);
+    return result
+  }, [tasks])
 
   const table = useReactTable({
     data: groupedTasks,
     columns,
     state: {
       grouping, // Ensure grouping works
-      expanded,
+      expanded
     },
 
     defaultColumn: {
-      size: 'auto', //starting column size
+      size: 'auto' //starting column size
     },
 
     onExpandedChange: setExpanded, // Handles expand/collapse
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(), // Enables grouping
-    autoResetExpanded: false,
-  });
+    autoResetExpanded: false
+  })
 
   return (
-    <div className="flex flex-col h-full min-h-0 intro-y">
-      <table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  header.id !== 'assignedGroup' && (
-                    <TableHead key={header.id} style={{
-                      width: typeof header.getSize() === 'number' ? `${header.getSize()}px` : header.getSize(),
-                      maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : header.column.columnDef.maxSize
-                    }}
-                      className='bg-zinc-50 text-sm text-primary'>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))
+    <div className="flex flex-col h-full min-h-0 intro-y ">
+      <ScrollArea className="relative">
+        <table className="table w-full border-separate border-spacing-0 caption-bottom text-sm">
+          <TableHeader className="!sticky top-0 z-10 bg-zinc-50">
+            {table.getHeaderGroups().map(headerGroup => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map(header => {
+                  return (
+                    header.id !== 'assignedGroup' && (
+                      <TableHead
+                        key={header.id}
+                        style={{
+                          width:
+                            typeof header.getSize() === 'number'
+                              ? `${header.getSize()}px`
+                              : header.getSize(),
+                          maxWidth: header.column.columnDef.maxSize
+                            ? `${header.column.columnDef.maxSize}px`
+                            : header.column.columnDef.maxSize
+                        }}
+                        className="bg-zinc-50 text-sm text-primary"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    )
+                  )
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
 
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-      </table>
+          <TableBody className="sticky top-[39px] z-10">
+            <tr>
+              <td colSpan="100%">
+                <AnnouncementFeed />
+              </td>
+            </tr>
+          </TableBody>
 
-      <AnnouncementFeed />
-
-      <ScrollArea className='fadeInUp'>
-        <Table className="table">
           <TableBody>
-            {table.getRowModel().rows.map((row) => {
+            {table.getRowModel().rows.map(row => {
               if (row.getIsGrouped()) {
                 return (
                   <React.Fragment key={row.id}>
                     {/* Group Header Row */}
-                    <TableRow className="bg-gray-200 text-sm text-primary ">
-                      <TableCell className="px-4 py-2" colSpan='100%'>
-                        <div className='flex items-center '>
+                    <TableRow className="bg-gray-200 text-sm text-primary">
+                      <TableCell className="px-4 py-2" colSpan="100%">
+                        <div className="flex items-center ">
                           <button
                             onClick={() => row.toggleExpanded()}
                             className="mr-2 text-lg"
                           >
-                            {row.getIsExpanded() ? <MdOutlineKeyboardArrowDown /> : <MdOutlineKeyboardArrowRight />}
+                            {row.getIsExpanded() ? (
+                              <MdOutlineKeyboardArrowDown />
+                            ) : (
+                              <MdOutlineKeyboardArrowRight />
+                            )}
                           </button>
-                          <span className='text-sm font-medium !text-slate-700'>
-                            {row.groupingValue === 'true' ? 'Aan mij toegewezen' : 'Niet aan mij toegewezen'}
+                          <span className="text-sm font-medium !text-slate-700">
+                            {row.groupingValue === 'true'
+                              ? 'Aan mij toegewezen'
+                              : 'Niet aan mij toegewezen'}
                           </span>
                           <span className="text-[10px] !text-white ml-2 bg-green-700 min-w-[1.5rem] h-6 w-6 px-2 flex items-center justify-center rounded-full">
-                            {row.subRows.length === 1 && row.subRows[0].original?.isDummy ? 0 : row.subRows.length}
+                            {row.subRows.length === 1 &&
+                            row.subRows[0].original?.isDummy
+                              ? 0
+                              : row.subRows.length}
                           </span>
                         </div>
                       </TableCell>
@@ -132,59 +167,54 @@ export const TaskTable = ({ tasks, setSheetState, handleTaskUpdate, handleTasksR
                     {/* SubRows (Tasks inside this group) */}
                     {row.getIsExpanded() &&
                       row.subRows
-                        .filter((subRow) => !subRow.original?.isDummy)
+                        .filter(subRow => !subRow.original?.isDummy)
                         .map((subRow, index) => (
                           <TableRow
                             key={subRow.id}
-                            className={
-                              cn({
-                                'bg-zinc-50 opacity-40': false,
-                                'table-row ': true,
-                                'table-row-even': index % 2 === 0,
-                              })}
+                            className={cn({
+                              'bg-zinc-50 opacity-40': false,
+                              'table-row ': true,
+                              'table-row-even': index % 2 === 0
+                            })}
                           >
-                            {subRow.getVisibleCells().map((cell) => {
+                            {subRow.getVisibleCells().map(cell => {
                               return (
                                 cell.column.id !== 'assignedGroup' && (
                                   <TableCell
                                     key={cell.id}
-                                    style={{ width: typeof cell.column.getSize() === 'number' ? `${cell.column.getSize()}px` : cell.column.getSize() }}
-                                    className={`h-[60px] ${cell.column.id !== 'action' ? 'cursor-pointer' : ''}`}
-                                    align={(cell.column.columnDef.meta)?.align}
+                                    className={`h-[60px] ${
+                                      cell.column.id !== 'action'
+                                        ? 'cursor-pointer'
+                                        : ''
+                                    }`}
+                                    align={cell.column.columnDef.meta?.align}
                                     onClick={
                                       cell.column.id !== 'action'
-                                        ? () => setSheetState({ open: true, taskId: subRow.original.id })
+                                        ? () =>
+                                            setSheetState({
+                                              open: true,
+                                              taskId: subRow.original.id
+                                            })
                                         : undefined
                                     }
                                   >
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
                                   </TableCell>
-                                ))
+                                )
+                              )
                             })}
                           </TableRow>
                         ))}
                   </React.Fragment>
-                );
+                )
               }
-
-              // Regular (non-grouped) row:
-              // return (
-              //   <TableRow
-              //     key={row.id}
-              //     onClick={() => setSheetState({ open: true, task: row.original })}
-              //     className="cursor-pointer"
-              //   >
-              //     {row.getVisibleCells().map((cell) => (
-              //       <TableCell key={cell.id} className="h-[60px]">
-              //         {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              //       </TableCell>
-              //     ))}
-              //   </TableRow>
-              // );
             })}
           </TableBody>
-        </Table>
+        </table>
       </ScrollArea>
-    </div >
-  );
-};
+    </div>
+  )
+}

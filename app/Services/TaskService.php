@@ -9,20 +9,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
-use App\Enums\TaskStatus;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Enums\TaskStatus as TaskStatusEnum;
-use App\Models\OAZIS\Patient;
 
 class TaskService
 {
-  private const DEFAULT_EXCLUDED_STATUSES = [
-    TaskStatusEnum::Replaced->value,
-    TaskStatusEnum::Completed->value,
-    TaskStatusEnum::Skipped->value,
-  ];
-
   public function updateTask(Task $task, array $data)
   {
     $clientTimestamp = Carbon::parse($data['beforeUpdateAt']);
@@ -48,10 +40,6 @@ class TaskService
       $this->handleUserAssignments($task, $data, $metadata);
       $comment = $task->addComment($data['comment'] ?? '', $metadata);
       $this->handleAutoStatusReset($task, $data, $comment);
-
-      if ($task->status_id === TaskStatusEnum::Completed->value || $task->status_id === TaskStatusEnum::Skipped->value) {
-        $task->is_active = false;
-      }
 
       $task->save();
     });
@@ -118,7 +106,7 @@ class TaskService
   private function handleAutoStatusReset(Task $task, array $data, Comment $comment): void
   {
     if ($task->assignees->isEmpty() && !empty($data['usersToUnassign'])) {
-      $task->update(['status_id' => TaskStatus::Added->value]);
+      $task->update(['status_id' => TaskStatusEnum::Added->value]);
 
       $task->comments()->create([
         'created_by' => config('app.system_user_id'),
@@ -136,7 +124,7 @@ class TaskService
 
     // Get common settings
     $relationships = [
-      'visit' => fn($query) => $query->with(['patient', 'room', 'bed']),
+      'visit' => fn($query) => $query->with(['patient', 'bed.room']),
       'tags',
       'status',
       'taskType' => fn($query) => $query->with(['assets']),
@@ -150,12 +138,11 @@ class TaskService
 
     // Get assigned tasks (non-paginated)
     $assignedTasks = Task::with($relationships)
-      ->byActive()
       ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
         $this->applyFilters($query, $filters, $hasFilterByStatus);
       })
       ->when(!$hasFilterByStatus, function ($query) {
-        $query->whereNotIn('status_id', self::DEFAULT_EXCLUDED_STATUSES);
+        $query->byActive();
       })
       ->when($sorters, function ($query) use ($request) {
         foreach ($request->input('sorters', []) as $sorter) {
@@ -182,14 +169,13 @@ class TaskService
       ->with($relationships)
       ->where(function ($query) {
         $query
-          ->byNotAssigned()
-          ->byActive();
+          ->withoutAssignees(Auth::user());
       })
       ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
         $this->applyFilters($query, $filters, $hasFilterByStatus);
       })
       ->when(!$hasFilterByStatus, function ($query) {
-        $query->whereNotIn('status_id', self::DEFAULT_EXCLUDED_STATUSES);
+        $query->byActive();
       })
       ->when($sorters, function ($query) use ($request) {
         foreach ($request->input('sorters', []) as $sorter) {

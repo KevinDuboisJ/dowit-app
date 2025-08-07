@@ -11,25 +11,29 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use Illuminate\Support\Facades\Cache;
 use App\Casts\Interval;
-use App\Models\PATIENTLIST\Patient;
+use App\Models\PATIENTLIST\Visit;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
+use App\Services\TaskPlannerService;
+use App\Traits\HasJsonAssignees;
+use App\Traits\HasTeamOrUserScope;
+use Illuminate\Support\Facades\DB;
 
 class TaskPlanner extends Model
 {
-    use SoftDeletes, HasCreator, HasTeams;
+    use SoftDeletes, HasCreator, HasTeams, HasJsonAssignees, HasTeamOrUserScope;
 
     protected $casts = [
         'frequency' => TaskPlannerFrequency::class,
         'on_holiday' => ApplyOnHoliday::class,
         'action' => TaskPlannerAction::class,
-        'start_date_time' => 'datetime:Y-m-d H:i', // This casts the 'next_run_at' attribute to a Carbon instance for date manipulation
         'next_run_at' => 'datetime', // This casts the 'next_run_at' attribute to a Carbon instance for date manipulation
         'interval' => Interval::class,
         'assignments' => 'array',
         'assets' => 'array',
+        'excluded_dates' => 'array',
     ];
 
     // Automatically handle logic during creation
@@ -40,33 +44,32 @@ class TaskPlanner extends Model
         static::creating(function ($taskPlanner) {
 
             if (Auth::check()) {
-                // Set next_run_at to start_date_time's value if next_run_at is not set
+                // Set next_run_at to next_run_at's value if next_run_at is not set
                 if (is_null($taskPlanner->next_run_at)) {
-                    $taskPlanner->next_run_at = $taskPlanner->start_date_time;
+                    $taskPlanner->next_run_at = $taskPlanner->next_run_at;
                 }
 
                 $taskPlanner->created_by = Auth::id();
             }
-            Cache::forget('next_run_tasks');
+            Cache::forget(TaskPlannerService::getCacheKey());
         });
 
         static::updating(function ($taskPlanner) {
-
             if (Auth::check()) {
-                $prevStartDatetimeState = $taskPlanner->getOriginal('start_date_time');
+
+                $prevStartDatetimeState = $taskPlanner->getOriginal('next_run_at');
 
                 // Use loose comparison to check the carbon dates values
-                if ($prevStartDatetimeState != $taskPlanner->start_date_time) {
-                    $taskPlanner->next_run_at = $taskPlanner->start_date_time;
+                if ($prevStartDatetimeState != $taskPlanner->next_run_at) {
+                    $taskPlanner->next_run_at = $taskPlanner->next_run_at;
                 }
 
                 if ($taskPlanner->frequency === TaskPlannerFrequency::Daily->name) {
                     $taskPlanner->interval = null;
                 }
-                $taskPlanner->created_by = Auth::id();
             }
 
-            Cache::forget('next_run_tasks');
+            Cache::forget(TaskPlannerService::getCacheKey());
         });
     }
 
@@ -110,9 +113,22 @@ class TaskPlanner extends Model
         return $this->belongsToMany(Tag::class);
     }
 
-    public function patient()
+    public function visit()
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Visit::class);
+    }
+
+    public function scopeByActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeByWithinWindow($query, Carbon $start, Carbon $end)
+    {
+        return $query->whereBetween(
+            DB::raw('DATE_SUB(next_run_at, INTERVAL task_types.creation_time_offset MINUTE)'),
+            [$start, $end]
+        );
     }
 
     public function getNextRunDate(?Carbon $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon
@@ -156,6 +172,10 @@ class TaskPlanner extends Model
 
                 // Find the next occurrence of one of the specific days
                 return $this->getNextSpecificDay($next_run_at, $interval);
+                
+            case 'Weekdays':
+                // If it's Fri, this will jump to Monday; if Tue, it goes to Wed, etc.
+                return $next_run_at->copy()->nextWeekday();
 
             case 'WeekdayInMonth':
                 if (
@@ -234,14 +254,42 @@ class TaskPlanner extends Model
         return $currentDate->copy()->next($dayNumbers[0])->setTimeFrom($currentDate);
     }
 
+    public function activate(): bool
+    {
+        return $this->update(['is_active' => true]);
+    }
+
+    public function deactivate(): bool
+    {
+        return $this->update(['is_active' => false]);
+    }
+
+    public function getOffsetRunAt(): Carbon
+    {
+        return Carbon::parse($this->next_run_at)
+            ->subMinutes($this->taskType?->creation_time_offset ?? 0);
+    }
+
     public function updateNextRunDate()
     {
-        $nextRunDate = $this->getNextRunDate();
-        $this->start_date_time = $this->next_run_at;
-        $this->next_run_at = $nextRunDate->format('Y-m-d H:i:s');
-
+        $this->next_run_at = $this->getNextRunDate();
         $this->save();
-        Cache::forget('next_run_tasks');
+        Cache::forget(TaskPlannerService::getCacheKey());
+    }
+
+    public function nextRunAtIsExcluded(): bool
+    {
+        if (empty($this->excluded_dates)) {
+            return false;
+        }
+
+        $nextRunDate = Carbon::parse($this->next_run_at)->toDateString();
+
+        if (in_array($nextRunDate, $this->excluded_dates, true)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function toTaskModel(): Task

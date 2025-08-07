@@ -33,6 +33,14 @@ input:focus {
   transition: none;
 }
 
+.fi-ta-text-item-label{
+   @apply leading-tight;
+}
+
+.fi-ta-text {
+   @apply gap-y-0;
+}
+
 .fi-fo-field-wrp.report-hidden-label > div.grid.gap-y-2 > div.flex.items-center {
     @apply hidden;
 }
@@ -271,3 +279,6 @@ section {
     margin-top:-23px
 }
 
+.fi-ta-filters > *:first-child {
+    @apply hidden
+}

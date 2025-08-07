@@ -157,24 +157,63 @@ class TaskAssignmentRuleResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->label('id'),
                 TextColumn::make('teams.name')
                     ->label('Teams')
                     ->formatStateUsing(fn($state, $record) => $record->teams->pluck('name')->join(', '))
                     ->sortable(),
-                ViewColumn::make('campuses')
-                    ->view('filament.tables.columns.jsonArray')
-                    ->label('Campussen'),
-                ViewColumn::make('task_types')
-                    ->view('filament.tables.columns.jsonArray')
+
+                TextColumn::make('campuses')
+                    ->label('Campussen')
+                    ->formatStateUsing(function ($state) {
+                        if (!is_array($state)) {
+                            return $state;
+                        }
+                        // If it's a single object with a "name" key
+                        if (isset($state['name'])) {
+                            return $state['name'];
+                        }
+                    })
+                    ->listWithLineBreaks(),
+
+                TextColumn::make('task_types')
+                    ->formatStateUsing(function ($state) {
+                        if (!is_array($state)) {
+                            return $state;
+                        }
+                        // If it's a single object with a "name" key
+                        if (isset($state['name'])) {
+                            return $state['name'];
+                        }
+                    })
+                    ->listWithLineBreaks()
                     ->label('Taaktypes'),
-                ViewColumn::make('spaces')
-                    ->view('filament.tables.columns.jsonArray')
+
+                TextColumn::make('spaces')
+                    ->formatStateUsing(function ($state) {
+                        if (!is_array($state)) {
+                            return $state;
+                        }
+                        // If it's a single object with a "name" key
+                        if (isset($state['name'])) {
+                            return $state['name'];
+                        }
+                    })
+                    ->listWithLineBreaks()
                     ->label('Locaties'),
-                ViewColumn::make('spaces_to')
-                    ->view('filament.tables.columns.jsonArray')
+
+                TextColumn::make('spaces_to')
+                    ->formatStateUsing(function ($state) {
+                        if (!is_array($state)) {
+                            return $state;
+                        }
+                        // If it's a single object with a "name" key
+                        if (isset($state['name'])) {
+                            return $state['name'];
+                        }
+                    })
+                    ->listWithLineBreaks()
                     ->label('Bestemmingslocaties'),
+
                 TextColumn::make('tags')
                     ->label('Tags')
                     ->formatStateUsing(fn($state) => $state['name'] ?? '')

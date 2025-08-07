@@ -9,6 +9,7 @@ use App\Enums\TaskStatus;
 use App\Models\Holiday;
 use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
+use App\Enums\TaskPlannerEvaluationResultEnum;
 use App\Enums\TaskPlannerFrequency;
 use Illuminate\Support\Carbon;
 use Exception;
@@ -18,12 +19,16 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\TaskAssignmentService;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Mail\Message;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Mail;
 
 class TaskPlannerService
 {
   const CACHE_KEY = 'next_run_tasks';
 
-  public function getPlannedTasksToActivate(): Collection
+  public function getScheduledTasks(): Collection
   {
     return Task::with(Task::getRelationships())->where('start_date_time', '<=', Carbon::now())
       ->where('status_id', TaskStatus::Scheduled)
@@ -32,38 +37,43 @@ class TaskPlannerService
 
   public function getTodayTaskPlanners(): Collection
   {
+    $now = Carbon::now()->second(0);
+    $end = Carbon::now()->endOfDay();
+    $yesterday = $now->copy()->subDay();
+
     // Cache tasks for the day to avoid querying every minute
-    // This will not refresh the cache if it already exists. Instead, it will return the cached value if it exists, or generate and store the new cache if it doesn't
-    return Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () {
-      return TaskPlanner::with(['teams', 'tags'])->where('next_run_at', '>=', Carbon::now()->second(0))
-        ->where('next_run_at', '<=', Carbon::now()->endOfDay())
+    // This will not refresh the cache if it already exists. Instead, it will return the cached value if it exists, or generate and store the new cache if it doesn"t
+    return Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () use ($now, $end, $yesterday) {
+      return TaskPlanner::with(['teams', 'tags', 'visit', 'taskType'])
+        ->select('task_planners.*') // Select only the taskplanners columns and no the task_types
+        ->join('task_types', 'task_planners.task_type_id', '=', 'task_types.id')  // Join so we can reference task_types.creation_time_offset in byWithinWindow
+        ->where(function (Builder $query) use ($now, $end, $yesterday) {
+          $query->byWithinWindow($now, $end)
+            ->orWhereBetween('next_run_at', [$yesterday, $now]);
+        })
         ->where('is_active', true)
         ->orderBy('next_run_at')
         ->get();
     });
   }
 
-  public function getClosestTaskPlanners()
+  public function getClosestTaskPlanners(): Collection
   {
-    // Fetch today's task planners
+    // Retrieves today's task planners and returns only those scheduled to be triggered within the next hour
     $todayTaskPlanners = $this->getTodayTaskPlanners();
+    $now = Carbon::now()->second(0);
+    $oneMinuteLater = now()->addMinute();
 
-    // Ensure the collection is not empty
-    if ($todayTaskPlanners->isEmpty()) {
-      return collect(); // Return an empty collection if no task planners found
-    }
+    $closestTaskPlanners = $todayTaskPlanners->filter(function ($taskPlanner) use ($now, $oneMinuteLater) {
 
-    // // Sort task planners by next_run_at to ensure correct order
-    // $sortedTaskPlanners = $todayTaskPlanners->sortBy('next_run_at');
+      $runAt = $taskPlanner->getOffsetRunAt();
+      if (! $runAt) {
+        return false;
+      }
 
-    // Get the closest next_run_at value (the first task planner in the sorted list)
-    $closestNextRunAt = $todayTaskPlanners->first()->next_run_at;
-
-    // Filter all task planners with the closest next_run_at
-    $closestTaskPlanners = $todayTaskPlanners->filter(function ($taskPlanner) use ($closestNextRunAt) {
-      return $taskPlanner->next_run_at->eq($closestNextRunAt);
+      // Return true if it’s within [ now and oneHourLater ] OR already past
+      return $runAt->lessThanOrEqualTo($now, $oneMinuteLater);
     });
-
     return $closestTaskPlanners;
   }
 
@@ -101,7 +111,7 @@ class TaskPlannerService
     }
   }
 
-  public function triggerTask(TaskPlanner $taskPlanner, TaskStatus $status, Carbon|null $startDateTime = null)
+  public function createTask(TaskPlanner $taskPlanner, TaskStatus $status, Carbon|null $startDateTime = null)
   {
     try {
       DB::transaction(function () use ($taskPlanner, $status, $startDateTime) {
@@ -117,6 +127,7 @@ class TaskPlannerService
           'space_id' => $taskPlanner->space_id,
           'space_to_id' => $taskPlanner->space_to_id,
           'status_id' => $status->value,
+          'visit_id' => $taskPlanner->visit_id,
         ]);
 
         $task->save();
@@ -134,13 +145,53 @@ class TaskPlannerService
       });
     } catch (\Throwable $e) {
       Log::debug([
-        'message' => 'An error occurred in triggerTask: ' . $e->getMessage(),
+        'message' => 'An error occurred in createTask: ' . $e->getMessage(),
         'file'    => $e->getFile(),
         'line'    => $e->getLine(),
         'trace'   => $e->getTraceAsString(),
       ]);
       throw $e; // Rethrow so outer catch can also catch it
     }
+  }
+
+  public function deactivate($taskPlanner): TaskPlannerEvaluationResultEnum
+  {
+    $taskPlanner->deactivate();
+    return TaskPlannerEvaluationResultEnum::Deactivated;
+  }
+
+  public function reschedule($taskPlanner): TaskPlannerEvaluationResultEnum
+  {
+    $taskPlanner->updateNextRunDate();
+    return TaskPlannerEvaluationResultEnum::Rescheduled;
+  }
+  //  public function toMail($notifiable)
+  //   {
+  //       return (new MailMessage)
+  //                   ->subject('Herziening van Ultimo-ruimte nodig')
+  //                   ->line("De ruimte $this->spaceName moet worden herzien vanwege ontbrekende gegevens.")
+  //                   ->action('Ultimo', url('https://ultimoweb.monica.be'));
+  //   }
+  public function applyExecutionRules(TaskPlanner $taskPlanner): TaskPlannerEvaluationResultEnum
+  {
+    if ($taskPlanner->visit_id && $taskPlanner->visit?->bed_id === null && $taskPlanner->visit?->discharged_at === null) {
+      Mail::html('<p>Patiënt met opnamenummer: ' . $taskPlanner->visit->number . ' heeft geen bed en is nog niet ontslagen</p>', function (Message $message) {
+        $message->to('kevin.dubois@azmonica.be')
+          ->subject('Dowit - Patiënt in taakplanner zonder bed');
+      });
+    }
+
+    if ($taskPlanner->visit_id && $taskPlanner->visit?->discharged_at !== null) {
+      return $this->deactivate($taskPlanner);
+    }
+
+    if ($taskPlanner->nextRunAtIsExcluded() || $this->handleHoliday($taskPlanner)) {
+      return $this->reschedule($taskPlanner);
+    }
+
+    $this->handleAction($taskPlanner);
+
+    return TaskPlannerEvaluationResultEnum::ShouldTrigger;
   }
 
   public function handleAction(TaskPlanner $taskPlanner)
@@ -164,25 +215,25 @@ class TaskPlannerService
     }
   }
 
-  public function handleHolidayDates($taskPlanner)
+  public function handleHoliday($taskPlanner): bool
   {
-    $isHolidayToday = Holiday::whereDate('date', Carbon::now()->toDateString())->exists();
+    $isHoliday = Holiday::whereDate('date', $taskPlanner->next_run_at->toDateString())->exists();
 
-    if ($taskPlanner->on_holiday == ApplyOnHoliday::No && $isHolidayToday) {
-      $this->triggerTask($taskPlanner, TaskStatus::Skipped);
-      $taskPlanner->updateNextRunDate();
-    } elseif ($taskPlanner->on_holiday == ApplyOnHoliday::OnlyOnHolidays && !$isHolidayToday) {
-      $taskPlanner->updateNextRunDate();
+    if ($taskPlanner->on_holiday == ApplyOnHoliday::No && $isHoliday) {
+      $this->createTask($taskPlanner, TaskStatus::Skipped);
+      return true;
     }
+
+    if ($taskPlanner->on_holiday == ApplyOnHoliday::OnlyOnHolidays && !$isHoliday) {
+      return true;
+    }
+
+    return false;
   }
 
-  public function handleSpecificDays($taskPlanner)
+  public static function getCacheKey(): string
   {
-    if ($taskPlanner->frequency === TaskPlannerFrequency::SpecificDays) {
-      if (!in_array($taskPlanner->next_run_at->format('l'), $taskPlanner->interval ?? [])) { // 'l' gives day name (e.g., 'Monday')
-        $taskPlanner->updateNextRunDate();
-      }
-    }
+    return self::CACHE_KEY;
   }
 
   public function getCacheExpiration()

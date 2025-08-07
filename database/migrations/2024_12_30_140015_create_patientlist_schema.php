@@ -35,13 +35,13 @@ class CreatePatientListSchema extends Migration
         // Create visits table
         Schema::connection('patientlist')->create('visits', function ($table) {
             $table->id();
-            $table->string('number');
+            $table->string('number')->unique();
             $table->foreignId('patient_id');
             $table->foreignId('campus_id')->nullable();
             $table->foreignId('department_id')->nullable();
             $table->foreignId('bed_id')->nullable();
-            $table->datetime('admission')->nullable();
-            $table->datetime('discharge')->nullable();
+            $table->datetime('admitted_at')->nullable();
+            $table->datetime('discharged_at')->nullable();
             $table->timestamps();
 
             // Uniqueness constraint to prevent duplicates

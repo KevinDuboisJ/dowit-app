@@ -2,56 +2,78 @@
 
 namespace App\Models;
 
+use App\Models\Team;
 use App\Models\PATIENTLIST\BedVisit;
 use App\Models\PATIENTLIST\Visit;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\TaskType;
-use App\Models\TaskStatus;
 use App\Models\Space;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Carbon;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
-use App\Enums\TaskStatus as EnumsTaskStatus;
+use App\Enums\TaskStatus as TaskStatusEnum;
+use App\Traits\HasAssignees;
+use App\Traits\HasTeamOrUserScope;
+use Carbon\Carbon;
 
 class Task extends Model
 {
-    use HasCreator, HasTeams;
+    use HasAssignees, HasCreator, HasTeams, HasTeamOrUserScope;
 
-    // protected function serializeDate(\DateTimeInterface $date): string
-    // {
-    //     return Carbon::parse($date)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
-    // }
-
-    protected $appends = ['capabilities'];
+    protected $with = ['taskType'];
+    protected $appends = ['capabilities', 'start_date_time_with_offset'];
 
     protected $casts = [
         'needs_help' => 'boolean', // Cast tinyint(1) to boolean
-        'start_date_time' => 'datetime', // Cast tinyint(1) to boolean
+        'start_date_time' => 'datetime',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
+    private const ACTIVE_STATUSES = [
+        TaskStatusEnum::Added->value,
+        TaskStatusEnum::InProgress->value,
+        TaskStatusEnum::WaitingForSomeone->value,
+    ];
 
-        // Listen for the `attached` event on the assignees relationship
-        Event::listen('eloquent.attached: App\\Models\\Task.assignees', function ($task, $ids, $attributes) {
-            logger('Attached: ' . implode(',', $ids) . ' to Task ' . $task->id);
+    protected static function booted()
+    {
+        // Set the default task status
+        static::saving(function ($task) {
+            if ($task->status_id === null) {
+                $task->status_id = TaskStatusEnum::fromStartDateTime($task->start_date_time)->value;
+            }
         });
     }
 
-    // Set the default task status, or mark it as scheduled if start_date_time is in the future
-    protected static function booted()
+    protected function capabilities(): Attribute
     {
-        static::saving(function ($task) {
-            if ($task->start_date_time > Carbon::now()) {
-                $task->status_id = EnumsTaskStatus::Scheduled;
-            } elseif (! $task->status) {
-                $task->status_id = EnumsTaskStatus::Added;
-            }
-        });
+        return Attribute::make(
+            get: fn() => [
+                'can_update' => auth()->user()?->can('update', $this),
+                'can_assign' => auth()->user()?->can('assign', $this),
+                'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
+            ],
+        );
+    }
+
+    protected function startDateTimeWithOffset(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+
+                $value = $this->attributes['start_date_time'];
+
+                if (empty($value)) {
+                    return null;
+                }
+
+                $base = $value instanceof Carbon ? $value->copy() : Carbon::parse($value);
+                $offset = (int) ($this->taskType?->creation_time_offset ?? 0); // minutes
+
+                // Return the base start time with the offset applied
+                return $base->addMinutes($offset);
+            },
+        );
     }
 
     public function status()
@@ -84,11 +106,6 @@ class Task extends Model
         return $this->belongsToMany(Team::class, 'task_team');
     }
 
-    public function assignees()
-    {
-        return $this->belongsToMany(User::class, 'task_user');
-    }
-
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
@@ -99,20 +116,14 @@ class Task extends Model
         return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
     }
 
-    public function scopeByActive($query)
+    public function scopeByScheduled($query)
     {
-        return $query->whereNotIn('status_id', [EnumsTaskStatus::Scheduled, EnumsTaskStatus::Completed]);
+        return $query->where('status_id', TaskStatusEnum::Scheduled->value);
     }
 
-    protected function capabilities(): Attribute
+    public function scopeByActive($query)
     {
-        return Attribute::make(
-            get: fn() => [
-                'can_update' => auth()->user()?->can('update', $this),
-                'can_assign' => auth()->user()?->can('assign', $this),
-                'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
-            ],
-        );
+        return $query->whereIn('status_id', self::ACTIVE_STATUSES);
     }
 
     public function scopeByAssignedOrTeams($query)
@@ -120,7 +131,7 @@ class Task extends Model
         $query->where(function ($query) {
             $query->byUserTeams()
                 ->orWhere(function ($query) {
-                    $query->byAssigned();
+                    $query->byAssignees($query, Auth::user());
                 });
         });
     }
@@ -142,36 +153,20 @@ class Task extends Model
         });
     }
 
-    public function scopeByNotAssigned($query)
-    {
-        $query->whereDoesntHave('assignees', function ($userQuery) {
-            $userQuery->where('users.id', Auth::id());
-        });
-    }
-
-    public function scopeByAssigned($query)
-    {
-        $user = Auth::user();
-
-        $query->whereHas('assignees', function ($userQuery) use ($user) {
-            $userQuery->where('users.id', $user->id);
-        });
-    }
-
     public function activate()
     {
-        $this->update(['status_id' => EnumsTaskStatus::Added]);
+        $this->update(['status_id' => TaskStatusEnum::Added]);
     }
 
     public function isScheduled()
     {
-        return $this->status_id === EnumsTaskStatus::Scheduled;
+        return $this->status_id === TaskStatusEnum::Scheduled;
     }
 
     public static function getRelationships()
     {
         return [
-            'visit' => fn($query) => $query->with(['patient', 'room', 'bed']),
+            'visit' => fn($query) => $query->with(['patient', 'bed.room']),
             'tags',
             'status',
             'taskType' => fn($query) => $query->with(['assets']),
@@ -179,16 +174,6 @@ class Task extends Model
             'assignees',
             'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
         ];
-    }
-
-    public function assignUsers(array $userIds)
-    {
-        $this->assignees()->syncWithoutDetaching($userIds);
-    }
-
-    public function unassignUsers(array $userIds)
-    {
-        $this->assignees()->detach($userIds);
     }
 
     public function addComment(string $comment, ?array $metadata = null): Comment

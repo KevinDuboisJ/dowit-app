@@ -12,6 +12,7 @@ use App\Http\Controllers\Pages\UserController;
 use App\Http\Controllers\Pages\TeamController;
 use App\Http\Controllers\Pages\SpaceController;
 use App\Http\Controllers\Pages\TagController;
+use App\Http\Controllers\Pages\VisitController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 
@@ -31,12 +32,7 @@ Route::group(['middleware' => ['guest', HandleInertiaRequests::class]], function
   Route::post('login', [LoginController::class, 'authenticate']);
 });
 
-Route::get('adm/login', function () {
-  return redirect('login');
-});
-
 Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function () {
-
   Route::get('/tasks/{id}', [TaskController::class, 'find'])->name('task.find');
   Route::get('/tasks/{id}/comments', [TaskController::class, 'comments'])->name('task.comments');
   Route::match(['get', 'post'], '/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -48,15 +44,10 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
   Route::post('/announce/{comment}/mark-as-read', [DashboardController::class, 'markAsRead'])->name('dashboard.markAsRead');
   Route::post('/task/store', [TaskController::class, 'store'])->name('task.store');
   Route::match(['post', 'delete'], '/task/{task}/update', [TaskController::class, 'update'])->name('task.update');
-  // Route::post('/task/{task}/create/comment', [TaskController::class, 'addComment'])->name('task.addComment');
-  Route::post('/patient/visitid', [PatientController::class, 'getPatient'])->name('task.getPatient');
+  Route::post('/visit/search', [VisitController::class, 'search'])->name('visit.search');
   Route::match(['get', 'post'], '/newsfeed', [NewsfeedController::class, 'index'])->name('newsfeed.index');
   Route::get('/beds', [BedController::class, 'index'])->middleware('auth');
   Route::get('/assets', [AssetController::class, 'index'])->name('asset.index');
   Route::any('help', [HelpController::class, 'index']);
   Route::post('logout', [LoginController::class, 'logout'])->name('logout');
-  
-
-  //Route::post('/notifications', [AdminController::class, 'userNotifications']);
-
 });

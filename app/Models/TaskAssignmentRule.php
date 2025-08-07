@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\TaskType;
 use App\Models\Space;
 use App\Traits\HasCreator;
+use App\Traits\HasTeamOrUserScope;
 use App\Traits\HasTeams;
 
 class TaskAssignmentRule extends Model
 {
-    use SoftDeletes, HasCreator, HasTeams;
+    use SoftDeletes, HasCreator, HasTeams, HasTeamOrUserScope;
 
     protected $casts = [
         'campuses' => 'array',
@@ -21,6 +22,31 @@ class TaskAssignmentRule extends Model
         'spaces' => 'array',
         'spaces_to' => 'array',
     ];
+
+    public function campus()
+    {
+        return $this->belongsTo(Campus::class, 'campuses');
+    }
+
+    public function taskType()
+    {
+        return $this->belongsTo(TaskType::class, 'task_types');
+    }
+
+    public function space()
+    {
+        return $this->belongsTo(Space::class, 'spaces');
+    }
+
+    public function spaceTo()
+    {
+        return $this->belongsTo(Space::class, 'spaces_to');
+    }
+
+    public function tags()
+    {
+        return $this->belongsTo(Tag::class, 'tags');
+    }
 
     public function scopeByTaskMatch(Builder $query, Task $task): Builder
     {

@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Asset;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
-
+use App\Traits\HasTeamOrUserScope;
 class TaskType extends Model
 {
-    use HasFactory, HasCreator, HasTeams;
+    use HasFactory, HasCreator, HasTeams, HasTeamOrUserScope;
 
     protected $fillable = ['name', 'team_id'];
 

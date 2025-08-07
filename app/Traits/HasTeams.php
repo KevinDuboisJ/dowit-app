@@ -12,48 +12,6 @@ use App\Models\User;
 trait HasTeams
 {
     /**
-     * Global scope: if the authenticated user is NOT super_admin,
-     * only return records linked to their teams.
-     */
-    public static function bootHasTeams(): void
-    {
-        static::addGlobalScope('team_access', function (Builder $query) {
-            if (static::class === User::class) {
-                return;
-            }
-
-            $user = Auth::user();
-
-            if (! $user || $user->isSuperAdmin()) {
-                return;
-            }
-
-            /** @var self $model */
-            $model = new static;
-
-            $query->where(function ($query) use ($model, $user) {
-                // logger($user->teams->pluck('id')->toArray());
-                $query->where(function ($q) use ($user, $model) {
-                    $model->scopeByBelongsToTeamIds($q, $user->teams->pluck('id')->toArray());
-                    
-                    if (method_exists($model, 'scopeByCreator')) {
-                        $q->orWhere(function ($subQuery) use ($user, $model) {
-                            $model->scopeByCreator($subQuery, $user);
-                        });
-                    }
-                });
-
-                // If the model has an 'assignees' relationship, include assigned tasks
-                if (method_exists($model, 'assignees')) {
-                    $query->orWhereHas('assignees', function ($q2) use ($user) {
-                        $q2->where('users.id', $user->id);
-                    });
-                }
-            });
-        });
-    }
-
-    /**
      * The `teams` pivot relationship.
      */
     public function teams(): BelongsToMany

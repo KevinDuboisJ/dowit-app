@@ -5,10 +5,6 @@ namespace App\Filament\Resources\TeamResource\Pages;
 use App\Filament\Resources\TeamResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
-use App\Models\Team;
-use App\Traits\HasTeams;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Facades\Auth;
 
 class ListTeams extends ListRecords
 {

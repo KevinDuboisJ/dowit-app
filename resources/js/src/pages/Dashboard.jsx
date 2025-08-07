@@ -23,8 +23,7 @@ const Dashboard = ({tasks: initTasks}) => {
     },
     options: {filterFromUrlParams: true}
   })
-  const {tasks, setTasks, mergeTasks, todoTasks, openTasks, setPagination} =
-    useTask(initTasks, filters.get())
+  const {tasks, setTasks, mergeTasks, todoTasks, openTasks, setPagination} = useTask(initTasks, filters.get())
   const {newEvent} = useWebSocket()
   const [sheetState, setSheetState] = useState({open: false, task: null})
   const {isMobile} = useIsMobile()

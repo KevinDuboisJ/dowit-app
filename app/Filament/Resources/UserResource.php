@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
+use App\Traits\HasTeamOrUserScope;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -19,7 +20,7 @@ use App\Traits\HasTeams;
 
 class UserResource extends Resource
 {
-    use HasTeams;
+    use HasTeams, HasTeamOrUserScope;
 
     protected static ?string $model = User::class;
 

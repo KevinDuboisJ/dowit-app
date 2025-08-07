@@ -35,7 +35,7 @@ export const AnnouncementFeed = ({className}) => {
             announcements.map(announcement => (
               <TableRow
                 key={announcement.id}
-                className="bg-[#ffd7001f] hover:bg-[#ffd7001f]"
+                className="bg-[#FFFBE0] hover:bg-[#FFFBE0]"
               >
                 <TableCell>
                   <div className="flex items-center min-h-4 py-0 px-1">

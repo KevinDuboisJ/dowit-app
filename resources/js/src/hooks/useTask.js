@@ -15,6 +15,8 @@ export const useTask = (initialData, filters) => {
     const open = [];
 
     tasksData.forEach((task) => {
+
+      // Optimistic update for tasks that are marked as completed
       if (task.status.name === "Completed" && filters?.status_id?.value !== "Completed") return;
 
       if (task.capabilities.isAssignedToCurrentUser) {

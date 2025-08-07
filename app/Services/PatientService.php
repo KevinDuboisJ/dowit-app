@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskTypeEnum;
 use App\Events\BroadcastEvent;
+use App\Helpers\Helper;
 use App\Models\Chain;
 use App\Models\PATIENTLIST\Patient;
 use App\Models\PATIENTLIST\Visit;
@@ -31,20 +33,24 @@ class PatientService
       $inserts = [];
 
       $query = "
-      SELECT
-      CAST(CAMPUS_ID AS INT) as campus_id
-      ,WARD_ID as department_number
-      ,ROOM_ID as room_number
-      ,BED_ID as bed_number
-      ,VISIT_ID as visit_number
-      ,VISIT_TYPE as visit_type
-      ,PAT_ID as patient_number
-      ,LASTNAME as lastname
-      ,FIRSTNAME as firstname
-      ,SEX as gender
-      FROM OAZP.dbo.BEDGRID
-      WHERE PATINDEX('%[^0-9]%', ROOM_ID) = 0
-      ORDER BY ROOM_ID";
+        SELECT TOP (1000)
+        CAST(bg.CAMPUS_ID AS INT) AS campus_id,
+        bg.WARD_ID       AS department_number,
+        bg.ROOM_ID       AS room_number,
+        bg.BED_ID        AS bed_number,
+        bg.VISIT_ID      AS visit_number,
+        bg.VISIT_TYPE    AS visit_type,
+        bg.PAT_ID        AS patient_number,
+        bg.LASTNAME      AS lastname,
+        bg.FIRSTNAME     AS firstname,
+        bg.SEX           AS gender,
+        -- combine date + time into one column
+        CAST(av.adm_date AS DATETIME) + CAST(av.adm_time AS DATETIME) AS admitted_at,
+        CAST(av.dis_date AS DATETIME) + CAST(av.dis_time AS DATETIME) AS discharged_at 
+        FROM OAZP.dbo.BEDGRID AS bg
+        LEFT JOIN adt_visit AS av ON bg.VISIT_ID = av.visit_id
+        WHERE PATINDEX('%[^0-9]%', bg.ROOM_ID) = 0
+        ORDER BY bg.ROOM_ID;";
 
       $results = DB::connection('oazis')->select($query);
 
@@ -62,7 +68,7 @@ class PatientService
         });
 
       foreach ($results as $row) {
-        $row = array_map('trim', (array) $row);
+        $row = array_map([Helper::class, 'trimOrNull'], (array) $row);
         self::createOrUpdateVisitByContext($row, $context);
 
         $row['room_id'] = $context['rooms']->get(self::getRoomKey($row['campus_id'], $row['room_number']))?->id;
@@ -111,28 +117,28 @@ class PatientService
             logger("Kamer niet gevonden in Ultimo: Eindpoets patiëntkamer Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname));
           }
 
-          $task = Task::create(
-            [
-              'name' => 'Eindpoets patiëntkamer',
-              'start_date_time' => $now,
-              'description' => "Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname),
-              'campus_id' => $bedVisit->bed->room->campus_id,
-              'task_type_id' => '3',
-              'space_id' => $spaceId ?? null,
-              'priority' => TaskPriority::Medium->name,
-              'bed_visit_id' => $bedVisit->id,
-            ],
-          );
+          // $task = Task::create(
+          //   [
+          //     'name' => 'Eindpoets patiëntkamer',
+          //     'start_date_time' => $now,
+          //     'description' => "Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname),
+          //     'campus_id' => $bedVisit->bed->room->campus_id,
+          //     'task_type_id' => TaskTypeEnum::EndOfStayCleaning->value,
+          //     'space_id' => $spaceId ?? null,
+          //     'priority' => TaskPriority::Medium->name,
+          //     'bed_visit_id' => $bedVisit->id,
+          //   ],
+          // );
 
-          if ($bedVisit->bed->room->campus_id === 1) {
-            $task->teams()->sync([5]); // Teams id for Antwerp
-          }
+          // if ($bedVisit->bed->room->campus_id === 1) {
+          //   $task->teams()->sync([5]); // Teams id for Antwerp
+          // }
 
-          if ($bedVisit->bed->room->campus_id === 2) {
-            $task->teams()->sync([6]); // Teams id for Deurne
-          }
+          // if ($bedVisit->bed->room->campus_id === 2) {
+          //   $task->teams()->sync([6]); // Teams id for Deurne
+          // }
 
-          broadcast(new BroadcastEvent($task, 'task_created', $chain->identifier));
+          // broadcast(new BroadcastEvent($task, 'task_created', $chain->identifier));
         }
       }
 
@@ -161,6 +167,60 @@ class PatientService
           ->update([
             'occupied_at' => $now,
           ]);
+      }
+
+      $visits = Visit::query()
+        ->whereNull('discharged_at') // only active visits
+        ->whereNotNull('bed_id')
+        ->whereDoesntHave('bedVisits', function ($q) {
+          $q->whereNull('vacated_at'); // bed is still occupied
+        })
+        ->pluck('number'); // get only the visit number
+
+      if ($visits->isNotEmpty()) {
+
+        $results = collect(); // will hold the final merged result
+
+        $visits->chunk(500)->each(function ($chunk) use (&$results) {
+
+          $partial = DB::connection('oazis')
+            ->table('OAZP.dbo.adt_visit')
+            ->selectRaw("
+              LTRIM(RTRIM(visit_id)) AS visit_id,
+              CAST(adm_date AS DATETIME) + CAST(adm_time AS DATETIME) AS admitted_at,
+              CAST(dis_date AS DATETIME) + CAST(dis_time AS DATETIME) AS discharged_at
+            ")
+            ->whereIn('visit_id', $chunk)
+            ->get();
+
+          // Detect duplicates
+          $duplicateVisits = $partial
+            ->groupBy('visit_id')
+            ->filter(fn($rows) => $rows->count() > 1)
+            ->keys();
+
+          if ($duplicateVisits->isNotEmpty()) {
+            $duplicateVisitNumber = $duplicateVisits->join(', ');
+            throw new \Exception("In PatientService, while updating the discharged_at value, multiple Visit records were found for visit number: $duplicateVisitNumber. Cause unknown, further investigation required");
+          }
+
+          $results = $results->merge($partial);
+        });
+
+        foreach ($results as $row) {
+
+          if (!$row->discharged_at) {
+            logger("Visit ID $row->visit_id has no assigned bed and also doesnt have a discharge date ");
+          }
+
+          Visit::where('number', $row->visit_id)
+            ->update([
+              'campus_id'     => null,
+              'department_id' => null,
+              'bed_id'        => null,
+              'discharged_at' => $row->discharged_at,
+            ]);
+        }
       }
     } catch (\Throwable $e) {
       Log::debug([
@@ -237,17 +297,20 @@ class PatientService
 
     // Visit
     $visit = $context['visits']->get($data['visit_number']) ?? new Visit(['number' => $data['visit_number']]);
+
     $visit->fill([
       'patient_id'    => $patient->id,
       'campus_id'     => $data['campus_id'],
       'department_id' => $department->id,
       'bed_id'        => $bed->id,
-      'admission'     => $data['admission'] ?? $visit->admission ?? null,
-      'discharge'     => $data['discharge'] ?? null,
+      'admitted_at'   => $data['admitted_at'] ?? $visit->admitted_at ?? null,
+      'discharged_at' => $data['discharged_at'] ?? $visit->discharged_at ?? null,
     ]);
+
     if ($visit->isDirty()) {
       $visit->save();
     }
+
     $context['visits'][$visit->number] = $visit;
   }
 
@@ -286,61 +349,6 @@ class PatientService
         logger('handleFinalCleanTask: Geen huidige bedbezoek gevonden voor taak: ' . $task->id);
       }
     }
-  }
-
-  public static function createOrUpdateVisit($data)
-  {
-    $spaceId = Space::where('SpcRoomNr', $data['room_number'])->where('campus_id', $data['campus_id'])->value('id'); // Fast with index
-
-    if (!$spaceId) {
-      $spaceId = Space::where('name', 'like', '%' . $data['room_number'] . '%')->where('campus_id', $data['campus_id'])->value('id'); // Slower fallback
-    }
-
-    if (!$spaceId) {
-      logger("Kamer niet gevonden in Ultimo: Eindpoets patiëntkamer Kamer {$data['room_number']}, Bed {$data['bed_number']} - " . strtoupper($data['lastname']));
-    }
-
-    $department = Department::firstOrCreate(
-      ['number' => $data['department_number']],
-      ['number' => $data['department_number']]
-    );
-
-    $room = Room::firstOrCreate(
-      ['number' => $data['room_number']],
-      ['number' => $data['room_number']]
-    );
-
-    $bed = Bed::firstOrCreate(
-      ['number' => $data['bed_number'], 'room_id' => $room->id],
-      ['number' => $data['bed_number'], 'room_id' => $room->id]
-    );
-
-    // Create or Update the Patient
-    $patient = Patient::updateOrCreate(
-      ['number'  => $data['patient_number']], // Find by API patient ID
-      [
-        'number' => $data['patient_number'],
-        'firstname'      => $data['firstname'],
-        'lastname'       => $data['lastname'],
-        'gender'         => self::formatOazisGender($data['gender']),
-      ]
-    );
-
-    $existingVisit = Visit::where('number', $data['visit_number'])->first();
-
-    return Visit::updateOrCreate(
-      ['number' => $data['visit_number']],
-      [
-        'patient_id'    => $patient->id,
-        'space_id'      => $spaceId ?? null,
-        'campus_id'     => $data['campus_id'],
-        'department_id' => $department->id,
-        'room_id'       => $room->id,
-        'bed_id'        => $bed->id,
-        'admission'     => !empty($data['admission']) ? $data['admission'] : ($existingVisit?->admission ?? now()),
-        'discharge'     => $data['discharge'] ?? null,
-      ]
-    );
   }
 
   public static function formatOazisBirthdate(string|null $birthdate)

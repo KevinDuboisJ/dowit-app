@@ -32,7 +32,6 @@ trait HasCreator
         return $query->where('created_by', $user->id);
     }
 
-
     public function isCreator(?User $user = null): bool
     {
         if ($user === null) {

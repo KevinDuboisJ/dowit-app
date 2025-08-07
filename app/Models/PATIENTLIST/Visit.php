@@ -3,6 +3,7 @@
 namespace App\Models\PATIENTLIST;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\PATIENTLIST\Patient;
 use App\Models\PATIENTLIST\Department;
 use App\Models\PATIENTLIST\Room;
@@ -14,7 +15,6 @@ use App\Models\Space;
 class Visit extends Model
 {
     protected $connection = 'patientlist';
-    protected $fillable = ['number', 'admission', 'discharge'];
 
     public function patient()
     {
@@ -29,11 +29,6 @@ class Visit extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
-    }
-
-    public function room()
-    {
-        return $this->belongsTo(Room::class);
     }
 
     public function bed()
@@ -51,8 +46,51 @@ class Visit extends Model
         return $this->hasMany(BedVisit::class);
     }
 
-    public function scopeOrderByLatestVisit($query)
+    public function latestBedVisit()
     {
-        return $query->latest('admission');
+        return $this->hasMany(BedVisit::class)
+            ->latest()  // Orders by 'created_at' by default
+            ->first(); // Returns the latest entry
+    }
+
+    public function scopeByVisitNumber($query, string $number)
+    {
+        return $query->where('number', $number);
+    }
+
+    public function scopeByIsAdmitted($query)
+    {
+        return $query->whereNull('discharged_at');
+    }
+
+    public function scopeByPatientName($query, string $search)
+    {
+        return $query->whereHas('patient', function ($query) use ($search) {
+            $query->where('firstname', 'like', "%{$search}%")
+                ->orWhere('lastname', 'like', "%{$search}%")
+                ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"]);
+        });
+    }
+
+    public static function getPatient(string $search): ?Visit
+    {
+        return self::query()
+            ->byVisitNumber($search)
+            ->byIsAdmitted()
+            ->first();
+    }
+
+    public static function getByAdmittedPatientName(string $search): Collection
+    {
+        return self::query()
+            ->with(['latestVisit.bed.room'])
+            ->byIsAdmitted()
+            ->where(function ($query) use ($search) {
+                $query->where('firstname', 'like', "%{$search}%")
+                    ->orWhere('lastname', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"]);
+            })
+            ->limit(40)
+            ->get();
     }
 }

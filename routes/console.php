@@ -9,6 +9,7 @@ use App\Console\Commands\FailoverHolidaySeed;
 use App\Console\Commands\FailoverTaskPlanners;
 use App\Console\Commands\SeedHolidayDatabase;
 use App\Console\Commands\HandlePatientVisits;
+use App\Console\Commands\HandleScheduledTasks;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,8 +38,8 @@ Artisan::command('inspire', function () {
 |
 */
 
-Schedule::command(HandleTaskPlanners::class)->everyMinute(); // Handle task planners
-Schedule::command(FailoverTaskPlanners::class)->everyOddHour(); // Handle missed tasks everyFiveMinutes
+Schedule::command(HandleTaskPlanners::class)->everyMinute();
+Schedule::command(HandleScheduledTasks::class)->everyMinute();
 Schedule::command(SeedHolidayDatabase::class)->yearly(); // Seed holidays
 Schedule::command(FailoverHolidaySeed::class)->yearlyOn(1, 2, '00:00'); // Runs January 2nd
-Schedule::command(HandlePatientVisits::class)->everyTwoMinutes(); // 
+Schedule::command(HandlePatientVisits::class)->everyFifteenMinutes();

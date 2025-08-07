@@ -12,6 +12,7 @@ enum TaskPlannerFrequency implements HasLabel
     case Quarterly;
     case EachXDay;
     case SpecificDays;
+    case Weekdays;
     case WeekdayInMonth;
 
     public function getLabel(): ?string
@@ -23,6 +24,7 @@ enum TaskPlannerFrequency implements HasLabel
             self::Quarterly => 'Per kwartaal',
             self::EachXDay => 'Elke x dag',
             self::SpecificDays => 'Specifieke dagen',
+            self::Weekdays => 'Weekdagen',
             self::WeekdayInMonth => 'Weekdag van de maand',
         };
     }

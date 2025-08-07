@@ -1,5 +1,5 @@
 .table{
-    @apply overflow-hidden border-0 bg-white/60;
+    @apply border-0 bg-white/60;
     .table-header {
         @apply font-medium text-current border-t border-b border-slate-200 bg-transparent;
         .table-headers {

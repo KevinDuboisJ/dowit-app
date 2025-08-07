@@ -8,6 +8,7 @@
         "php": "^8.2.0",
         "awcodes/filament-table-repeater": "^3.0",
         "awcodes/filament-tiptap-editor": "^3.0",
+        "coolsam/flatpickr": "*",
         "ezyang/htmlpurifier": "^4.18",
         "filament/filament": "^3.3.14",
         "guava/filament-icon-picker": "^2.3",

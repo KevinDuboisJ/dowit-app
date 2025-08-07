@@ -10,6 +10,7 @@ import {useForm, useWatch} from 'react-hook-form'
 import {z} from 'zod'
 import {useInertiaFetchList, useAxiosFetchByInput} from '@/hooks'
 import axios from 'axios'
+import {isPatientTransportTask} from '@/stores/enums'
 
 import {
   Sheet,
@@ -44,111 +45,6 @@ import {
 } from '@/base-components'
 
 import {PatientAutocomplete} from '@/components'
-
-const FormSchema = z
-  .object({
-    name: z.string().min(1, 'Naam is verplicht'), // Required string with a custom error message
-    startDateTime: z.date({
-      required_error: 'Gelieve een Startdatum te kiezen',
-      invalid_type_error: 'Startdatum moet een geldige datum zijn'
-    }),
-
-    description: z.string().min(1, 'Gelieve een omschrijving in te vullen'), // Required string
-    taskType: z.string().min(1, 'Gelieve een taaktype te kiezen'), // Required string for selected campus
-    campus: z.string().min(1, 'Gelieve een campus te kiezen'), // Required string for selected campus
-
-    patient: z
-      .object({
-        patient_number: z.string().optional(),
-        visit_number: z.string().optional(),
-        firstname: z.string().optional(),
-        lastname: z.string().optional(),
-        gender: z.string().optional(),
-        birthdate: z.string().optional(),
-        campus_id: z.string().optional(),
-        department_number: z.string().optional(),
-        room_number: z.string().optional(),
-        bed_number: z.string().optional(),
-        adm_date: z.string().optional(),
-        adm_time: z.string().optional(),
-        dis_date: z.string().optional(),
-        dis_time: z.string().optional()
-      })
-      .optional(),
-
-    space: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(), //.min(1, "Gelieve een locatie te kiezen"),
-
-    spaceTo: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    tags: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    assets: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    assignTo: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    teamsMatchingAssignment: z.array(z.any()).optional() // Add this field if not already present
-  })
-  .refine(
-    data =>
-      !(
-        data?.teamsMatchingAssignment?.length === 0 &&
-        data?.assignTo?.length === 0
-      ),
-    {
-      path: ['assignTo'], // Attach error to assignTo field
-      message:
-        'Gelieve een teamtaaktoewijzingsregel aan te maken of de taak rechtstreeks aan een persoon toe te wijzen'
-    }
-  )
-  .refine(
-    data => {
-      // If taskType is "1", ensure patient is not undefined
-      if (data.taskType === '1') {
-        return data.patient && data.patient.patient_number !== undefined
-      }
-      return true // If taskType is not 1, patient can be undefined
-    },
-    {
-      path: ['patient'],
-      message: 'Gelieve een patiënt te kiezen',
-      required_error: 'Gelieve een patiënt te kiezen'
-    }
-  )
 
 export const TaskSheet = React.memo(() => {
   const [sheetState, setSheetState] = useState(false)
@@ -241,7 +137,7 @@ const CreateTaskForm = () => {
       description: '',
       taskType: '',
       campus: '',
-      patient: {},
+      visit: {},
       space: [],
       spaceTo: [],
       tags: [],
@@ -261,11 +157,9 @@ const CreateTaskForm = () => {
     const cleanData = {...data}
     setLoading(true)
 
-    if (!data.patient.patient_number) {
-      delete cleanData.patient
+    if (!data.visit.id) {
+      delete cleanData.visit
     }
-
-    form.reset()
 
     try {
       const response = await axios.post('/task/store', {...cleanData})
@@ -287,6 +181,7 @@ const CreateTaskForm = () => {
       toast.error(`${errorMessages}`)
       console.error(`${error.message}: `, error.response)
     } finally {
+      form.reset()
       setLoading(false)
     }
   }
@@ -489,11 +384,11 @@ const CreateTaskForm = () => {
             )}
           /> */}
 
-          {/* Conditionally Rendered Campus Field */}
-          {taskType === '1' && (
+          {/* Conditionally Rendered PatientVisit Field */}
+          {isPatientTransportTask(taskType) && (
             <FormField
               control={form.control}
-              name="patient"
+              name="visit"
               render={({field}) => (
                 <FormItem>
                   <FormLabel>Patiënt</FormLabel>
@@ -533,7 +428,7 @@ const CreateTaskForm = () => {
               )}
             />
             {/* Conditionally rendered spaceTo field */}
-            {taskType === '1' && (
+            {isPatientTransportTask(taskType) && (
               <FormField
                 control={form.control}
                 name="spaceTo"
@@ -587,7 +482,7 @@ const CreateTaskForm = () => {
             setValue={form.setValue}
           />
           <div className="text-right justify-items-end">
-            {loading ? <Loader/> : <Button type="submit">Aanmaken</Button>}
+            {loading ? <Loader /> : <Button type="submit">Aanmaken</Button>}
           </div>
         </form>
       </Form>
@@ -628,8 +523,6 @@ const TeamsMatchingAssignmentRules = ({control, setValue}) => {
   })
 
   useEffect(() => {
-    console.log(campus)
-    console.log(tags)
     fetchTeamsMatchingAssignmentRules()
   }, [taskType, campus, tags])
 
@@ -669,3 +562,94 @@ const TeamsMatchingAssignmentRules = ({control, setValue}) => {
     </div>
   )
 }
+
+const FormSchema = z
+  .object({
+    name: z.string().min(1, 'Naam is verplicht'), // Required string with a custom error message
+    startDateTime: z.date({
+      required_error: 'Gelieve een Startdatum te kiezen',
+      invalid_type_error: 'Startdatum moet een geldige datum zijn'
+    }),
+
+    description: z.string().min(1, 'Gelieve een omschrijving in te vullen'), // Required string
+    taskType: z.string().min(1, 'Gelieve een taaktype te kiezen'), // Required string for selected campus
+    campus: z.string().min(1, 'Gelieve een campus te kiezen'), // Required string for selected campus
+
+    visit: z
+      .object({
+        id: z.number().optional(),
+      })
+      .optional(),
+
+    space: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.number()
+        })
+      )
+      .optional(), //.min(1, "Gelieve een locatie te kiezen"),
+
+    spaceTo: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.number()
+        })
+      )
+      .optional(),
+
+    tags: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.number()
+        })
+      )
+      .optional(),
+
+    assets: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.number()
+        })
+      )
+      .optional(),
+
+    assignTo: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.number()
+        })
+      )
+      .optional(),
+
+    teamsMatchingAssignment: z.array(z.any()).optional() // Add this field if not already present
+  })
+  .refine(
+    data =>
+      !(
+        data?.teamsMatchingAssignment?.length === 0 &&
+        data?.assignTo?.length === 0
+      ),
+    {
+      path: ['assignTo'], // Attach error to assignTo field
+      message:
+        'Gelieve een teamtaaktoewijzingsregel aan te maken of de taak rechtstreeks aan een persoon toe te wijzen'
+    }
+  )
+  .refine(
+    data => {
+      if (isPatientTransportTask(data.taskType)) {
+        return data.visit && data.visit.id !== undefined
+      }
+      return true
+    },
+    {
+      path: ['visit'],
+      message: 'Gelieve een patiënt te kiezen',
+      required_error: 'Gelieve een patiënt te kiezen'
+    }
+  )

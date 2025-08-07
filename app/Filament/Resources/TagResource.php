@@ -16,6 +16,9 @@ use Filament\Tables\Columns\TextColumn;
 use Guava\FilamentIconPicker\Tables\IconColumn;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Tables\Columns\ColorColumn;
+use App\Traits\HasFilamentTeamFields;
+use Filament\Forms\Components\Group;
+use Illuminate\Database\Eloquent\Model;
 
 class TagResource extends Resource
 {
@@ -33,9 +36,17 @@ class TagResource extends Resource
 
     public static function form(Form $form): Form
     {
-
         return $form
             ->schema([
+                
+                Group::make()
+                    ->schema(
+                        [
+                            HasFilamentTeamFields::belongsToTeamsField(),
+                        ]
+                    )
+                    ->columnSpanFull(),
+
                 TextInput::make('name')
                     ->label('Naam'),
 
@@ -56,9 +67,9 @@ class TagResource extends Resource
                     ->extraAttributes([
                         'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
                     ])
-                    ->columns(3)
+                    ->columns(3),
 
-
+                HasFilamentTeamFields::creatorField(),
             ])->columns(3);
     }
 

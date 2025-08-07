@@ -63,9 +63,7 @@ const FormSchema = z.object({
 
 export function TaskForm({ task, handleTaskUpdate, handleTasksRecon, setActiveTab }) {
 
-  const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
-
   const { list, fetchList } = useAxiosFetchByInput({
     url: "/users/search",
     queryKey: "userInput",
@@ -101,7 +99,6 @@ export function TaskForm({ task, handleTaskUpdate, handleTasksRecon, setActiveTa
         setActiveTab('details')
         handleTasksRecon(data);
         form.resetField('usersToAssign');
-        // setComment('<p></p>');
         toast.success('De gegevens zijn bijgewerkt')
       },
 
@@ -242,7 +239,6 @@ export function TaskForm({ task, handleTaskUpdate, handleTasksRecon, setActiveTa
                         onUpdate={(value) => {
                           field.onChange(value); // Updates form state when MultiSelect changes
                         }}
-                        value={comment}
                         readonly={!task.capabilities.can_update}
 
                       />

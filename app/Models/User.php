@@ -14,18 +14,15 @@ use Filament\Models\Contracts\HasAvatar;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use App\Models\Team;
+use App\Traits\HasTeamOrUserScope;
 use App\Traits\HasTeams;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Scopes\ExcludeSystemUser;
 
 class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 {
-    use HasFactory, Notifiable, HasTeams;
+    use HasFactory, Notifiable, HasTeams, HasTeamOrUserScope;
 
     public const ROLE_ADMIN       = 'ADMIN';
     public const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
@@ -247,13 +244,22 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 
     public function userBelongsToAllTeams(array $teamIds): bool
     {
+        if (empty($teamIds)) {
+            return false;
+        }
+
         $userTeamIds = $this->teams->pluck('id')->toArray();
 
+        // Return true only if there is no difference between required and user's team IDs
         return empty(array_diff($teamIds, $userTeamIds));
     }
 
     public function userBelongsToAtLeastOneTeam(array $teamIds): bool
     {
+        if (empty($teamIds)) {
+            return false;
+        }
+
         $userTeamIds = $this->teams->pluck('id')->toArray();
 
         return !empty(array_intersect($teamIds, $userTeamIds));

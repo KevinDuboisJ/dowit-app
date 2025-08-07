@@ -123,7 +123,7 @@ export const TaskDetails = ({task}) => {
                 />
               }
               label="Wie:"
-              value={`${task.visit.patient.firstname} ${task.visit.patient.lastname} (${task.visit.patient.gender}) - ${task.visit.room.number}, ${task.visit.bed.number}`}
+              value={`${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}`}
             />
           )}
 
@@ -191,11 +191,8 @@ export const TaskDetails = ({task}) => {
           )}
         </div>
 
-        <div>
-          <div className="flex text-base font-medium">Bestanden</div>
+        <AssetList assets={task?.task_type?.assets} />
 
-          <AssetList assets={task.task_type.assets} />
-        </div>
         <div>
           <div className="flex text-base font-medium">
             Historiek
@@ -211,7 +208,9 @@ export const TaskDetails = ({task}) => {
           </div>
 
           {loadingComments ? (
-            <div className='flex pt-8 items-center justify-center'><Loader/></div>
+            <div className="flex pt-8 items-center justify-center">
+              <Loader />
+            </div>
           ) : (
             <TaskActivity comments={comments} status={task.status.name} />
           )}
@@ -286,26 +285,31 @@ const AssetList = ({assets}) => {
   // State to track selected asset
   const [selectedAsset, setSelectedAsset] = useState(null)
 
-  return (
-    <div className="flex flex-wrap items-center">
-      {assets?.length > 0 ? (
-        assets.map(asset => (
-          <div
-            key={asset.id}
-            className="opacity-70 text-sm p-[6px] w-full text-slate-800 font-normal rounded-lg border bg-yellow-50 flex items-center justify-between cursor-pointer"
-            onClick={() => setSelectedAsset(asset.link)} // Clicking anywhere opens the iframe
-          >
-            {/* Asset Name & Icon */}
-            <div className="flex items-center">
-              <Lucide
-                icon="FileText"
-                className="w-[14px] h-[14px] text-slate-800 mr-1"
-              />
-              {asset.name}
-            </div>
+  // Don't render the component at all if no assets
+  if (assets.length === 0) return null
 
-            {/* Open in New Tab Button */}
-            {/* <button
+  return (
+    <div>
+      <div className="flex text-base font-medium">Bestanden</div>
+      <div className="flex flex-wrap items-center">
+        {assets?.length > 0 ? (
+          assets.map(asset => (
+            <div
+              key={asset.id}
+              className="opacity-70 text-sm p-[6px] w-full text-slate-800 font-normal rounded-lg border bg-yellow-50 flex items-center justify-between cursor-pointer"
+              onClick={() => setSelectedAsset(asset.link)} // Clicking anywhere opens the iframe
+            >
+              {/* Asset Name & Icon */}
+              <div className="flex items-center">
+                <Lucide
+                  icon="FileText"
+                  className="w-[14px] h-[14px] text-slate-800 mr-1"
+                />
+                {asset.name}
+              </div>
+
+              {/* Open in New Tab Button */}
+              {/* <button
               onClick={(e) => {
                 e.stopPropagation(); // Prevent the main div's click event (don't open iframe)
                 window.open(asset.link, "_blank");
@@ -315,33 +319,34 @@ const AssetList = ({assets}) => {
             >
               🔗
             </button> */}
+            </div>
+          ))
+        ) : (
+          <span className="text-sm font-medium ml-4">
+            Dit taaktype heeft geen bestanden
+          </span>
+        )}
+
+        {/* Show iframe if a asset is selected */}
+        {selectedAsset && (
+          <div className="mt-4 w-full p-4 bg-gray-100 rounded-lg border relative">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedAsset(null)}
+              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
+            >
+              Sluiten ✖
+            </button>
+
+            {/* Iframe Container */}
+            <iframe
+              src={selectedAsset}
+              className="w-full h-[500px] border rounded-lg"
+              title="Bestand viewer"
+            />
           </div>
-        ))
-      ) : (
-        <span className="text-sm font-medium ml-4">
-          Dit taaktype heeft geen bestanden
-        </span>
-      )}
-
-      {/* Show iframe if a asset is selected */}
-      {selectedAsset && (
-        <div className="mt-4 w-full p-4 bg-gray-100 rounded-lg border relative">
-          {/* Close Button */}
-          <button
-            onClick={() => setSelectedAsset(null)}
-            className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-          >
-            Sluiten ✖
-          </button>
-
-          {/* Iframe Container */}
-          <iframe
-            src={selectedAsset}
-            className="w-full h-[500px] border rounded-lg"
-            title="Bestand viewer"
-          />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

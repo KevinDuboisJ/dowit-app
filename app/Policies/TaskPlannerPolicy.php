@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\TaskPlanner;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class TaskPlannerPolicy
 {
@@ -32,11 +33,11 @@ class TaskPlannerPolicy
 
     public function update(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAtLeastOneTeam($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator();
+        return $user->userBelongsToAtLeastOneTeam($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator() || $taskPlanner->isAssignedTo(Auth::user());
     }
 
     public function delete(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAllTeams($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator();
+        return $user->userBelongsToAllTeams($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator() || $taskPlanner->isAssignedTo(Auth::user());
     }
 }

@@ -49,7 +49,7 @@ class TeamSetting extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return Auth::user()->isSuperAdmin() || Auth::user()->isAdmin();
+        return (Auth::user()?->isSuperAdmin() || Auth::user()?->isAdmin()) ?? false;
     }
 
     public function getFormModel(): ?string

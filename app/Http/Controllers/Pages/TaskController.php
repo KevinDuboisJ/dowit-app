@@ -65,20 +65,15 @@ class TaskController extends Controller
       // Start transactions on both connections
       DB::connection('mysql')->beginTransaction();
 
-      if (isset($data['patient'])) {
+      if (isset($data['visit'])) {
 
         DB::connection('patientlist')->beginTransaction();
 
-        $data['patient']['admission'] = $this->mergeDateTime($data['patient']['adm_date'], $data['patient']['adm_time']);
-        $data['patient']['discharge'] = $this->mergeDateTime($data['patient']['dis_date'], $data['patient']['dis_time']);
-
-        $visit = PatientService::createOrUpdateVisit($data['patient']);
-
         // Create the task with validated data
-        $task = new Task([...$data['task'], 'visit_id' => $visit->id]);
+        $task = new Task([...$data['task'], 'visit_id' => $data['visit']['id']]);
       }
 
-      if (!isset($visit)) {
+      if (!isset($data['visit'])) {
         $task = new Task($data['task']);
       }
 

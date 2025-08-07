@@ -1,5 +1,7 @@
 www.svgator.com
 
+Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen bed toegewezen heeft? Ik moet het weten, want anders kan een taakplanner uitgeschakeld worden omdat die denkt dat de opname geen bed toegewezen heeft. Dan moet anders de discharge_at gebruik maar wel weten dat soms dit blijkbaar niet wordt aangepast in het systeem.
+
   TO-DO's
   1. Change icons in filament.
   2. Set mobile variable to somewhere global
@@ -11,35 +13,60 @@ www.svgator.com
   8. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
   10. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
   12. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
-  13. An enduser can create a task in ad hoc and event
-  15. Besmette kamer kunnen doorgeven (= taaksubtyes "besmet")
-      Belangrijk:
-      Team koppelen met dienstcode
-      Enkel kamers op afdeling mogen gewijzigd worden
-
+  17. change cdn in PatientAutocomplete to a local approach
+  18. Improve the stores, separate tranlsation map to enums.js?
+  19. create utility/helper for Object.keys(selectedPatient).length > 0 in patient-autocomplete
+  20. use the same logic and view of dropfown as the Patient-automcomplete for all the other inputs with dropdown
+  21. If a task is completed the help icon still appears in dashboard. (Only show icon when the task is active)
+  21. Revision of Dennis Martinet account, why was he changed to a decoupled user?
+  22. Check if verwijderd in taskplanner for task is same color as deleting in the default delete modal
+  24. Sometimes opening the taakplanner from the user front end shows rows expanded
+  30. Show name on hover in avatar
+ 
 
 Patient transport TO-DO's
-1.Show patient column with the same information as in the selection of the patientList in the custom field && show patient_id field on edit and also fill with the data
-1. Bij opname van een patiënt wordt de startdatum ingesteld → frequentie: dagelijks.
-   Het systeem verwijdert automatisch de planning zodra de patiënt is ontslagen → het taakplanner kijk of het patient nog op een bed ligt → inactive zetten
-2. Manuele stop mogelijk indien de patiënt nog opgenomen is, maar de behandeling is afgerond.
-  • Filter inactive 
-3. Mogelijkheid om patiënten op naam te zoeken in plaats van op opnamenummer. taskplanner en adhoc
-4. Voeg in de Taskplanner een extra knop toe waarmee gebruikers specifieke datums kunnen overslaan.
-5. Taskplanner tasktype, zoals: verwittigen, in rolstoel, te voet begeleid, krukken (zoals bij 'Arta detail' in Patiëntentransport Antwerpen).
-6. Optie voor retourtransport → momenteel nog niet nodig.
-7. Brainstorm over hoe uitzonderingen bij het bewerken van taken best kunnen worden afgehandeld.
-  • Optie toevoegen 'uitzondering inplannen' data clone van de huidige taakplanner  → startdatum default waarde is de 'ingelpland voor' datum van de huidige taakplanner. 
+1. Het systeem verwijdert automatisch de planning zodra de patiënt is ontslagen → het taakplanner kijk of het patient nog op een bed ligt → inactive zetten = DONE✓
+
+2. Manuele stop mogelijk indien de patiënt nog opgenomen is, maar de behandeling is afgerond. = DONE✓
+
+3. Mogelijkheid om patiënten op naam te zoeken in plaats van op opnamenummer. taskplanner en adhoc DONE✓
+
+4. Voeg in de Taskplanner een extra knop toe waarmee gebruikers specifieke datums kunnen overslaan = DONE✓
+
+5. Taskplanner tasktype, zoals: verwittigen, in rolstoel, te voet begeleid, krukken (zoals bij 'Arta detail' in Patiëntentransport Antwerpen) = DONE✓
+
+6. Optie voor retourtransport → momenteel nog niet nodig = DONE✓
+
+7. Brainstormen over hoe uitzonderingen bij het bewerken van taken best kunnen worden afgehandeld.
+  • Optie toevoegen 'uitzondering inplannen' data clone van de huidige taakplanner → startdatum default waarde is de 'ingepland voor' datum van de huidige taakplanner. 
   • In the hoofdtaakplanner → weergave van de startdatums van de gecloned taakplanners
-  • Taakplanner zonder teams mag niet worden opgeslagen. → DONE✓
-  • Bij activatie van een taak: werk de volgende uitvoeringsdatum van de Taskplanner bij.
+  ik was mij nog aan het bedenken waarom wij nuweer die actieve taak gingen tonen onder de taakplanner
 
-8.  Naam laten zien van wie het melding heeft gemaakt → DONE✓
-9. Ze krijgen 25 minuten op voorhand een taak. → Voeg een kolom toe om te bepalen hoeveel minuten op voorhand een taak moet worden aangemaakt, op basis van de startdatum van de Taskplanner.
-10. Bewerken van een patientransport is bestemmingslocatie niet zichtbaar als het bestemmingslocatie niet gekozen is
-11. Per teams button laten zien om prefill taak planner te maken.
-12. Check task id 11820, it seems that the task is being created to soon with the start_date_time in the future.
+voor die vroeger te activeren toch he?
+ 
+of nee... dat kan niet
+ 
+aah jawel
 
+voor de tijd op 'locatie' te vervroegen terwijl de taak al bestond
+ 
+zodat die prioriteit krijgt.
+
+8. Naam laten zien van wie het melding heeft gemaakt = DONE✓
+
+9. Ze krijgen 25 minuten op voorhand een taak. Voeg een kolom toe aan het taaktype om te bepalen hoeveel minuten op voorhand een taak moet worden aangemaakt, op basis van de startdatum van de Taskplanner = DONE✓
+
+10. Bij het bewerken van een taakplanner met taaktype patiënttransport is het veld bestemmingslocatie niet zichtbaar als er bij het aanmaken geen bestemmingslocatie gekozen werd = DONE✓
+
+11. Per teams knop laten zien om prefill taak planner te maken (KineCA → frequentie: dagelijks, taaktype: Patiententransport, campus: CA) = DONE✓
+
+12. Show under task type column patient firstname, lastname, room and bed number = DONE✓
+
+13. Taakplanner zonder teams mag niet worden opgeslagen. = DONE✓
+
+14. Filteren op inactief taakplanners = DONE✓
+
+15. Bij activatie van een taak: werk de volgende uitvoeringsdatum van de Taskplanner bij. = DONE✓
 
 
 

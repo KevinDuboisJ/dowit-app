@@ -44,7 +44,7 @@ class GlobalSetting extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return Auth::user()->isSuperAdmin();
+        return Auth::user()?->isSuperAdmin() ?? false;
     }
 
     public function mount(SettingService $settingService): void

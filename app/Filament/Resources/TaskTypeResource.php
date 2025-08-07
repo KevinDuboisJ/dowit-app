@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Section;
 use App\Traits\HasFilamentTeamFields;
+use Filament\Forms\Components\Group;
 use Illuminate\Database\Eloquent\Model;
 
 class TaskTypeResource extends Resource
@@ -34,11 +35,27 @@ class TaskTypeResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('')
+                
+                Group::make()
+                    ->schema(
+                        [
+                            HasFilamentTeamFields::belongsToTeamsField(),
+                        ]
+                    )
+                    ->columnSpanFull(),
+
+                Group::make()
                     ->schema([
                         TextInput::make('name')
                             ->label('Naam')
                             ->required(),
+
+                        TextInput::make('creation_time_offset')
+                            ->label('Taakcreatie versnellen')
+                            ->default(0)
+                            ->numeric()
+                            ->required()
+                            ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Voeg minuten toe om de taak eerder aan te maken dan gepland'),
 
                         IconPicker::make('icon')
                             ->label('Icoon')
@@ -54,30 +71,15 @@ class TaskTypeResource extends Resource
                                 'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
                             ]),
 
-                        TextInput::make('creation_time_offset')
-                            ->label('Taakcreatie bespoedigen')
-                            ->default(0)
-                            ->numeric()
-                            ->required()
-                            ->helperText('Aantal minuten om de taakcreatie te bespoedigen.'),
                     ])
                     ->extraAttributes([
                         'class' => 'h-full',
                     ])
-                    ->columns(2)
-                    ->columnSpan(5),
-
-                Section::make('')
-                    ->schema(function (?Model $record) {
-
-                        return [
-                            HasFilamentTeamFields::belongsToTeamsField(),
-                        ];
-                    })
-                    ->columnSpan(3),
+                    ->columns(3)
+                    ->columnSpanFull(),
 
                 HasFilamentTeamFields::creatorField(),
-            ])->columns(8);
+            ])->columns(10);
     }
 
     public static function table(Table $table): Table
@@ -88,13 +90,18 @@ class TaskTypeResource extends Resource
                     ->label('Naam')
                     ->width('300px'),
 
+                TextColumn::make('teams.name')
+                    ->label('Naam')
+                    ->width('300px')
+                    ->listWithLineBreaks(),
+
+                TextColumn::make('creation_time_offset')
+                    ->label('Taakcreatie versnellen')
+                    ->formatStateUsing(fn($state) => $state . ' minuten'),
+
                 IconColumn::make('icon')
                     ->label('Icoon')
                     ->view('filament.components.icon-picker-column'),
-
-                TextColumn::make('creation_time_offset')
-                    ->label('Taakcreatie bespoedigen')
-                    ->formatStateUsing(fn($state) => $state . ' minuten')
 
             ])
             ->filters([
