@@ -23,6 +23,17 @@ enum TaskStatus: int implements HasLabel
     case Paused = 11;
     case Skipped = 12;
 
+    private const ACTIVE_STATUSES = [
+        self::Added->value,
+        self::InProgress->value,
+        self::WaitingForSomeone->value,
+    ];
+
+    public static function activeStatuses(): array
+    {
+        return self::ACTIVE_STATUSES;
+    }
+
     public function getLabel(): ?string
     {
         return match ($this) {

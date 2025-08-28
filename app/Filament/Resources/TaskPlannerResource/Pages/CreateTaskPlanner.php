@@ -25,6 +25,7 @@ class CreateTaskPlanner extends CreateRecord
             $defaultValues = $this->form->getRawState();
 
             $overrides = [
+                'name'   => TaskTypeEnum::PatientTransportInBed->getLabel(),
                 'frequency'   => TaskPlannerFrequency::Daily->name,
                 'task_type_id' => TaskTypeEnum::PatientTransportInBed->value,
                 'campus_id'   => CampusEnum::CA->value,

@@ -32,7 +32,7 @@ const Dashboard = ({tasks: initTasks}) => {
   // Poll every 5 minutes as a fallback for WebSockets (300000 ms)
   usePoll(300000, {
     onSuccess: ({props}) => {
-      setTasks(props.tasks.data)
+      setTasks(props?.tasks?.data)
     }
   })
 

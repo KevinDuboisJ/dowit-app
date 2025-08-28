@@ -47,7 +47,13 @@ const sideMenu = {
           icon: 'AdjustmentsHorizontal',
           pathname: '/adm/task-planners',
           roles: ['1', '2'],
-          title: 'Taakconfigurator'
+          title: 'Taakplanner'
+        },
+        {
+          icon: 'RectangleStack',
+          pathname: '/adm/holidays',
+          roles: ['1', '2'],
+          title: 'Feestdagen'
         },
       ]
     }

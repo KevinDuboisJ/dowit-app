@@ -37,24 +37,26 @@ class TaskPlannerService
 
   public function getTodayTaskPlanners(): Collection
   {
-    $now = Carbon::now()->second(0);
-    $end = Carbon::now()->endOfDay();
-    $yesterday = $now->copy()->subDay();
+    $now = now()->second(0);
 
-    // Cache tasks for the day to avoid querying every minute
-    // This will not refresh the cache if it already exists. Instead, it will return the cached value if it exists, or generate and store the new cache if it doesn"t
-    return Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () use ($now, $end, $yesterday) {
+    $planners = Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () {
       return TaskPlanner::with(['teams', 'tags', 'visit', 'taskType'])
-        ->select('task_planners.*') // Select only the taskplanners columns and no the task_types
-        ->join('task_types', 'task_planners.task_type_id', '=', 'task_types.id')  // Join so we can reference task_types.creation_time_offset in byWithinWindow
-        ->where(function (Builder $query) use ($now, $end, $yesterday) {
-          $query->byWithinWindow($now, $end)
-            ->orWhereBetween('next_run_at', [$yesterday, $now]);
-        })
+        ->select('task_planners.*')
+        ->join('task_types', 'task_planners.task_type_id', '=', 'task_types.id')
         ->where('is_active', true)
-        ->orderBy('next_run_at')
+        // optional: Add this if you want to limit to only today's planners
+        // ->whereDate('next_run_at', today())
         ->get();
     });
+
+    return $planners
+      ->filter(function ($tp) use ($now) {
+        $offset = (int)($tp->taskType->creation_time_offset ?? 0);
+        $effective = optional($tp->next_run_at)->copy()->subMinutes($offset);
+        return ($effective && $effective->lte($now)) || $tp->next_run_at->lte($now);
+      })
+      ->sortBy('next_run_at')
+      ->values();
   }
 
   public function getClosestTaskPlanners(): Collection

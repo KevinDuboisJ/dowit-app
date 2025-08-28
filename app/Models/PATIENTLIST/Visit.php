@@ -10,11 +10,11 @@ use App\Models\PATIENTLIST\Room;
 use App\Models\PATIENTLIST\Bed;
 use App\Models\Campus;
 use App\Models\Space;
-
+use App\Traits\HasPatientListTable;
 
 class Visit extends Model
 {
-    protected $connection = 'patientlist';
+    use HasPatientListTable;
 
     public function patient()
     {

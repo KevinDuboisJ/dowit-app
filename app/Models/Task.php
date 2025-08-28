@@ -29,12 +29,6 @@ class Task extends Model
         'start_date_time' => 'datetime',
     ];
 
-    private const ACTIVE_STATUSES = [
-        TaskStatusEnum::Added->value,
-        TaskStatusEnum::InProgress->value,
-        TaskStatusEnum::WaitingForSomeone->value,
-    ];
-
     protected static function booted()
     {
         // Set the default task status
@@ -123,7 +117,7 @@ class Task extends Model
 
     public function scopeByActive($query)
     {
-        return $query->whereIn('status_id', self::ACTIVE_STATUSES);
+        return $query->whereIn('status_id', TaskStatusEnum::activeStatuses());
     }
 
     public function scopeByAssignedOrTeams($query)

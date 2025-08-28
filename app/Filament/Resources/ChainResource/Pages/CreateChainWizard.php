@@ -247,8 +247,7 @@ class CreateChainWizard extends Page implements HasForms
                                                 ? "{$space->name} ({$space->_spccode})"
                                                 : null
                                         )
-                                        ->preload()
-                                        ->required(),
+                                        ->preload(),
 
                                     Select::make('space_to_id')
                                         ->label('Bestemmingslocatie')

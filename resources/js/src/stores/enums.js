@@ -10,14 +10,13 @@ export const taskStatusEnum = {
 
 export const taskTypeEnum = {
   PatientTransportInBed: 1,
-  PatientTransportInWheelchair: 4,
-  PatientTransportOnFootAssisted: 5,
-  PatientTransportNotify: 6,
-  PatientTransportWithCrutches: 7
+  PatientTransportInWheelchair: 6,
+  PatientTransportOnFootAssisted: 7,
+  PatientTransportNotify: 8,
+  PatientTransportWithCrutches: 9
 }
 
 export function isPatientTransportTask(taskType) {
-  
   const taskTypes = [
     taskTypeEnum.PatientTransportInBed,
     taskTypeEnum.PatientTransportInWheelchair,

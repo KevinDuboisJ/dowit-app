@@ -4,9 +4,8 @@ namespace App\Policies;
 
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
-class RolePolicy
+class ChainPolicy
 {
     // Allow all actions for admins
     public function before(User $user)

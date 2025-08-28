@@ -2,12 +2,12 @@
 
 namespace App\Models\PATIENTLIST;
 
-use Illuminate\Database\Eloquent\Collection;
+use App\Traits\HasPatientListTable;
 use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
 {
-    protected $connection = 'patientlist';
+    use HasPatientListTable;
 
     public function visits()
     {

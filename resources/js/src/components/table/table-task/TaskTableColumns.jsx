@@ -82,18 +82,19 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
                 <span className="text-gray-500 ml-1">
                   {format(parseISO(dateStr), 'HH:mm')}
                 </span>
+
+                {taskHasPatient && (
+                  <>
+                    <span className="mx-1 text-gray-500">→</span>
+                    <span className="text-gray-500">
+                      {format(
+                        parseISO(row.original.start_date_time_with_offset),
+                        'HH:mm'
+                      )}
+                    </span>
+                  </>
+                )}
               </div>
-              {taskHasPatient && (
-                <div className="flex text-gray-900">
-                  Op locatie:{' '}
-                  <span className="text-gray-500 ml-1">
-                    {format(
-                      parseISO(row.original.start_date_time_with_offset),
-                      'HH:mm'
-                    )}
-                  </span>
-                </div>
-              )}
             </div>
           )
         }
@@ -107,7 +108,10 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
           const description = task.description || ''
           const plainText = description.replace(/<[^>]+>/g, '') // strip HTML tags
           const TaskHasPatient = task.visit || null
-          const preText = TaskHasPatient && task.task_planner_id ? `${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}</br>` : '';
+          const preText =
+            TaskHasPatient && task.task_planner_id
+              ? `${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}</br>`
+              : ''
 
           return (
             <div className="flex flex-col">
@@ -116,7 +120,11 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
               </div>
               <RichText
                 className="text-gray-500 text-xs"
-                text={`${preText} ${plainText.length > 60 ? plainText.slice(0, 60) + '...' : plainText}`}
+                text={`${preText} ${
+                  plainText.length > 60
+                    ? plainText.slice(0, 60) + '...'
+                    : plainText
+                }`}
               />
             </div>
           )

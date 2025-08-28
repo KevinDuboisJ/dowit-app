@@ -18,7 +18,7 @@ const Layout = ({ children: { props: { user } }, children }) => {
   const sideMenuStore = useMemo(() => useSideMenuStore, []);
   const [activeDropdowns, setActiveDropdowns] = useState({});
   const [mobileMenu, setMobileMenu] = useState(false);
-  const { fontSize, setFontSize } = useFontSize(getComputedStyle(document.documentElement).getPropertyValue('--font-base-size')); // Default size in pixels
+  const { fontSize, setFontSize } = useFontSize(); // Default size in pixels
   const { isMobile } = useIsMobile();
 
   const sideMenuLinks = useMemo(() =>

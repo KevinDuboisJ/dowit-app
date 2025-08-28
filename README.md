@@ -2,6 +2,20 @@ www.svgator.com
 
 Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen bed toegewezen heeft? Ik moet het weten, want anders kan een taakplanner uitgeschakeld worden omdat die denkt dat de opname geen bed toegewezen heeft. Dan moet anders de discharge_at gebruik maar wel weten dat soms dit blijkbaar niet wordt aangepast in het systeem.
 
+NATASCHA
+1. Stel je voor dat er elke dag om 10u een taak wordt aangemaakt.  
+Een medewerker wijst de taak aan zichzelf toe, maar door andere prioriteiten kan hij die vandaag niet afhandelen.  
+Wat verwacht je dat er moet gebeuren als de taak nog niet is afgehandeld tegen de tijd dat de taakplanner opnieuw een taak gaat aanmaken?
+
+2. Hoe gebruik je de oplving van wie, wanner een taak heeft begonen en afgehandeld?
+ • Elke keer dat een een taa k toegewezen wordt en dat person is de eerste die er aan toegewezen wordt vul de started_at and started_by, and the same when a person ends it. finished_at finished_by
+
+3. Voor welke Afdelingen moet ik de eindpoets taak triggeren?
+
+
+!!WHEN PULLING IN PRODUCTION CHANGE THE SETTINGS DATABASE Low, Medium, High TO UPPERCASE!!
+
+
   TO-DO's
   1. Change icons in filament.
   2. Set mobile variable to somewhere global
@@ -18,11 +32,8 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
   19. create utility/helper for Object.keys(selectedPatient).length > 0 in patient-autocomplete
   20. use the same logic and view of dropfown as the Patient-automcomplete for all the other inputs with dropdown
   21. If a task is completed the help icon still appears in dashboard. (Only show icon when the task is active)
-  21. Revision of Dennis Martinet account, why was he changed to a decoupled user?
-  22. Check if verwijderd in taskplanner for task is same color as deleting in the default delete modal
   24. Sometimes opening the taakplanner from the user front end shows rows expanded
-  30. Show name on hover in avatar
- 
+  36. Add maybe an advanced filters. also when filtered task are showed with the groups of assigned task or not. add filter to show only assigned to me.
 
 Patient transport TO-DO's
 1. Het systeem verwijdert automatisch de planning zodra de patiënt is ontslagen → het taakplanner kijk of het patient nog op een bed ligt → inactive zetten = DONE✓

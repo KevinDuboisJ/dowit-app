@@ -24,6 +24,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Enums\ChainActionType;
 
 use App\Filament\Resources\ChainResource\Pages\CreateChainWizard;
+use Filament\Tables\Actions\BulkAction;
+use Illuminate\Support\Facades\DB;
 
 class ChainResource extends Resource
 {
@@ -45,17 +47,16 @@ class ChainResource extends Resource
 
     public static function cacheLookupsForPage(array $spaceIds, array $campusIds, array $taskTypeIds): void
     {
-        static::$spacesCache = \App\Models\Space::whereIn('id', array_unique($spaceIds))->get()->keyBy('id')->toArray();
-        static::$campusesCache = \App\Models\Campus::whereIn('id', array_unique($campusIds))->get()->keyBy('id')->toArray();
+        static::$spacesCache    = \App\Models\Space::whereIn('id', array_unique($spaceIds))->get()->keyBy('id')->toArray();
+        static::$campusesCache  = \App\Models\Campus::whereIn('id', array_unique($campusIds))->get()->keyBy('id')->toArray();
         static::$taskTypesCache = \App\Models\TaskType::whereIn('id', array_unique($taskTypeIds))->get()->keyBy('id')->toArray();
     }
-
 
     public static function table(Table $table): Table
     {
         return $table->columns([
             TextColumn::make('identifier')->label('Identificatie')
-                ->description(fn(Chain $record): string => $record->description),
+                ->description(fn(Chain $record): ?string => $record->description),
             TextColumn::make('actions')
                 ->label('Acties')
                 ->formatStateUsing(function (Model $record) {
@@ -68,30 +69,22 @@ class ChainResource extends Resource
 
                     if (isset($record->actions[ChainActionType::CreateTask->name])) {
                         $task = $record->actions[ChainActionType::CreateTask->name];
+                        $taskName = data_get($task, 'name');
+                        // $description = data_get($task, 'description.content.0.content.0.text');
+                        // $space    = \App\Filament\Resources\ChainResource::$spacesCache[$task['space_id'] ?? null] ?? null;
+                        // $campus   = \App\Filament\Resources\ChainResource::$campusesCache[$task['campus_id'] ?? null] ?? null;
+                        // $taskType = \App\Filament\Resources\ChainResource::$taskTypesCache[$task['task_type_id'] ?? null] ?? null;
 
-                        $space    = \App\Filament\Resources\ChainResource::$spacesCache[$task['space_id'] ?? null] ?? null;
-                        $campus   = \App\Filament\Resources\ChainResource::$campusesCache[$task['campus_id'] ?? null] ?? null;
-                        $taskType = \App\Filament\Resources\ChainResource::$taskTypesCache[$task['task_type_id'] ?? null] ?? null;
-
-                        $description = data_get($task, 'description.content.0.content.0.text');
-                        $text = '<h4 class="text-green-800">1. Taak aanmaken</h4>';
-                        $text .= '<div class="ml-4">';
-                        $text .= collect([
-                            'Locatie'      => $space ? "{$space['name']} ({$space['_spccode']})" : '-',
-                            'Campus'       => $campus['name'] ?? '-',
-                            'Taaktype'     => $taskType['name'] ?? '-',
-                            'Omschrijving' => \Illuminate\Support\Str::limit($description, 50),
-                        ])
-                            ->map(fn($v, $k) => "<span class='text-sm font-semibold'>$k:</span> <span class='text-sm'>$v</span>")
-                            ->implode('<br>');
-
+                        $text = '<h4 class="text-green-800">Taak aanmaken:</h4>';
+                        $text .= '<div>';
+                        $text .= "<span class='text-sm'>$taskName</span>";
                         $text .= '</div>';
                     }
 
                     if (!empty($record->actions[ChainActionType::CustomCode->name])) {
-                        $text = '<h4 class="text-green-800">1. Code</h4>';
-                        $text .= '<div class="ml-4">';
-                        $text .= "<span class='text-sm font-semibold'>Class:</span> <span class='text-sm'>{$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}</span>";
+                        $text = '<h4 class="text-green-800">Code:</h4>';
+                        $text .= '<div>';
+                        $text .= "<span class='text-sm'>{$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}</span>";
                         $text .= '</div>';
                     }
 
@@ -110,7 +103,44 @@ class ChainResource extends Resource
 
                     DeleteAction::make(),
                 ])
-            ]);;
+            ])
+            ->bulkActions([
+                // Only show when filtering to active rows
+                BulkAction::make('Inactiveren')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $ids = $records->modelKeys();
+                        if (!$ids) return;
+
+                        DB::transaction(function () use ($ids) {
+                            $model = static::getModel();
+                            foreach (array_chunk($ids, 500) as $chunk) {
+                                $model::whereKey($chunk)
+                                    ->where('is_active', true)   // idempotent
+                                    ->update(['is_active' => false]);
+                            }
+                        });
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                // Only show when filtering to inactive rows
+                BulkAction::make('Activeren')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $ids = $records->modelKeys();
+                        if (!$ids) return;
+
+                        DB::transaction(function () use ($ids) {
+                            $model = static::getModel();
+                            foreach (array_chunk($ids, 500) as $chunk) {
+                                $model::whereKey($chunk)
+                                    ->where('is_active', false)  // idempotent
+                                    ->update(['is_active' => true]);
+                            }
+                        });
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ]);
     }
 
     public static function getPages(): array

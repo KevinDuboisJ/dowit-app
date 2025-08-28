@@ -28,13 +28,13 @@ return [
             'type'    => 'group',            // a custom “group” type
             'scopes'  => ['global', 'team'],
             'default' => [
-                'Low'    => ['time' => null, 'color' => null],
-                'Medium' => ['time' => null, 'color' => null],
-                'High'   => ['time' => null, 'color' => null],
+                'low'    => ['time' => null, 'color' => null],
+                'medium' => ['time' => null, 'color' => null],
+                'high'   => ['time' => null, 'color' => null],
             ],
             'config'  => [
                 // the three fixed levels
-                'levels' => ['Low', 'Medium', 'High'],
+                'levels' => ['low', 'Medium', 'high'],
 
                 // each “field” that every level gets
                 'fields' => [

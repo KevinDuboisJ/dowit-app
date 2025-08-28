@@ -51,6 +51,7 @@ class TaskPlanner extends Model
 
                 $taskPlanner->created_by = Auth::id();
             }
+
             Cache::forget(TaskPlannerService::getCacheKey());
         });
 
@@ -123,13 +124,11 @@ class TaskPlanner extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeByWithinWindow($query, Carbon $start, Carbon $end)
-    {
-        return $query->whereBetween(
-            DB::raw('DATE_SUB(next_run_at, INTERVAL task_types.creation_time_offset MINUTE)'),
-            [$start, $end]
-        );
-    }
+    // Deprecated
+    // public function scopeByWithinWindow($query, Carbon $now)
+    // {
+    //     return $query->whereRaw('DATE_SUB(next_run_at, INTERVAL task_types.creation_time_offset MINUTE) <= ?', [$now]);
+    // }
 
     public function getNextRunDate(?Carbon $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon
     {
@@ -172,7 +171,7 @@ class TaskPlanner extends Model
 
                 // Find the next occurrence of one of the specific days
                 return $this->getNextSpecificDay($next_run_at, $interval);
-                
+
             case 'Weekdays':
                 // If it's Fri, this will jump to Monday; if Tue, it goes to Wed, etc.
                 return $next_run_at->copy()->nextWeekday();

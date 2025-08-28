@@ -157,6 +157,10 @@ class TaskAssignmentRuleResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('description')
+                    ->label('Omschrijving')
+                    ->sortable(),
+                    
                 TextColumn::make('teams.name')
                     ->label('Teams')
                     ->formatStateUsing(fn($state, $record) => $record->teams->pluck('name')->join(', '))
@@ -177,7 +181,9 @@ class TaskAssignmentRuleResource extends Resource
 
                 TextColumn::make('task_types')
                     ->formatStateUsing(function ($state) {
+                          logger($state);
                         if (!is_array($state)) {
+                          
                             return $state;
                         }
                         // If it's a single object with a "name" key

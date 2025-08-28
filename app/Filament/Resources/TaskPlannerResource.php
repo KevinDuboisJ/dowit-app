@@ -9,8 +9,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Forms\Components\TextInput;
@@ -23,10 +21,8 @@ use App\Enums\TaskStatus as TaskStatusEnum;
 use App\Enums\TaskTypeEnum;
 use App\Filament\Components\PatientAutocomplete;
 use App\Models\Space;
-use App\Models\Task;
 use Illuminate\Support\Carbon;
 use App\Services\TaskPlannerService;
-use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
@@ -37,33 +33,25 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Section;
 use App\Models\User;
 use App\Models\Asset;
-use App\Models\PATIENTLIST\Patient;
 use App\Models\PATIENTLIST\Visit;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Placeholder;
 use App\Services\TaskAssignmentService;
 use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\RichEditor;
 use App\Traits\HasFilamentTeamFields;
 use App\Models\Team;
-use Filament\Forms\Components\DatePicker;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Coolsam\Flatpickr\Forms\Components\Flatpickr;
+use Filament\Tables\Actions\ReplicateAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Support\Enums\Alignment;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\Layout\Panel;
-use Filament\Tables\Columns\Layout\Split;
-use Filament\Tables\Columns\Layout\View;
-use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\Request;
-use Livewire\Component as Livewire;
+use Illuminate\Support\Facades\DB;
 
 class TaskPlannerResource extends Resource
 {
@@ -114,6 +102,7 @@ class TaskPlannerResource extends Resource
                     ->seconds(false)
                     ->native(true)
                     ->displayFormat(' j F Y H:i')
+                    ->default(now()->addMinute())
                     ->after(function ($state, ?string $context, ?TaskPlanner $record) {
                         // Apply 'after' validation only in the 'create' context or in the 'edit' context when the value has been changed by the user
                         $now = now();
@@ -274,7 +263,7 @@ class TaskPlannerResource extends Resource
                                             'Thursday' => 'Donderdag',
                                             'Friday' => 'Vrijdag',
                                             'Saturday' => 'Zaterdag',
-                                            'Sunday' => 'Zondag',
+                                            'Sundayf' => 'Zondag',
                                         ])
                                         ->required()
                                         ->columnSpan(1),
@@ -462,7 +451,10 @@ class TaskPlannerResource extends Resource
                 $builder->where('is_active', true);
             }))
             ->columns([
-                TextColumn::make('name')->label('Naam'),
+                TextColumn::make('name')
+                    ->label('Naam')
+                    ->searchable(),
+
                 TextColumn::make('teams.id')
                     ->label('Teams/Medewerkers')
                     ->getStateUsing(function ($record) {
@@ -515,6 +507,11 @@ class TaskPlannerResource extends Resource
                             return "<div>{$record->taskType?->name}</div> $subHtmlData";
                         }
                     )
+                    ->searchable(query: function (Builder $query, string $search) {
+                        $query
+                            ->orWhereHas('taskType', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                            ->orWhereHas('visit', fn($q) => $q->byPatientName($search));
+                    })
                     ->html(),
 
                 TextColumn::make('tags.name')->label('Tags')->badge(),
@@ -537,13 +534,17 @@ class TaskPlannerResource extends Resource
             ])
 
             ->filters([
+                SelectFilter::make('teams')
+                    ->relationship('teams', 'name'),
+
                 // Filter to show only inactive records
-                Filter::make('inactief')
-                    ->label('Toon inactieve')
+                Filter::make('inactives')
+                    ->label('Inactieven')
+                    ->toggle() // built-in toggle, no extra field nesting
                     ->baseQuery(function (Builder $query) {
                         return $query->withoutGlobalScope('active')->where('is_active', false);
                     }),
-            ], layout: FiltersLayout::AboveContent)
+            ])
 
             ->actions([
                 ActionGroup::make([
@@ -617,14 +618,61 @@ class TaskPlannerResource extends Resource
                         ->modalFooterActionsAlignment(Alignment::Center)
                         ->modalAutofocus(false),
 
-
+                    ReplicateAction::make()
+                        ->modalHeading(fn($record) => $record->name)
+                        ->modalDescription('Duplicaties worden automatisch op inactief gezet')
+                        ->beforeReplicaSaved(function ($replica) {
+                            $replica->is_active = false;
+                        }),
                     DeleteAction::make(),
                 ]),
 
             ])
             ->view('filament.components.task-planner-table')
             ->poll('30s')
-            ->bulkActions([])
+            ->bulkActions([
+                // Only show when filtering to active rows
+                BulkAction::make('Inactiveren')
+                    ->visible(
+                        fn($livewire) => (data_get($livewire->getTableFilterState('inactives'), 'isActive') === false)
+                    )
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $ids = $records->modelKeys();
+                        if (!$ids) return;
+
+                        DB::transaction(function () use ($ids) {
+                            $model = static::getModel();
+                            foreach (array_chunk($ids, 500) as $chunk) {
+                                $model::whereKey($chunk)
+                                    ->where('is_active', true)   // idempotent
+                                    ->update(['is_active' => false]);
+                            }
+                        });
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                // Only show when filtering to inactive rows
+                BulkAction::make('Activeren')
+                    ->visible(
+                        fn($livewire) => (data_get($livewire->getTableFilterState('inactives'), 'isActive') === true)
+                    )
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $ids = $records->modelKeys();
+                        if (!$ids) return;
+
+                        DB::transaction(function () use ($ids) {
+                            $model = static::getModel();
+                            foreach (array_chunk($ids, 500) as $chunk) {
+                                $model::whereKey($chunk)
+                                    ->where('is_active', false)  // idempotent
+                                    ->update(['is_active' => true]);
+                            }
+                        });
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])
             ->defaultSort('next_run_at', 'asc')
             ->defaultSort('is_active', 'desc');
     }
@@ -633,6 +681,8 @@ class TaskPlannerResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
+                'teams',
+                'taskType',
                 'visit.bed.room',
                 'visit.patient',
                 'space',

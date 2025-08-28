@@ -31,7 +31,7 @@ const Help = () => {
               Hoe kan ik een taak maken die zich elke x dagen zelf triggert?
             </AccordionTrigger>
             <AccordionContent className="text-slate-600 dark:text-slate-500 leading-relaxed">
-              Een taakplanner kan alleen worden aangemaakt door een gebruiker met de rol admin
+              Een taakplanner kan alleen worden aangemaakt door gebruikers met de rol admin
             </AccordionContent>
           </AccordionItem>
 
@@ -41,7 +41,7 @@ const Help = () => {
               Wat zijn de vereisten voor Dowit?
             </AccordionTrigger>
             <AccordionContent className="text-slate-600 dark:text-slate-500 leading-relaxed">
-              Dowit vereist een actieve internetverbinding en een moderne browser voor de beste ervaring.
+              Dowit vereist een actieve internetverbinding en een moderne browser voor de beste ervaring
             </AccordionContent>
           </AccordionItem>
 
