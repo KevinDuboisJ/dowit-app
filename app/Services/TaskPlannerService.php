@@ -5,23 +5,19 @@ namespace App\Services;
 use Illuminate\Support\Facades\DB;
 use App\Models\TaskPlanner;
 use App\Models\Task;
-use App\Enums\TaskStatus;
+use App\Enums\TaskStatusEnum;
 use App\Models\Holiday;
 use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use App\Enums\TaskPlannerEvaluationResultEnum;
-use App\Enums\TaskPlannerFrequency;
 use Illuminate\Support\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use App\Services\TaskAssignmentService;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Mail\Message;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Mail;
 
 class TaskPlannerService
@@ -31,7 +27,7 @@ class TaskPlannerService
   public function getScheduledTasks(): Collection
   {
     return Task::with(Task::getRelationships())->where('start_date_time', '<=', Carbon::now())
-      ->where('status_id', TaskStatus::Scheduled)
+      ->where('status_id', TaskStatusEnum::Scheduled)
       ->get();
   }
 
@@ -113,35 +109,40 @@ class TaskPlannerService
     }
   }
 
-  public function createTask(TaskPlanner $taskPlanner, TaskStatus $status, Carbon|null $startDateTime = null)
+  public function execute(TaskPlanner $taskPlanner, TaskStatusEnum $status, ?Carbon $startDateTime = null)
   {
     try {
+
       DB::transaction(function () use ($taskPlanner, $status, $startDateTime) {
 
-        // Create the new task from taskplanner
-        $task = new Task([
-          'task_planner_id' => $taskPlanner->id,
-          'description' => $taskPlanner->description,
-          'start_date_time' => $startDateTime ?? $taskPlanner->next_run_at,
-          'name' => $taskPlanner->name,
-          'campus_id' => $taskPlanner->campus_id,
-          'task_type_id' => $taskPlanner->task_type_id,
-          'space_id' => $taskPlanner->space_id,
-          'space_to_id' => $taskPlanner->space_to_id,
-          'status_id' => $status->value,
-          'visit_id' => $taskPlanner->visit_id,
-        ]);
+        $data = [
+          'task' => [
+            'task_planner_id' => $taskPlanner->id,
+            'description' => $taskPlanner->description,
+            'start_date_time' => $startDateTime ?? $taskPlanner->next_run_at,
+            'name' => $taskPlanner->name,
+            'campus_id' => $taskPlanner->campus_id,
+            'task_type_id' => $taskPlanner->task_type_id,
+            'space_id' => $taskPlanner->space_id,
+            'space_to_id' => $taskPlanner->space_to_id,
+            'status_id' => $status->value,
+            'visit_id' => $taskPlanner->visit_id,
+          ],
+          'tags' => $taskPlanner->tags->pluck('id')->toArray(),
+          'assignees' => $taskPlanner->assignments['users'] ?? null,
+          'teamsMatchingAssignment' => $taskPlanner->teams->pluck('id')->toArray(),
+        ];
 
-        $task->save();
+        $taskService = new TaskService();
+        $task = $taskService->create($data);
 
-        // Handle assignations
-        $this->handleAssignations($taskPlanner, $task);
+        // Handle one time recurrence for assignees
+        $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? null;
 
-        // Copy the planner's tags to the task
-        $task->tags()->sync($taskPlanner->tags->pluck('id'));
-
-        // Assign task to teams based on assignment rules
-        TaskAssignmentService::assignTaskToTeams($task, $taskPlanner->teams->pluck('id')->toArray());
+        if ($oneTimeOcurrence) {
+          $taskPlanner->assignments = null;
+          $taskPlanner->save();
+        }
 
         broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
       });
@@ -202,15 +203,17 @@ class TaskPlannerService
       case TaskPlannerAction::Replace:
         $latestTask = $taskPlanner->tasks()
           ->whereNotIn('status_id', [
-            TaskStatus::Completed->value,
-            TaskStatus::Replaced->value
+            TaskStatusEnum::Completed->value,
+            TaskStatusEnum::Replaced->value
           ])
           ->latest()
           ->first();
 
         if ($latestTask) {
-          $latestTask->status_id = TaskStatus::Replaced->value;
-          $latestTask->addComment('Taak is vervangen');
+          $latestTask->status_id = TaskStatusEnum::Replaced->value;
+          $latestTask->comments()->create([
+            'content' => 'Status werd automatisch omgezet naar Toegevoegd',
+          ]);
           $latestTask->save();
         }
         break;
@@ -222,7 +225,7 @@ class TaskPlannerService
     $isHoliday = Holiday::whereDate('date', $taskPlanner->next_run_at->toDateString())->exists();
 
     if ($taskPlanner->on_holiday == ApplyOnHoliday::No && $isHoliday) {
-      $this->createTask($taskPlanner, TaskStatus::Skipped);
+      $this->execute($taskPlanner, TaskStatusEnum::Skipped);
       return true;
     }
 
@@ -252,23 +255,6 @@ class TaskPlannerService
 
     // If no taskPlanner, cache for a long period (e.g., 1 hour)
     return 3600;
-  }
-
-  public function handleAssignations($taskPlanner, $task)
-  {
-    // User assignations
-    $users = $taskPlanner->assignments['users'] ?? null;
-
-    if ($users) {
-
-      $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? null;
-      $task->assignees()->attach($users);
-
-      if ($oneTimeOcurrence) {
-        $taskPlanner->assignments = null;
-        $taskPlanner->save();
-      }
-    }
   }
 
   /**

@@ -1,20 +1,7 @@
-www.svgator.com
+TODO ON GIT PULL FROM PRODUCTION
+Change in tasks table the task priority to lowercase and in settings the value of the settings
 
 Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen bed toegewezen heeft? Ik moet het weten, want anders kan een taakplanner uitgeschakeld worden omdat die denkt dat de opname geen bed toegewezen heeft. Dan moet anders de discharge_at gebruik maar wel weten dat soms dit blijkbaar niet wordt aangepast in het systeem.
-
-NATASCHA
-1. Stel je voor dat er elke dag om 10u een taak wordt aangemaakt.  
-Een medewerker wijst de taak aan zichzelf toe, maar door andere prioriteiten kan hij die vandaag niet afhandelen.  
-Wat verwacht je dat er moet gebeuren als de taak nog niet is afgehandeld tegen de tijd dat de taakplanner opnieuw een taak gaat aanmaken?
-
-2. Hoe gebruik je de oplving van wie, wanner een taak heeft begonen en afgehandeld?
- • Elke keer dat een een taa k toegewezen wordt en dat person is de eerste die er aan toegewezen wordt vul de started_at and started_by, and the same when a person ends it. finished_at finished_by
-
-3. Voor welke Afdelingen moet ik de eindpoets taak triggeren?
-
-
-!!WHEN PULLING IN PRODUCTION CHANGE THE SETTINGS DATABASE Low, Medium, High TO UPPERCASE!!
-
 
   TO-DO's
   1. Change icons in filament.
@@ -22,18 +9,19 @@ Wat verwacht je dat er moet gebeuren als de taak nog niet is afgehandeld tegen d
   3. Add a worker in laravel to allow the edit of tasks to be faster, this way i think i dont need Optimistically update the UI.
   4. Implement cache for task that have to be activated so only db query is made when a new task is created, and default get task that start date time < carbon now 
   5. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
-  6. Replace tippy.js with floatingUI
   7. Create an extension for the customLink that has target '_blank' as default, probably has to become a icon as the original link. look at link source code for help.
   8. fix issue where user creates task for its own in dashboard and doesnt show because things created or edited by the same user are omited in useWebsocket. Omit only for edit mode.
-  10. Add a button to add a assignment rule from within the taskplanner resource. i already have a part just check if there is a way to do something after opslaan is clicked so i can manually create the record using the form data
   12. Set byUserInput that is in spaces in trait to use for all model that have a userinput fetch from the front end.
-  17. change cdn in PatientAutocomplete to a local approach
-  18. Improve the stores, separate tranlsation map to enums.js?
   19. create utility/helper for Object.keys(selectedPatient).length > 0 in patient-autocomplete
   20. use the same logic and view of dropfown as the Patient-automcomplete for all the other inputs with dropdown
   21. If a task is completed the help icon still appears in dashboard. (Only show icon when the task is active)
-  24. Sometimes opening the taakplanner from the user front end shows rows expanded
   36. Add maybe an advanced filters. also when filtered task are showed with the groups of assigned task or not. add filter to show only assigned to me.
+  37. Remove the zoeken button and trigger on change(in the filters part)
+  40. Add Phone sound and vibration on task creation
+  45. Import all the schoonmaak gebruikers in EDB and migrate passwords using there name
+  46. Remove roles key from user, check where in frontend it is being used and if needed convert to a permission
+
+
 
 Patient transport TO-DO's
 1. Het systeem verwijdert automatisch de planning zodra de patiënt is ontslagen → het taakplanner kijk of het patient nog op een bed ligt → inactive zetten = DONE✓
@@ -313,20 +301,7 @@ Websockets are safe and effective for maintaining real-time sync between the ser
 
 
 
-A02 EXAMPLE:
-MSH|^~\&|PRIMUZ||||20250625162125||ADT^A02|50000000016460774|P|2.5.1|50000000016460774||||BE
-EVN|A02|20250625162125||||20250625162100
-PID|1|9404284511|9404284511||WOLKENFELD^GITI||19940428000000|F|||BELGIËLEI 130 /A/09^^ANTWERPEN^^2018^BEL||+32483609842^^CP^gitiwolkenfeld@gmail.com||N|UND|||94042828801|592350037113||||||BEL||BEL||N
-PD1|1|||11489748^GUTFREUND^GERSON
-PV1|1|O|1623^134^03^002^0|C|71913345|1222^00M^02^002|003604^VANHANDENHOVE^INGA||003604^VANHANDENHOVE^INGA|MVAA||||1|||114897^GUTFREUND^GERSON||71913345||Z||||||||||||||||||11||J||1222|20250625120600
-PV2|1|Z^^^Z|5||||||20250625200000|5|||1||||||||0|||||||||||||||||CD VAAT SPATADERS O
-OBX|1|ST|DESCR^Description|HYPERSENSITIVITY|false||REMARK
 
-A03 EXAMPLE:
-MSH|^~\&|PRIMUZ||||20250626144530||ADT^A03^ADT_A03|50000000016481706|P|2.5.1|50000000016481706||||BE
-EVN|A03|20250626144530||||20250626144500
-PID|1|4811204505|4811204505||COORNAERT^MARIJKE EUGENIA||19481120000000|F|||TURNHOUTSEBAAN 178 /701^^BORGERHOUT (ANTWERPEN)^^2140^BEL||+3232378561^^PH^marijkecoornaert@gmail.com~+32487227372^^CP||N|UND|||48112030484|595262111091||||||BEL||BEL||N
-PV1|1|O|1622^02O^01^002^0|C|71931324||002316^REYNTJENS^BRUNO||002316^REYNTJENS^BRUNO|MOOG||||0|||119117^LEMMENS^LIESBETH||71931324||Z|||||||||||||||1|1||11||J|||20250626123300|20250626144500
-PV2|1|Z^^^Z|5|1|||||20250626180000|5|||1||||||||0|||||||||||||||||CD oog A catar ingr
-OBX|1|ST|DESCR^Description|HYPERSENSITIVITY|false||REMARK
 
+Domain rules:
+1. When a user click on the help button to help someone, the task is always set to 'InProgress' and needs_help is set to false

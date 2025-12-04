@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\TaskPriorityEnum;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreTaskRequest extends FormRequest
 {
@@ -43,40 +45,40 @@ class StoreTaskRequest extends FormRequest
     public function rules()
     {
         return [
-            // Ensure task_planner_id is not provided.
+            // Ensure task_planner_id is not provided
             'data.attributes.task_planner_id' => 'prohibited',
 
-            // Validate name and description as strings.
+            // Validate name and description as strings
             'data.attributes.name' => 'required|string',
             'data.attributes.description' => 'required|string',
 
             // Validate foreign keys:
-            // campus_id should reference an existing campus.
+            // campus_id should reference an existing campus
             'data.attributes.campus_id' => 'required|integer|exists:campuses,id',
 
-            // task_type_id should reference an existing task type.
+            // task_type_id should reference an existing task type
             'data.attributes.task_type_id' => 'required|integer|exists:task_types,id',
 
-            // space_id should be null or reference an existing space.
+            // space_id should be null or reference an existing space
             'data.attributes.space_id' => [
                 'integer',
                 Rule::exists('spaces.spaces', 'id'),
             ],
 
-            // space_to_id should be null or reference an existing space.
+            // space_to_id should be null or reference an existing space
             'data.attributes.space_to_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('spaces.spaces', 'id'),
             ],
 
-            // status_id should reference an existing task status.
+            // status_id should reference an existing task status
             'data.attributes.status_id' => 'required|integer|exists:task_statuses,id',
 
-            // Validate priority to be one of Low, Medium, or High.
-            'data.attributes.priority' => 'required|in:Low,Medium,High',
+            // Validate priority to be one of the defined enum values
+            'data.attributes.priority' => ['required', new Enum(TaskPriorityEnum::class)],
 
-            // Validate teams as an array with at least one team.
+            // Validate teams as an array with at least one team
             'data.relationships.teams.data'   => 'required|array|min:1',
             'data.relationships.teams.data.*.id' => 'required|integer|exists:teams,id',
 

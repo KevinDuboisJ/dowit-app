@@ -65,7 +65,7 @@ class TaskAssignmentRuleResource extends Resource
                             }
 
                             $user = auth()->user();
-                            $userTeamIds = $user->teams->pluck('id')->toArray();
+                            $userTeamIds = $user->getTeamIds();
                             $recordTeamIds = $record?->teams->pluck('id')->toArray() ?? [];
                             $hasAtLeastOneTeamUserDoesNotHave = !empty(array_diff($recordTeamIds, $userTeamIds));
 
@@ -78,7 +78,7 @@ class TaskAssignmentRuleResource extends Resource
                             }
 
                             // Get the IDs of the teams the user can select from (i.e., user’s teams)
-                            $userTeamIds = auth()->user()->teams->pluck('id')->toArray();
+                            $userTeamIds = auth()->user()->getTeamIds();
 
                             // Get the teams linked to the record but not part of user teams
                             $otherTeams = $record->teams
@@ -181,7 +181,6 @@ class TaskAssignmentRuleResource extends Resource
 
                 TextColumn::make('task_types')
                     ->formatStateUsing(function ($state) {
-                          logger($state);
                         if (!is_array($state)) {
                           
                             return $state;

@@ -9,11 +9,18 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use App\Helpers\Helper;
 use App\Models\TaskStatus;
 use App\Traits\HasCreator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Comment extends Model
 {
-    use HasFactory, HasCreator;
+    use SoftDeletes, HasFactory, HasCreator;
+
+    protected $fillable = [
+        'content',
+        'created_by',
+    ];
 
     protected function casts(): array
     {
@@ -25,27 +32,45 @@ class Comment extends Model
         ];
     }
 
-    public function scopeByTeamsAndRecipients($query)
+    public function scopeByTeams(Builder $query): Builder
     {
-        $user = Auth::user();
-        $userTeamsIds = $user->teams->pluck('id')->toArray();
+        $teamIds = Auth::user()->getTeamIds();
 
-        $query->where(function ($query) use ($userTeamsIds, $user) {
-            $query->whereHas('task.teams', function ($teamQuery) use ($userTeamsIds) {
-                $teamQuery->whereIn('teams.id', $userTeamsIds);
+        return $query->where(function (Builder $q) use ($teamIds) {
+            // 1) User is in one of the task's teams
+            $q->where(function (Builder $inner) use ($teamIds) {
+                $inner->byTaskTeams($teamIds);
             })
-                ->orWhere('created_by', $user->id)
-                ->orWhere(function ($query) use ($userTeamsIds, $user) {
-                    if (!empty($userTeamsIds)) {
-                        $query->whereRaw(
-                            implode(' OR ', array_map(function ($teamId) {
-                                return "JSON_CONTAINS(recipient_teams, '$teamId')";
-                            }, $userTeamsIds))
-                        );
-                    }
-
-                    $query->orWhereJsonContains('recipient_users', $user->id);
+                ->orWhere(function (Builder $inner) use ($teamIds) {
+                    $inner->byRecipientTeams($teamIds);
                 });
+        });
+    }
+
+    // User teams is in one of the task's teams
+    public function scopeByTaskTeams(Builder $query, array $teamIds): Builder
+    {
+        if (empty($teamIds)) {
+            return $query;
+        }
+
+        return $query->whereHas('task.teams', function (Builder $teamQuery) use ($teamIds) {
+            $teamQuery->whereIn('teams.id', $teamIds);
+        });
+    }
+
+    // User teams is in one of the recipient's team
+    public function scopeByRecipientTeams(Builder $query, array $teamIds): Builder
+    {
+        if (empty($teamIds)) {
+            return $query;
+        }
+
+        // (recipient_teams is a JSON array of team IDs)
+        return $query->where(function (Builder $q) use ($teamIds) {
+            foreach ($teamIds as $teamId) {
+                $q->orWhereJsonContains('recipient_teams', $teamId);
+            }
         });
     }
 

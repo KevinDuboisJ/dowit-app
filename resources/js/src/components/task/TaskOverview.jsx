@@ -9,9 +9,8 @@ import {
   TabsList,
   TabsTrigger,
   CardHeader,
-  Badge,
   ScrollArea,
-  Tippy
+  Tooltip
 } from '@/base-components'
 
 import {TaskForm, TaskDetails, TaskIcon} from '@/components'
@@ -85,7 +84,7 @@ export const TaskOverview = ({
         </div>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="details">Details</TabsTrigger>
-          <Tippy
+          <Tooltip
             content="Alleen toegestaan voor gebruikers die aan deze taak zijn toegewezen"
             placement="bottom"
             disabled={canUpdateTask}
@@ -100,7 +99,7 @@ export const TaskOverview = ({
                 <Heroicon icon="LockClosed" className="w-4 h-4 text-gray-500" />
               )}
             </TabsTrigger>
-          </Tippy>
+          </Tooltip>
         </TabsList>
       </CardHeader>
 

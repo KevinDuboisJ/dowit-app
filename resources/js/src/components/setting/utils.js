@@ -10,7 +10,7 @@ export const getPriority = (createdAt, taskPriority, setting) => {
   // Use task priority if it is defined
   if (taskPriority) {
     data.state = __(taskPriority);
-    data.color = setting[taskPriority].color;
+    data.color = setting[taskPriority]?.color ?? '#000000';
     return data;
   }
 

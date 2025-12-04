@@ -15,7 +15,6 @@ use App\Events\BroadcastEvent;
 use App\Models\Comment;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
-use App\Services\PatientService;
 
 class TaskController extends Controller
 {
@@ -53,75 +52,30 @@ class TaskController extends Controller
       abort(404);
     }
 
-    return response()->json( Comment::with(['creator', 'status' => fn($query) => $query->select('id', 'name')])->where('task_id', $id)->orderBy('created_at', 'desc')->get());
+    return response()->json(Comment::with(['creator', 'status' => fn($query) => $query->select('id', 'name')])->where('task_id', $id)->orderBy('created_at', 'desc')->get());
   }
 
-  public function store(StoreTaskRequest $request)
+  public function store(StoreTaskRequest $request, TaskService $taskService)
   {
     try {
-      $user = Auth::user();
       $data = $request->prepareForDatabase();
+      $task = $taskService->create($data);
 
-      // Start transactions on both connections
-      DB::connection('mysql')->beginTransaction();
-
-      if (isset($data['visit'])) {
-
-        DB::connection('patientlist')->beginTransaction();
-
-        // Create the task with validated data
-        $task = new Task([...$data['task'], 'visit_id' => $data['visit']['id']]);
-      }
-
-      if (!isset($data['visit'])) {
-        $task = new Task($data['task']);
-      }
-
-      // Save in db
-      $task->save();
-
-      // Sync tags
-      $task->tags()->sync(collect($data['tags'] ?? [])->pluck('value'));
-
-      // Sync the many-to-many relationship for assigned users
-      if ($request->validated('assignTo')) {
-        // Extract ids from array
-        $ids = array_column($request->validated('assignTo'), 'value');
-        $task->assignees()->sync($ids);
-      }
-
-      TaskAssignmentService::assignTaskToTeams($task, $user->teams->pluck('id')->toArray());
-
-      // Commit the transaction if all operations succeed
-      DB::connection('mysql')->commit();
-
-      if (isset($visit)) {
-        DB::connection('patientlist')->commit();
-      }
-
-      $task->load(Task::getRelationships());
-
-      if (!$task->isScheduled()) {
+      if (! $task->isScheduled()) {
         broadcast(new BroadcastEvent($task, 'task_created', 'dashboard'));
       }
 
       return response()->json($task);
+      
     } catch (\Throwable $e) {
       logger()->error('Task creation failed', [
         'message' => $e->getMessage(),
         'file'    => $e->getFile(),
         'line'    => $e->getLine(),
         'trace'   => $e->getTraceAsString(),
-        // optionally more context:
         'code'    => $e->getCode(),
-        // 'previous' => $e->getPrevious(), // if needed
       ]);
 
-      // Rollback both transactions if anything fails
-      DB::connection('mysql')->rollBack();
-      DB::connection('patientlist')->rollBack();
-
-      // Return a user-friendly error response
       return response()->json([
         'message' => 'Gelieve dit te melden bij de helpdesk: #' . $request->attributes->get('log_id'),
       ], 422);
@@ -131,7 +85,7 @@ class TaskController extends Controller
   public function update(UpdateTaskRequest $request, TaskService $taskService, Task $task)
   {
     try {
-      $result = $this->taskService->updateTask($task, $request->validated());
+      $result = $this->taskService->updateTask($task, $request->prepareForDatabase());
       $tasks = $taskService->fetchAndCombineTasks($request);
 
       if (isset($result['conflict'])) {

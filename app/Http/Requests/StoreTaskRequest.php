@@ -20,25 +20,29 @@ class StoreTaskRequest extends FormRequest
             'name' => 'required|string|max:255',
             'description' => 'string',
             'startDateTime' => 'required|date',
-            'taskType' => 'required|exists:task_types,id',
+            'taskType' => [
+                'required',
+                'in:' . implode(',', array_column(TaskTypeEnum::cases(), 'name'))
+            ],
             'campus' => 'required|exists:campuses,id',
             'visit' => 'sometimes|array',
             'visit.id'  => [
                 'sometimes',
                 'required_with:visit',
                 Rule::requiredIf(function () {
-                    return in_array(request('task_type_id'), TaskTypeEnum::getPatientTransportIds());
+                    return TaskTypeEnum::fromCaseName($this->input('taskType'))->isPatientTransport();
                 }),
                 'numeric',
             ],
             'tags' => 'array',
-            // 'assets' => 'array',
             'space' => 'array',
             'space.*.value' => 'required|exists:spaces.spaces,id',
             'spaceTo' => 'array|min:0',
             'spaceTo.*.value' => 'required|exists:spaces.spaces,id',
-            'assignTo' => 'array|min:0',
-            'assignTo.*.value' => 'required|exists:users,id',
+            'assignees' => 'array',
+            'teamsMatchingAssignment' => 'array',
+             // 'assets' => 'array',
+
         ];
     }
 
@@ -51,7 +55,7 @@ class StoreTaskRequest extends FormRequest
                 'name' => $validated['name'],
                 'description' => $validated['description'],
                 'start_date_time' => Carbon::parse($validated['startDateTime'])->setTimezone(config('app.timezone')),
-                'task_type_id' => $validated['taskType'],
+                'task_type_id' => TaskTypeEnum::fromCaseName($validated['taskType'])->value,
                 'campus_id' => $validated['campus'],
                 'space_id' => !empty($validated['space']) ? array_column($validated['space'], 'value')[0] : null,
                 'space_to_id' => !empty($validated['spaceTo']) ? array_column($validated['spaceTo'], 'value')[0] : null,
@@ -64,6 +68,14 @@ class StoreTaskRequest extends FormRequest
 
         if (isset($validated['visit'])) {
             $data['visit'] = $validated['visit'];
+        }
+
+        if (isset($validated['assignees'])) {
+            $data['assignees'] = $validated['assignees'];
+        }
+
+        if (isset($validated['teamsMatchingAssignment'])) {
+            $data['teamsMatchingAssignment'] = $validated['teamsMatchingAssignment'];
         }
 
         return $data;

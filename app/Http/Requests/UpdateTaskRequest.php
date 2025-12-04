@@ -3,23 +3,15 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Enums\TaskPriority;
-use App\Enums\TaskStatus;
+use App\Enums\TaskPriorityEnum;
+use App\Enums\TaskStatusEnum;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-
-        $task = $this->route('task'); // Get the Task model from the route
-        $user = $this->user(); // Get the authenticated user
-
-        // If 'priority' is in the request, check if the user can update it
-        // if ($this->has('priority')) {
-        //     return $user->can('canUpdatePriority', $task);
-        // }
-
         return true;
     }
 
@@ -28,15 +20,11 @@ class UpdateTaskRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
-        $this->prepareUsersToAssign();
-        $this->prepareUsersToUnassign();
-
         // Convert to app timezone as all javascript datetime function uses UTC(0)
         $this->merge([
             'updated_at' => Carbon::parse($this->updated_at)->setTimezone(config('app.timezone')),
             //'beforeUpdateAt' => Carbon::parse($this->beforeUpdateAt)->setTimezone(config('app.timezone')),
         ]);
-
     }
 
     /**
@@ -47,36 +35,32 @@ class UpdateTaskRequest extends FormRequest
     {
         return [
             'status' => [
-                'sometimes',
                 'string',
-                'in:' . implode(',', array_column(TaskStatus::cases(), 'name')),
+                'in:' . implode(',', array_column(TaskStatusEnum::cases(), 'name')),
             ],
+
             'priority' => [
-                'sometimes',
                 'string',
-                'in:' . implode(',', array_column(TaskPriority::cases(), 'name')),
+                new Enum(TaskPriorityEnum::class),
                 'nullable',
             ],
+
             'needs_help' => [
-                'sometimes',
                 'bool',
             ],
-            'usersToAssign' => [
-                'sometimes',
-                'array',
-            ],
-            'usersToUnassign' => [
-                'sometimes',
-                'array',
-            ],
+
+            'assignees' => 'array',
+
             'comment' => [
-                'sometimes',
                 'string',
+                'nullable'
             ],
+
             'updated_at' => [
                 'required',
                 'date',
             ],
+
             'beforeUpdateAt' => [
                 'required',
                 'date',
@@ -84,12 +68,9 @@ class UpdateTaskRequest extends FormRequest
         ];
     }
 
-    /**
-     * Return validated data and exclude invalid fields.
-     */
-    public function validated($key = null, $default = null)
+    public function prepareForDatabase()
     {
-        $validated = parent::validated($key, $default);
+        $data = $this->validated();
 
         // Get all request keys
         $requestKeys = array_keys($this->all());
@@ -104,47 +85,11 @@ class UpdateTaskRequest extends FormRequest
             abort(422, 'Invalid fields in request: ' . implode(', ', $extraKeys));
         }
 
-        if (isset($validated['status'])) {
-
-            $validated['status_id'] = TaskStatus::fromCaseName($validated['status'])->value;
-            unset($validated['status']);
+        if (isset($data['status'])) {
+            $data['status_id'] = TaskStatusEnum::fromCaseName($data['status'])->value;
+            unset($data['status']);
         }
 
-        return $validated;
-    }
-
-
-    /**
-     * Normalize 'usersToAssign' to extract user IDs.
-     */
-    protected function prepareUsersToAssign()
-    {
-        if ($this->has('usersToAssign')) {
-            $userIds = array_map(
-                fn($user) => is_array($user) && isset($user['value']) ? $user['value'] : $user,
-                $this->usersToAssign
-            );
-
-            $this->merge([
-                'usersToAssign' => $userIds,
-            ]);
-        }
-    }
-
-    /**
-     * Normalize 'usersToUnassign' to extract user IDs.
-     */
-    protected function prepareUsersToUnassign()
-    {
-        if ($this->has('usersToUnassign')) {
-            $userIds = array_map(
-                fn($user) => is_array($user) && isset($user['value']) ? $user['value'] : $user,
-                $this->usersToUnassign
-            );
-
-            $this->merge([
-                'usersToUnassign' => $userIds,
-            ]);
-        }
+        return $data;
     }
 }

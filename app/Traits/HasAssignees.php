@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 trait HasAssignees
 {
@@ -26,13 +25,8 @@ trait HasAssignees
         });
     }
 
-    public function assignUsers(array $userIds)
+    public function syncAssignees(array $ids)
     {
-        $this->assignees()->syncWithoutDetaching($userIds);
-    }
-
-    public function unassignUsers(array $userIds)
-    {
-        $this->assignees()->detach($userIds);
+        $this->assignees()->sync($ids);
     }
 }

@@ -1,16 +1,15 @@
-import React, {useMemo} from 'react'
-import {usePage} from '@inertiajs/react'
-import {createColumnHelper} from '@tanstack/react-table'
-import {format, parseISO} from 'date-fns'
-import {__} from '@/stores'
-import helpAnimation from '@json/animation-help.json'
-import Lottie from 'lottie-react'
-import {AvatarStack, Tippy, RichText} from '@/base-components'
-import {TaskActionButton, getPriority} from '@/components'
+import { useMemo } from 'react'
+import { usePage } from '@inertiajs/react'
+import { createColumnHelper } from '@tanstack/react-table'
+import { format, parseISO } from 'date-fns'
+import { __ } from '@/stores'
+import { AvatarStack, Tooltip, RichText } from '@/base-components'
+import { TaskActionButton, getPriority, HelpAnimation } from '@/components'
 
-export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
-  const {settings, user} = usePage().props
-  const columnHelper = createColumnHelper()
+const columnHelper = createColumnHelper()
+
+export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
+  const { settings, user } = usePage().props
 
   const columns = useMemo(
     () => [
@@ -25,53 +24,53 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
       columnHelper.accessor('priority', {
         id: 'priority',
         header: '',
-        cell: cell => {
+        size: 40,
+        enableSorting: false,
+        meta: {
+          align: 'center'
+        },
+        cell: ({ cell, row }) => {
           const data = cell.row.original
           const priorityInfo = getPriority(
             data.created_at,
             data.priority,
             settings.TASK_PRIORITY.value
           )
-          return (
-            <Tippy content={priorityInfo.state}>
-              <div
-                className="w-4 h-4 mx-auto rounded-full"
-                style={{backgroundColor: priorityInfo.color}}
-              />
-            </Tippy>
-          )
-        },
-        enableSorting: false
-      }),
-
-      // Status Column
-      columnHelper.accessor('status.name', {
-        id: 'status',
-        header: 'Status',
-        maxWidth: 200,
-        cell: ({cell, row}) => {
           return row.original.needs_help ? (
-            <Tippy content="Hulp gevraagd" options={{allowHTML: true}}>
-              <span className="relative text-sm">
+            <Tooltip content="Hulp gevraagd">
                 <HelpAnimation
                   needsHelp={row.original.needs_help}
                   isAssignedToCurrentUser={
                     row.original.capabilities.isAssignedToCurrentUser
                   }
                 />
-                {__(cell.getValue())}
-              </span>
-            </Tippy>
+            </Tooltip>
           ) : (
-            <span className="relative text-sm">{__(cell.getValue())}</span>
+            <Tooltip content={priorityInfo.state}>
+              <div
+                className="w-4 h-4 mx-auto rounded-full text-center"
+                style={{ backgroundColor: priorityInfo.color }}
+              />
+            </Tooltip>
           )
+        }
+      }),
+
+      // Status Column
+      columnHelper.accessor('status.name', {
+        id: 'status',
+        header: 'Status',
+        size: 200,
+        cell: ({ cell, row }) => {
+          return <span className="relative text-sm">{__(cell.getValue())}</span>
         }
       }),
 
       // Start Date Column
       columnHelper.accessor('start_date_time', {
         header: 'Tijdstip',
-        cell: ({cell, row}) => {
+        size: 200,
+        cell: ({ cell, row }) => {
           const dateStr = cell.getValue()
           const taskHasPatient = row.original?.visit_id || null
 
@@ -103,6 +102,7 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
       // Task Name Column
       columnHelper.accessor('name', {
         header: 'Taak',
+        size: 360,
         cell: cell => {
           const task = cell.row.original
           const description = task.description || ''
@@ -143,6 +143,7 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
       columnHelper.accessor('assignees', {
         id: 'assignees',
         header: 'Toegewezen',
+        size: 360,
         cell: cell => {
           const users = cell.getValue()
           return <AvatarStack avatars={users} />
@@ -160,7 +161,6 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
       // Action Button Column
       columnHelper.display({
         id: 'action',
-        maxWidth: 200,
         meta: {
           align: 'right'
         },
@@ -176,22 +176,8 @@ export const useTaskTableColumns = ({handleTaskUpdate, handleTasksRecon}) => {
         )
       })
     ],
-    []
+    [settings, user, handleTaskUpdate, handleTasksRecon]
   )
 
   return columns
 }
-
-// Memoized component that only re-renders when `needsHelp` or `isAssignedToCurrentUser` changes.
-const HelpAnimation = React.memo(({needsHelp, isAssignedToCurrentUser}) => {
-  // Only render if help is needed and the current user is not assigned.
-  if (!needsHelp || isAssignedToCurrentUser) return null
-  return (
-    <Lottie
-      className="absolute -top-6 -left-5 w-6 h-6 mr-2 cursor-help"
-      animationData={helpAnimation}
-      loop={true}
-      autoplay={true}
-    />
-  )
-})

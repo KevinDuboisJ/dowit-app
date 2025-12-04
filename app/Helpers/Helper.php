@@ -97,9 +97,9 @@ class Helper
         return !is_null($value) ? (string) $value : null;
     }
 
-    public static function containsFilter(array $filters, string $value): array
+    public static function getFilterByValue(array $filters, string $value): ?array
     {
-        return array_filter($filters, fn($filter) => isset($filter['field']) && $filter['field'] === $value);
+        return collect($filters)->firstWhere('field', $value);
     }
 
     public static function trimOrNull($value)

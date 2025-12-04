@@ -29,7 +29,7 @@ html {
   }
   body {
     font-size: var(--font-base-size);
-    @apply bg-background text-foreground h-full antialiased font-roboto text-slate-700 h-screen;
+    @apply bg-background text-foreground h-full antialiased text-slate-700 h-screen leading-tight;
 
     #app {
       @apply h-screen;

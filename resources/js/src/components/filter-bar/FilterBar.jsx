@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { cn } from '@/utils';
 import { __ } from '@/stores';
 import { usePage } from '@inertiajs/react';
@@ -15,7 +14,7 @@ import {
 
 export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
   
-  const { statuses, teams } = usePage().props;
+  const { user, statuses } = usePage().props;
   const onFilters = () => {
     const activeFilters = Object.values(filtersRef.current).filter(filter => filter.value);
     onApplyFilters({ activeFilters, filtersRef });
@@ -25,7 +24,7 @@ export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
 
   return (
     <form
-      className='flex z-40 flex-col xl:min-w-[600px] xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3 xl:gap-x-3'
+      className='flex z-40 flex-col xl:min-w-[600px] xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3 xl:gap-x-3 font-light'
       onSubmit={(e) => {
         e.preventDefault();
         onFilters();
@@ -67,7 +66,7 @@ export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={null}>Team</SelectItem>
-          {teams.map(team => (
+          {user.teams.map(team => (
             <SelectItem key={team.id} value={String(team.id)}>
               {team.name}
             </SelectItem>
@@ -76,7 +75,7 @@ export const FilterBar = ({ filtersRef = {}, onApplyFilters }) => {
       </Select>
 
       {/* Search Button */}
-      <Button type="submit" className="w-full xl:w-auto" size="sm">
+      <Button type="submit" className="w-full xl:w-auto font-normal" size="sm">
         <Heroicon icon="MagnifyingGlass" /> Zoeken
       </Button>
     </form>

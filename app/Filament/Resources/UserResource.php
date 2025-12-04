@@ -5,7 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -20,7 +20,7 @@ use App\Traits\HasTeams;
 
 class UserResource extends Resource
 {
-    use HasTeams, HasTeamOrUserScope;
+    use HasTeams, HasAccessScope;
 
     protected static ?string $model = User::class;
 
@@ -38,7 +38,7 @@ class UserResource extends Resource
                     ->label('PIN code')
                     ->password()
                     ->required()
-                    ->rule(['integer', 'digits_between:4,8'])
+                    ->rule(['integer', 'digits_between:3,10'])
                     ->revealable()
             ]);
     }

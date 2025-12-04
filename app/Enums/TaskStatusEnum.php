@@ -6,7 +6,7 @@ use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 use Illuminate\Support\Carbon;
 
-enum TaskStatus: int implements HasLabel
+enum TaskStatusEnum: int implements HasLabel
 {
     use HasEnumCaseNames;
 

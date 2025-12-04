@@ -11,7 +11,7 @@
   <title>{{ config('app.name') }}</title>
   <style>
     body {
-      font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
+      font-family: 'Geist', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
       background-color: #F3F4F6;
       height: 100vh;
       display: flex;

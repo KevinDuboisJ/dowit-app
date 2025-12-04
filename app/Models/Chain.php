@@ -3,14 +3,14 @@
 namespace App\Models;
 
 use App\Traits\HasCreator;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
 use App\Traits\HasTeams;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Chain extends Model
 {
-    use SoftDeletes, HasTeams, HasCreator, HasTeamOrUserScope;
+    use SoftDeletes, HasTeams, HasCreator, HasAccessScope;
 
     protected function casts(): array
     {

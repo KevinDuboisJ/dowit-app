@@ -49,7 +49,7 @@ class PincodeLoginService implements UserAuthenticator
   {
     return $request->validate([
       'username' => ['required'],
-      'password' => ['required', 'digits_between: 4,6'],
+      'password' => ['required', 'digits_between: 3,10'],
     ]);
   }
 }

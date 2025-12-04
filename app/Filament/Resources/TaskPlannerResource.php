@@ -17,7 +17,7 @@ use App\Enums\TaskPlannerFrequency;
 use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use App\Enums\DaysOfWeek;
-use App\Enums\TaskStatus as TaskStatusEnum;
+use App\Enums\TaskStatusEnum;
 use App\Enums\TaskTypeEnum;
 use App\Filament\Components\PatientAutocomplete;
 use App\Models\Space;
@@ -33,6 +33,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Section;
 use App\Models\User;
 use App\Models\Asset;
+use App\Models\Chain;
 use App\Models\PATIENTLIST\Visit;
 use Filament\Forms\Components\Grid;
 use App\Services\TaskAssignmentService;
@@ -40,17 +41,21 @@ use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Group;
 use App\Traits\HasFilamentTeamFields;
 use App\Models\Team;
+use App\Services\PatientService;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Coolsam\Flatpickr\Forms\Components\Flatpickr;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Actions\ReplicateAction;
 use Filament\Forms\Components\Hidden;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TaskPlannerResource extends Resource
@@ -67,6 +72,7 @@ class TaskPlannerResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -79,9 +85,8 @@ class TaskPlannerResource extends Resource
                     ->required()
                     ->live()
                     ->afterStateUpdated(function (Set $set, ?string $state, Get $get) {
-                        if (empty($get('name'))) {
-                            $set('name', TaskTypeEnum::from($state)->getLabel());
-                        }
+                        $set('name', TaskTypeEnum::from($state)->getLabel());
+                        $set('visit_id', null);
                     }),
 
                 Select::make('campus_id')
@@ -93,7 +98,11 @@ class TaskPlannerResource extends Resource
                 TextInput::make('name')
                     ->label('Naam')
                     ->nullable()
-                    ->required(),
+                    ->required()
+                    ->extraAttributes([
+                        'wire:loading.class' => 'pointer-events-none opacity-60',
+                        'wire:target' => 'data.task_type_id',
+                    ]),
 
                 Flatpickr::make('next_run_at')
                     ->label('Uitvoerstijdstip')
@@ -141,7 +150,7 @@ class TaskPlannerResource extends Resource
                     ->label('Patiënt')
                     ->required()
                     ->visible(
-                        fn(Get $get): bool => in_array((int) $get('task_type_id'), TaskTypeEnum::getPatientTransportIds())
+                        fn(Get $get): bool => TaskTypeEnum::tryFrom((int) $get('task_type_id'))->isPatientTransport()
                     )
                     ->afterStateHydrated(function ($component, $state) {
                         if ($state) {
@@ -149,45 +158,102 @@ class TaskPlannerResource extends Resource
                             $component->state($patient);
                         }
                     })
-                    ->dehydrateStateUsing(fn($state) => $state['id']),
+                    ->afterStateUpdated(function ($state, Set $set) {
+
+                        if (!$state) {
+                            $set('space_to_id', null);
+                            $set('space_id', null);
+                            return;
+                        }
+
+                        $set('space_to_id', 2859);
+                        $roomNumber = $state['bed']['room']['number'] ?? null;
+
+                        if (! $roomNumber) {
+                            return;
+                        }
+
+                        // // Load visit with bed/room/space
+                        $space = Space::where('name', 'like', '%' . $roomNumber)->first();
+
+                        if ($space) {
+                            $set('space_id', $space->id);
+                        }
+                    })
+                    ->dehydrateStateUsing(fn($state) => $state['id'])
+                    ->live(),
 
                 Select::make('space_id')
                     ->label('locatie')
-                    ->native(false)
-                    ->relationship('space', 'name')
+                    ->relationship(
+                        name: 'space',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: function (Builder $query, $livewire, ?string $search) {
+
+                            $search = trim((string) $search);
+
+                            if (($livewire->source ?? null) === 'Revalidatie' && blank($search)) {
+                                $query->byRevalidatieDefault();
+                            } else {
+                                $query->byUserInput($search);
+                            }
+
+                            // Always include the currently selected space_id
+                            $currentSpaceId = data_get($livewire, 'data.space_id');
+
+                            if ($currentSpaceId) {
+                                $query->orWhere('id', $currentSpaceId);
+                            }
+
+                            return $query->limit(50);
+                        }
+                    )
+                    ->getOptionLabelFromRecordUsing(fn(Model $space) => "{$space->name} ({$space->_spccode})")
                     ->searchable(['name', '_spccode'])
-                    ->getSearchResultsUsing(function (string $search) {
-                        return Space::query()
-                            ->byUserInput($search) // ← use your scope here
-                            ->limit(50)
-                            ->get()
-                            ->mapWithKeys(fn($space) => [
-                                $space->id => "{$space->name} ({$space->_spccode})",
-                            ]);
-                    })
+                    ->preload()
+                    ->extraAttributes([
+                        'wire:target' => 'data.visit_id',
+                    ])
                     ->live(),
 
                 Select::make('space_to_id')
                     ->label('Bestemmingslocatie')
-                    ->relationship('spaceTo', 'name')
-                    ->searchable(['name', '_spccode'])
-                    ->getSearchResultsUsing(function (string $search) {
-                        return Space::query()
-                            ->byUserInput($search) // ← use your scope here
-                            ->limit(50)
-                            ->get()
-                            ->mapWithKeys(fn($space) => [
-                                $space->id => "{$space->name} ({$space->_spccode})",
-                            ]);
-                    })
-                    ->visible(
-                        fn(Get $get): bool => in_array((int) $get('task_type_id'), TaskTypeEnum::getPatientTransportIds())
+                    ->relationship(
+                        name: 'spaceTo',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: function (Builder $query, $livewire, ?string $search) {
+
+                            $search = trim((string) $search);
+
+                            if (($livewire->source ?? null) === 'Revalidatie' && blank($search)) {
+                                $query->byRevalidatieDefault();
+                            } else {
+                                $query->byUserInput($search);
+                            }
+
+                            // Always include the currently selected space_id
+                            $currentSpaceId = data_get($livewire, 'data.space_id');
+
+                            if ($currentSpaceId) {
+                                $query->orWhere('id', $currentSpaceId);
+                            }
+
+                            return $query->limit(50);
+                        }
                     )
+                    ->getOptionLabelFromRecordUsing(fn(Model $space) => "{$space->name} ({$space->_spccode})")
+                    ->searchable(['name', '_spccode'])
+                    ->preload()
+                    ->visible(
+                        fn(Get $get): bool =>
+                        TaskTypeEnum::tryFrom((int) $get('task_type_id'))->isPatientTransport()
+                    )
+                    ->extraAttributes([
+                        'wire:target' => 'data.visit_id',
+                    ])
                     ->live(),
 
                 // TextInput doesn't automatically convert an array to a string, unlike the TextColumn. To Solve this i use formatStateUsing
-
-
             ])->columnSpan(6)->columns(2),
 
             Group::make()->schema([
@@ -535,7 +601,7 @@ class TaskPlannerResource extends Resource
 
             ->filters([
                 SelectFilter::make('teams')
-                    ->relationship('teams', 'name'),
+                    ->relationship('teams', 'name', fn($query) => $query->whereIn('teams.id', Auth::user()->teams->pluck('id'))),
 
                 // Filter to show only inactive records
                 Filter::make('inactives')
@@ -561,7 +627,12 @@ class TaskPlannerResource extends Resource
                         ->icon('heroicon-o-cog')
                         ->action(function (TaskPlanner $record, TaskPlannerService $taskPlannerService) {
                             $taskPlannerService->reschedule($record);
-                            $taskPlannerService->createTask($record, TaskStatusEnum::Added, Carbon::now());
+                            $taskPlannerService->execute($record, TaskStatusEnum::Added, Carbon::now());
+
+                            Notification::make()
+                                ->title('De taakplanner is succesvol uitgevoerd.')
+                                ->success()
+                                ->send();
                         })
                         ->modalFooterActionsAlignment(Alignment::Center)
                         ->modalAutofocus(false),
@@ -576,16 +647,17 @@ class TaskPlannerResource extends Resource
                         ->icon('heroicon-o-pencil-square')
                         ->form([
                             Section::make([
-                                Flatpickr::make('next_run_at')
+                                DateTimePicker::make('next_run_at')
                                     ->label('Ingepland voor')
                                     ->required()
-                                    ->time(true)
+                                    ->native(false)
                                     ->seconds(false)
-                                    ->displayFormat(' j F Y H:i')
-                                    ->after(now())
-                                    ->default(function (Model $record) {
-                                        return $record->next_run_at;
-                                    }),
+                                    ->displayFormat('j F Y H:i')
+                                    ->rule('after:now')
+                                    ->validationMessages([
+                                        'after' => 'Ingepland voor moet een datum in de toekomst zijn.',
+                                    ])
+                                    ->default(fn(?Model $record) => $record?->next_run_at),
 
                                 Select::make('action')
                                     ->label('Actie')
@@ -613,17 +685,21 @@ class TaskPlannerResource extends Resource
                             $record->next_run_at = $data['next_run_at'];
                             $record->action = $data['action'];
                             $record->assignments = $data['assignments'];
-                            $taskPlannerService->createTask($record, TaskStatusEnum::fromStartDateTime($data['next_run_at']));
+                            $taskPlannerService->execute($record, TaskStatusEnum::fromStartDateTime($record->next_run_at));
+                            Notification::make()
+                                ->title('Taak succesvol aangemaakt')
+                                ->success()
+                                ->send();
                         })
                         ->modalFooterActionsAlignment(Alignment::Center)
                         ->modalAutofocus(false),
 
-                    ReplicateAction::make()
-                        ->modalHeading(fn($record) => $record->name)
-                        ->modalDescription('Duplicaties worden automatisch op inactief gezet')
-                        ->beforeReplicaSaved(function ($replica) {
-                            $replica->is_active = false;
-                        }),
+                    Tables\Actions\Action::make('duplicate')
+                        ->label('Dupliceren')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->url(fn($record) => TaskPlannerResource::getUrl('create', [
+                            'duplicate_from' => $record->getKey(),
+                        ])),
                     DeleteAction::make(),
                 ]),
 
@@ -662,14 +738,18 @@ class TaskPlannerResource extends Resource
                         $ids = $records->modelKeys();
                         if (!$ids) return;
 
-                        DB::transaction(function () use ($ids) {
-                            $model = static::getModel();
-                            foreach (array_chunk($ids, 500) as $chunk) {
-                                $model::whereKey($chunk)
-                                    ->where('is_active', false)  // idempotent
-                                    ->update(['is_active' => true]);
-                            }
-                        });
+                        // Let the service do per-record transactions; chunk to keep memory low.
+                        TaskPlanner::query()
+                            ->select(['id', 'is_active', 'next_run_at', 'frequency', 'interval']) // keep it lean; add columns your service needs
+                            ->whereIn('id', $ids)
+                            ->where('is_active', false)
+                            ->orderBy('id')
+                            ->chunkById(200, function ($chunk) {
+                                foreach ($chunk as $tp) {
+                                    // The service should be idempotent and set next_run_at > now()
+                                    $tp->activate();
+                                }
+                            }, 'id');
                     })
                     ->deselectRecordsAfterCompletion(),
             ])
@@ -725,7 +805,7 @@ class TaskPlannerResource extends Resource
                     ->map(fn($id) => ['id' => (int) $id])
             );
 
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task)
+        return TaskAssignmentService::getAssignmentRuleTeamsByTaskMatchAndTeams($task)
             ->byTeamsUserBelongsTo()
             ->pluck('id')
             ->toArray();

@@ -27,6 +27,8 @@ use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Assets\Js;
 use Illuminate\Support\Facades\Vite;
 use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 
 class AdminPanelProvider extends PanelProvider

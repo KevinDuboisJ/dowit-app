@@ -222,7 +222,7 @@ export const updateTask = async (values, row, options = {}) => {
     original: row,
     updatedAt: updatedAtISOString,
   });
-
+console.log(values)
   try {
     const response = await axios.post(`/task/${row.id}/update`, {
       ...values,

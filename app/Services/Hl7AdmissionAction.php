@@ -9,8 +9,8 @@ use Carbon\Carbon;
 use App\Contracts\ChainAction;
 use App\Models\Task;
 use App\Exceptions\InvalidHl7MessageException;
-use App\Enums\TaskStatus;
-use App\Enums\TaskPriority;
+use App\Enums\TaskStatusEnum;
+use App\Enums\TaskPriorityEnum;
 use App\Events\BroadcastEvent;
 use App\Services\PatientService;
 
@@ -95,8 +95,8 @@ class Hl7AdmissionAction implements ChainAction
         'campus_id' => $data['campus_id'],
         'task_type_id' => '3',
         'space_id' => $visit->space_id,
-        'status_id' => TaskStatus::Added->value,
-        'priority' => TaskPriority::Medium->name,
+        'status_id' => TaskStatusEnum::Added->value,
+        'priority' => TaskPriorityEnum::Medium->value,
         'visit_id' => $visit->id,
       ],
     );
@@ -133,8 +133,8 @@ class Hl7AdmissionAction implements ChainAction
         'campus_id' => $data['campus_id'],
         'task_type_id' => '3',
         'space_id' => $visit->space_id,
-        'status_id' => TaskStatus::Added->value,
-        'priority' => TaskPriority::Medium->name,
+        'status_id' => TaskStatusEnum::Added->value,
+        'priority' => TaskPriorityEnum::Medium->value,
         'visit_id' => $visit->id,
       ],
     );

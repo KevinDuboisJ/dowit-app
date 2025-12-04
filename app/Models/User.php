@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Arr;
 use App\Models\Team;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
 use App\Traits\HasTeams;
 use Illuminate\Database\Eloquent\Builder;
 
 class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 {
-    use HasFactory, Notifiable, HasTeams, HasTeamOrUserScope;
+    use HasFactory, Notifiable, HasTeams, HasAccessScope;
 
     public const ROLE_ADMIN       = 'ADMIN';
     public const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
@@ -58,9 +58,9 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         'permissions'
     ];
 
-    public function getFullNameAttribute()
+    public function tasks(): BelongsToMany
     {
-        return "{$this->firstname} {$this->lastname}";
+        return $this->belongsToMany(Task::class);
     }
 
     // Scope users by teams or default to the authenticated user's teams
@@ -72,9 +72,39 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
             ->whereHas('teams', fn($q) => $q->whereIn('teams.id', $teamIds));
     }
 
+
     public function scopeExcludeSystemUser($query)
     {
         return $query->where('id', '!=', config('app.system_user_id'));
+    }
+
+    protected function roles(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => session()->get('roles', []),
+            set: fn(array $value) => session(['roles' => $value]),
+        );
+    }
+
+    public function getPermissionsAttribute()
+    {
+        return [
+            'seeAdminMenu' => Gate::allows('seeAdminMenu', [$this->roles]),
+            'seeItems' => Gate::allows('seeItems', [$this->roles]),
+        ];
+    }
+
+    public function getFullNameAttribute()
+    {
+        return "{$this->firstname} {$this->lastname}";
+    }
+
+    public function getImagePathAttribute()
+    {
+        // A default dummy profile image is used as a fallback when no image path is provided during user creation. 
+        // This typically occurs when a user is created from an external source, rather than directly through the app.
+        $imagePath = $this->attributes['image_path'] ?? 'dummy-profile.png';
+        return "https://edb.monica.be/uploads/photos/$imagePath";
     }
 
     public function getFormattedDepartmentIdAttribute()
@@ -87,39 +117,16 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         return sprintf('PROF%03d', $this->profession_id);
     }
 
+
     public function setLastLogin()
     {
         $this->last_login = Carbon::now()->format('Y-m-d H:i:s');
         return $this;
     }
 
-    protected function roles(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => session()->get('roles', []),
-            set: fn(array $value) => session(['roles' => $value]),
-        );
-    }
-
     public function hasRole(String|array $roles): bool
     {
         return !empty(array_intersect($this->roles, Arr::wrap($roles)));
-    }
-
-    public function getImagePathAttribute()
-    {
-        // A default dummy profile image is used as a fallback when no image path is provided during user creation. 
-        // This typically occurs when a user is created from an external source, rather than directly through the app.
-        $imagePath = $this->attributes['image_path'] ?? 'dummy-profile.png';
-        return "https://edb.monica.be/uploads/photos/$imagePath";
-    }
-
-    public function getPermissionsAttribute()
-    {
-        return [
-            'seeAdminMenu' => Gate::allows('seeAdminMenu', [$this->roles]),
-            'seeItems' => Gate::allows('seeItems', [$this->roles]),
-        ];
     }
 
     public function getFilamentAvatarUrl(): ?string
@@ -174,7 +181,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 
     public function getTeamIds(): array
     {
-        return $this->teams->pluck('id')->toArray();
+        return $this->teams->modelKeys();
     }
 
     public function isSuperAdmin()
@@ -185,11 +192,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
     public function isAdmin()
     {
         return $this->hasRole(self::ROLE_ADMIN);
-    }
-
-    public function tasks(): BelongsToMany
-    {
-        return $this->belongsToMany(Task::class);
     }
 
     // Check if the user belongs to a specific team
@@ -205,16 +207,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 
     public function getDefaultTeam(): Team|null
     {
-        return $this->teams()->first();
-    }
-
-    public function getTeams()
-    {
-        if ($this->isSuperAdmin()) {
-            return Team::all();
-        }
-
-        return $this->teams()->get();
+        return $this->teams()->first() ?? null;
     }
 
     public function getSettings()

@@ -42,4 +42,4 @@ Schedule::command(HandleTaskPlanners::class)->everyMinute();
 Schedule::command(HandleScheduledTasks::class)->everyMinute();
 Schedule::command(SeedHolidayDatabase::class)->yearly(); // Seed holidays
 Schedule::command(FailoverHolidaySeed::class)->yearlyOn(1, 2, '00:00'); // Runs January 2nd
-Schedule::command(HandlePatientVisits::class)->everyFifteenMinutes();
+Schedule::command(HandlePatientVisits::class)->everyTenMinutes();

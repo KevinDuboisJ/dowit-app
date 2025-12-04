@@ -1,0 +1,60 @@
+.help-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  position: relative;
+  
+  /* main gradient, based on rgb(13,148,136) */
+  background: radial-gradient(
+    circle at 30% 0%,
+    rgba(13, 148, 136, 0.2),      /* light center */
+    rgba(13, 148, 136, 0.6) 40%,  /* mid */
+    rgba(13, 148, 136, 1)         /* dark edge */
+  );
+
+  /* glow using your color at 0.2 opacity */
+  box-shadow:
+    0 0 0 2px rgba(13, 148, 136, 0.2),
+    0 10px 25px rgba(13, 148, 136, 0.2);
+
+  cursor: help;
+  z-index: 99;
+}
+
+.help-icon-core {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: rgb(236, 253, 245); /* readable light mint text */
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* pulsing teal ring */
+.help-icon-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+
+  /* ring uses your color with requested opacity */
+  border: 2px solid rgba(13, 148, 136, 0.2);
+
+  opacity: 0;
+  animation: help-icon-ring 1.6s ease-out infinite;
+}
+
+@keyframes help-icon-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}

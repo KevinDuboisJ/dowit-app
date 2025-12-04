@@ -39,7 +39,7 @@ export const TaskDesktopView = ({
           }}
         />
         <div className="ml-auto space-x-2">
-          <AnnouncementSheet />
+          <AnnouncementSheet/>
           <TaskSheet />
         </div>
       </div>

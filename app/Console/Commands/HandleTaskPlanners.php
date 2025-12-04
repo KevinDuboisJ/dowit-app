@@ -6,8 +6,7 @@ use App\Enums\TaskPlannerEvaluationResultEnum;
 use Illuminate\Console\Command;
 use App\Services\TaskPlannerService;
 use Illuminate\Support\Facades\Log;
-use App\Enums\TaskStatus;
-use App\Events\BroadcastEvent;
+use App\Enums\TaskStatusEnum;
 
 class HandleTaskPlanners extends Command
 {
@@ -30,7 +29,7 @@ class HandleTaskPlanners extends Command
                         continue;
                     }
 
-                    $taskPlannerService->createTask($taskPlanner, TaskStatus::Added, $taskPlanner->getOffsetRunAt());
+                    $taskPlannerService->execute($taskPlanner, TaskStatusEnum::Added, $taskPlanner->getOffsetRunAt());
 
                     $taskPlannerService->reschedule($taskPlanner);
                 }

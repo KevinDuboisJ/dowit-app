@@ -3,14 +3,14 @@
 namespace App\Models;
 
 use App\Traits\HasCreator;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
 use App\Traits\HasTeams;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 class Tag extends Model
 {
-    use HasCreator, HasTeams, HasTeamOrUserScope;
+    use HasCreator, HasTeams, HasAccessScope;
 
     public function taskPlanners()
     {

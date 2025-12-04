@@ -8,7 +8,7 @@ use Filament\Tables\Enums\ActionsPosition;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordCheckboxPosition;
 use Illuminate\Support\Str;
-use App\Enums\TaskStatus as TaskStatusEnum; // CODE FOR SUBTABLE
+use App\Enums\TaskStatusEnum; // CODE FOR SUBTABLE
 
 $actions = $getActions();
 $flatActionsCount = count($getFlatActions());
@@ -1145,6 +1145,7 @@ return null;
                     <!-- OPEN CODE FOR SUBTABLE -->
                     <tr
                         x-show="expanded"
+                        x-cloak
                         x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 max-h-0"
                         x-transition:enter-end="opacity-100 max-h-screen"

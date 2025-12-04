@@ -2,18 +2,19 @@
 
 namespace App\Models;
 
+use App\Contracts\HasRequestingTeamsScopeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\TaskType;
 use App\Models\Space;
 use App\Traits\HasCreator;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
 use App\Traits\HasTeams;
 
-class TaskAssignmentRule extends Model
+class TaskAssignmentRule extends Model implements HasRequestingTeamsScopeInterface
 {
-    use SoftDeletes, HasCreator, HasTeams, HasTeamOrUserScope;
+    use SoftDeletes, HasCreator, HasTeams, HasAccessScope;
 
     protected $casts = [
         'campuses' => 'array',
@@ -88,5 +89,31 @@ class TaskAssignmentRule extends Model
         });
 
         return $query;
+    }
+
+    public function scopeByRequestingTeams(Builder $query, User $user): Builder
+    {
+        $teamIds = $user->getTeamIds();
+
+        if (empty($teamIds)) {
+            // user has no teams → nothing matches
+            return $query->whereRaw('0 = 1');
+        }
+
+        // 1) Get task type IDs that have requestingTeams in user's teams
+        $taskTypeIds = TaskType::whereHas('requestingTeams', function (Builder $q) use ($teamIds) {
+            $q->whereKey($teamIds);
+        })->pluck('id');
+
+        if ($taskTypeIds->isEmpty()) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        // 2) Filter rules where JSON column task_types contains any of those ids
+        return $query->where(function (Builder $q) use ($taskTypeIds) {
+            foreach ($taskTypeIds as $taskTypeId) {
+                $q->orWhereJsonContains('task_types', ['id' => $taskTypeId]);
+            }
+        });
     }
 }

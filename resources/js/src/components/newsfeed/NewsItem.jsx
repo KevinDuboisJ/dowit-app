@@ -1,70 +1,119 @@
 import { format, parseISO, isToday } from 'date-fns'
-import { nl } from "date-fns/locale";
+import { nl } from 'date-fns/locale'
 import { cn } from '@/utils'
-import { Badge, Avatar, AvatarImage, AvatarFallback, RichText } from "@/base-components"
-import { __, getVariant } from '@/stores';
+import {
+  Badge,
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  RichText
+} from '@/base-components'
+import { __ } from '@/stores'
 
 export const NewsItem = ({ newsItem }) => {
-
-  let createdAt = formatDate(newsItem.created_at)
+  const createdAt = formatDate(newsItem.created_at)
+  const meta = newsItem.metadata?.changed_keys ?? {}
 
   return (
-    <div className="relative z-10 bg-[rgb(241 245 249 / 75%)] flex flex-col items-start rounded-lg p-2 text-left text-sm">
-      <div className="flex w-full flex-col">
-        <div className="flex items-center">
-          <div className="flex items-center">
-            <div className="font-semibold"> {`${newsItem.creator?.firstname} ${newsItem.creator?.lastname}`}</div>
-          </div>
-          <div
-            className={cn(
-              "ml-auto text-sm",
-              newsItem.selected === newsItem.id
-                ? "text-foreground"
-                : "text-muted-foreground"
-            )}
-          >
-            {/* {createdAt} */}
-          </div>
-        </div>
+    <div className="flex flex-col px-2">
+      <div className="relative right-2 text-sm text-slate-800 font-semibold pb-2">
+        {' '}
+        {`${newsItem.creator?.firstname} ${newsItem.creator?.lastname}`}
       </div>
-      <div className="flex w-full p-2">
-        <Avatar className="rounded mr-3 top-0 ">
-          <AvatarImage src={newsItem.creator?.image_path} alt={newsItem.creator?.firstname} />
-          <AvatarFallback>{newsItem.creator?.firstname.charAt(0)}</AvatarFallback>
+      <div className="flex items-start gap-3">
+        {/* Avatar OUTSIDE the card */}
+        <Avatar className="rounded mr-2">
+          <AvatarImage
+            src={newsItem.creator?.image_path}
+            alt={newsItem.creator?.firstname}
+          />
+          <AvatarFallback>
+            {newsItem.creator?.firstname.charAt(0)}
+          </AvatarFallback>
         </Avatar>
-        <div className="relative w-full p-3 py-2 text-sm text-muted-foreground border border-slate-100 rounded border-neutral-200 bg-slate-50
-    after:content-[''] after:absolute after:z-10 after:left-[-10px] after:top-[5px] after:w-0 after:h-0 after:border-r-[10px] after:border-r-neutral-200 after:border-t-[10px] after:border-t-transparent after:border-b-[10px] after:border-b-transparent">
 
-          <span className="block">{newsItem?.task_id ? newsItem.task?.name : 'Mededeling'}</span>
-          {newsItem.content?.length > 0 &&
-            <RichText text={newsItem.content} className='text-gray-700'/>
-          }
+        <div
+          className={cn(
+            'relative w-full p-3 py-2 text-sm text-muted-foreground border rounded border-slate-100 bg-slate-50',
+            'transition-all duration-150',
 
-          {newsItem?.status && (
-            <div className="mt-2">
-              <span className="block font-medium">Status gewijzigd naar&nbsp;</span>
-              <Badge className="mt-1 h-6 py-1 px-2" variant={newsItem.status.name}>
-                {__(newsItem.status.name)}
-              </Badge>
-            </div>
+            // ARROW
+            'before:content-[""] before:absolute before:left-[-9px] before:top-[8px]',
+            'before:border-y-[7px] before:border-y-transparent',
+            'before:border-r-[9px] before:border-r-slate-100'
           )}
+        >
+          <div className="flex min-w-0 flex-col">
+            {/* TOP LINE: left content + task name + date to the right */}
+            <div className="flex items-baseline w-full gap-x-2">
+              {newsItem?.task_id && newsItem.task?.name && (
+                <span className="font-semibold text-slate-700">
+                  {newsItem.task.name}
+                </span>
+              )}
 
-          <span className="block text-sm mt-1">{createdAt}</span>
+              {/* Mededeling */}
+              {!newsItem?.task_id && (
+                <span className="text-xs rounded-full uppercase tracking-wide text-amber-700 shadow-xs">
+                  Mededeling
+                </span>
+              )}
 
+              <div className="ml-auto text-[0.7rem] text-slate-400">
+                {createdAt}
+              </div>
+            </div>
+
+            {/* BODY */}
+            <div className="flex flex-col">
+              {/* Content */}
+              {newsItem.content?.length > 0 && (
+                <RichText
+                  text={newsItem.content}
+                  className="prose prose-sm max-w-none text-muted-foreground pb-2"
+                />
+              )}
+              
+              {/* Collega nodig */}
+              {newsItem?.task_id && meta.needs_help && (
+                <span className="text-xs rounded-full uppercase tracking-wide text-amber-700 shadow-xs">
+                  Collega nodig
+                </span>
+              )}
+
+              {/* Status */}
+              {Object.entries(meta)
+                .filter(([key, value]) => key !== 'needs_help') // ⬅️ OMITIR
+                .map(([key, value]) => (
+                  <div key={key} className="flex flex-wrap items-center gap-1">
+                    {key === 'assignees' ? (
+                      <span className="text-gray-700">Toegewezen aan</span>
+                    ) : (
+                      <span className="text-gray-700">
+                        {__(key.charAt(0).toUpperCase() + key.slice(1))}{' '}
+                        gewijzigd naar
+                      </span>
+                    )}
+
+                    <span className="text-green-600">
+                      {typeof value === 'string' ? __(value) : value.toString()}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       </div>
-
-    </div >
-  );
+    </div>
+  )
 }
 
-const formatDate = (createdAt) => {
-  const date = parseISO(createdAt);
+const formatDate = createdAt => {
+  const date = parseISO(createdAt)
 
   if (isToday(date)) {
-    return `vandaag ${format(date, "HH:mm", { locale: nl })}`; // "Vandaag HH:mm"
+    return `Vandaag • ${format(date, 'HH:mm', { locale: nl })}`
   }
 
-  return format(date, "PP HH:mm", { locale: nl }); // Dutch localized date
-};
-
+  return format(date, 'PP • HH:mm', { locale: nl })
+}

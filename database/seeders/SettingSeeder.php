@@ -20,9 +20,9 @@ class SettingSeeder extends Seeder
             'name' => 'Taakprioriteit',
             'code' => 'TASK_PRIORITY',
             'value' => json_encode([
-                "Low" => ["time" => "60", "color" => "#16a34a"],
-                "High" => ["time" => "600", "color" => "#dc2626"],
-                "Medium" => ["time" => "180", "color" => "#fb923c"]
+                "low" => ["time" => "60", "color" => "#16a34a"],
+                "high" => ["time" => "600", "color" => "#dc2626"],
+                "medium" => ["time" => "180", "color" => "#fb923c"]
             ]),
             'type' => 'global',
             'created_at' => Carbon::now()->format('Y-m-d H:i:s'),

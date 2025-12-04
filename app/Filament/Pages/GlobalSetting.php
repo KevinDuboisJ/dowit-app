@@ -114,7 +114,7 @@ class GlobalSetting extends Page implements HasForms
                             return \Filament\Forms\Components\Grid::make(12)
                                 ->schema([
                                     \Filament\Forms\Components\Placeholder::make('text')
-                                        ->label(__("Settings.$level") . ':')
+                                        ->label(__($level) . ':')
                                         ->columnSpan(2),
 
                                     \Filament\Forms\Components\TextInput::make("$code.$level.time")

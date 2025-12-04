@@ -6,16 +6,8 @@ use App\Enums\TeamEnum;
 use App\Filament\Resources\TaskPlannerResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
-use App\Models\TaskType;
-use App\Jobs\CreateTasksJob;
-use Illuminate\Support\Carbon;
-use App\Models\TaskPlanner;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\IconPosition;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use App\Models\Task;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -43,12 +35,12 @@ class ListTaskPlanners extends ListRecords implements HasForms
         ];
 
         // Conditionally add extra action if user has certain team
-        if ($user->teams->contains('id', TeamEnum::KineCA->value)) {
-            $actions[] = Actions\CreateAction::make('kineCA')
-                ->label('Kine Taakplanner')
+        if ($user->teams->contains('id', TeamEnum::Revalidatie->value)) {
+            $actions[] = Actions\CreateAction::make('Revalidatie')
+                ->label('Kine/Ergo CA Taakplanner')
                 ->groupedIcon('')
                 ->url(fn() => TaskPlannerResource::getUrl('create', [
-                    'source' => 'kineCA',
+                    'source' => 'Revalidatie',
                 ]));
         }
 

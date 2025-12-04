@@ -29,6 +29,7 @@ class TeamSetting extends Page implements HasForms
     protected static string $view = 'filament.pages.team-setting';
     protected static ?string $navigationLabel = 'Teaminstellingen ';
     protected static ?string $navigationGroup = 'Instellingen';
+    public bool $hasDefaultTeam = true;
 
     /** Scope: either 'global' or 'team' */
     protected static string $scope = 'team';
@@ -65,7 +66,17 @@ class TeamSetting extends Page implements HasForms
     public function mount(SettingService $settingService): void
     {
         $this->settingService = $settingService;
-        $userDefaultTeamId = Auth::user()->getDefaultTeam()->id;
+        $userDefaultTeamId = Auth::user()->getDefaultTeam()?->id;
+
+        if (! $userDefaultTeamId) {
+            // Gebruiker heeft geen standaardteam → toon alleen melding
+            $this->hasDefaultTeam = false;
+            $this->data = [];
+
+            return;
+        }
+
+        $this->hasDefaultTeam = true;
 
         // fill initial state
         $this->data = $this->getDefaultSettingsForSelectedTeam($userDefaultTeamId);
@@ -75,6 +86,10 @@ class TeamSetting extends Page implements HasForms
 
     public function getFormAction(): array
     {
+        if (! $this->hasDefaultTeam) {
+            return [];
+        }
+
         return [
             Action::make('save')
                 ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
@@ -84,35 +99,41 @@ class TeamSetting extends Page implements HasForms
 
     public function form(Form $form): Form
     {
+        if (! $this->hasDefaultTeam) {
+            return $form
+                ->schema([
+                    Placeholder::make('no_team')
+                        ->label('Geen team gevonden')
+                        ->content(
+                            'Je moet aan minstens één team gekoppeld zijn om teaminstellingen te kunnen beheren. Neem contact op met een beheerder.'
+                        ),
+                ])
+                ->statePath('data');
+        }
 
+        //------------------------------------------------------------
+        // 1) The team dropdown (reactive). When it changes, it sets
+        //    $this->data['team_id'], causing Filament to re-render the closure
+        //    in the “Dynamic Settings” section below.
+        //------------------------------------------------------------
         return $form->schema([
-            //------------------------------------------------------------
-            // 1) The team dropdown (reactive). When it changes, it sets
-            //    $this->data['team_id'], causing Filament to re-render the closure
-            //    in the “Dynamic Settings” section below.
-            //------------------------------------------------------------
             Select::make('team_id')
                 ->label('Kies een team')
                 ->options(Auth::user()->teams->pluck('name', 'id')->toArray())
                 ->default($this->data['team_id'])
                 ->required()
-                ->live() // Makes Filament re‐evaluate any closures
+                ->live()
                 ->selectablePlaceholder(false)
                 ->afterStateUpdated(function ($state) {
-                    // When the team changes, we fetch the default settings for that team
-                    $this->data = array_merge($this->data, $this->getDefaultSettingsForSelectedTeam($state));
+                    $this->data = array_merge(
+                        $this->data,
+                        $this->getDefaultSettingsForSelectedTeam($state)
+                    );
                 }),
 
-            //------------------------------------------------------------
-            // 2) A Section whose `schema` is a closure. Filament will
-            //    call this closure every time `$this->data['team_id']` changes,
-            //    so inside we can fetch all settings for that team and
-            //    return a freshly built array of Form components.
-            //------------------------------------------------------------
             Section::make('Instellingen voor geselecteerd team')
                 ->schema(fn(): array => $this->generateDynamicFieldsForTeam()),
-        ])
-            ->statePath('data');
+        ])->statePath('data');
     }
 
     /**
@@ -190,7 +211,7 @@ class TeamSetting extends Page implements HasForms
                         return Grid::make(12)
                             ->schema([
                                 Placeholder::make("{$code}_label_{$level}")
-                                    ->label(__("Settings.{$level}") . ':')
+                                    ->label(__($level) . ':')
                                     ->columnSpan(1),
 
                                 TextInput::make("{$code}.{$level}.time")
@@ -220,6 +241,16 @@ class TeamSetting extends Page implements HasForms
 
     public function save(SettingService $settingService): void
     {
+        if (! $this->hasDefaultTeam) {
+            Notification::make()
+                ->title('Geen team gevonden')
+                ->body('Je moet aan minstens één team gekoppeld zijn om instellingen op te slaan.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         $data = $this->form->getState();
         $teamId = $data['team_id'];
 

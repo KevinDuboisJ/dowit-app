@@ -6,17 +6,14 @@ import {
   TableBody,
   TableCell,
   TableRow,
-  Heroicon,
-  Avatar,
-  AvatarImage,
-  AvatarFallback
+  Heroicon
 } from '@/base-components'
 
 export const AnnouncementFeed = ({className}) => {
   const {announcements} = usePage().props
   const markAsRead = announcementId => {
     router.post(
-      `/announce/${announcementId}/mark-as-read`,
+      `/announcements/${announcementId}/mark-as-read`,
       {replace: true},
       {
         only: ['announcements'],
@@ -35,7 +32,7 @@ export const AnnouncementFeed = ({className}) => {
             announcements.map(announcement => (
               <TableRow
                 key={announcement.id}
-                className="bg-[#FFFBE0] hover:bg-[#FFFBE0]"
+                className="bg-[#FFFBE0] hover:bg-[#FFFBE0] leading-none"
               >
                 <TableCell>
                   <div className="flex items-center min-h-4 py-0 px-1">
@@ -43,17 +40,17 @@ export const AnnouncementFeed = ({className}) => {
                       icon="InformationCircle"
                       className="h-5 w-5 shrink-0"
                     />
-                    {/* <Avatar className="inline-block w-5 h-5 mr-1">
-                    <AvatarImage src={announcement.creator.image_path} alt={announcement.creator.lastname} />
-                    <AvatarFallback>{announcement.creator.lastname.charAt(0)}</AvatarFallback>
-                  </Avatar> */}
-                    <RichText
-                      text={announcement.content}
-                      className="text-sm px-2"
-                    />
-                    <span className="pr-2 self-center text-[10px] text-black opacity-30">
-                      {`${announcement.creator.firstname} ${announcement.creator.lastname}`}
-                    </span>
+                    <div className="flex flex-col">
+                      <RichText
+                        text={announcement.content}
+                        className="text-sm px-2 leading-4"
+                      />
+                      <span className="px-2 text-[10px] text-black opacity-30">
+                        Toegevoegd door{' '}
+                        {`${announcement.creator.firstname} ${announcement.creator.lastname}`}
+                        {`, ${new Date(announcement.start_date).toLocaleDateString('nl-BE')}`}
+                      </span>
+                    </div>
                     <Heroicon
                       icon="XMark"
                       className="h-4 w-4 shrink-0 cursor-pointer ml-auto"

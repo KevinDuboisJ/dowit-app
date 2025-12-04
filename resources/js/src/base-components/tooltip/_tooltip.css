@@ -1,0 +1,60 @@
+.fui-tooltip {
+  display: inline-flex;
+}
+
+.fui-tooltip-inner {
+  background: #020617; /* bg-slate-900 */
+  color: #fff;
+  font-size: 0.75rem; /* text-xs */
+  padding: 0.5rem 0.75rem; /* px-2 py-1 */
+  border-radius: 0.375rem; /* rounded-md */
+  position: relative;
+  transition-property: opacity, transform;
+}
+
+/* OPEN state: ease-out (smooth entrance) */
+.fui-tooltip-inner[data-status='open'] {
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+/* CLOSE state: ease-out (clean exit) */
+.fui-tooltip-inner[data-status='close'] {
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+/* INITIAL and CLOSE both start hidden */
+.fui-tooltip-inner[data-status='initial'],
+.fui-tooltip-inner[data-status='close'] {
+  opacity: 0;
+}
+
+/* Placement-aware slide for initial/close */
+.fui-tooltip-inner[data-status='initial'][data-placement^='top'],
+.fui-tooltip-inner[data-status='close'][data-placement^='top'] {
+  transform: translateY(12px);
+}
+
+.fui-tooltip-inner[data-status='initial'][data-placement^='bottom'],
+.fui-tooltip-inner[data-status='close'][data-placement^='bottom'] {
+  transform: translateY(-12px);
+}
+
+.fui-tooltip-inner[data-status='initial'][data-placement^='left'],
+.fui-tooltip-inner[data-status='close'][data-placement^='left'] {
+  transform: translateX(12px);
+}
+
+.fui-tooltip-inner[data-status='initial'][data-placement^='right'],
+.fui-tooltip-inner[data-status='close'][data-placement^='right'] {
+  transform: translateX(-12px);
+}
+
+/* Arrow */
+.fui-tooltip-arrow {
+  width: 8px;
+  height: 8px;
+  background: #020617;
+  transform: rotate(45deg);
+}

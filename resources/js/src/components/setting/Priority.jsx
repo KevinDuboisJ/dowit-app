@@ -1,6 +1,6 @@
 import { __ } from '@/stores'
 import {
-  Tippy
+  Tooltip
 } from '@/base-components'
 
 export const PriorityText = ({ state, color }) => {
@@ -11,8 +11,8 @@ export const PriorityText = ({ state, color }) => {
 
 export const PriorityCircle = ({ state, color }) => {
   return (
-    <Tippy content={state} >
+    <Tooltip content={state} >
       <div style={{ backgroundColor: color }} className="w-4 h-4 mx-auto rounded-full"></div>
-    </Tippy>
+    </Tooltip>
   )
 }

@@ -1,8 +1,7 @@
-import React, {useEffect, useRef, useState, useCallback} from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
-import {usePoll, router} from '@inertiajs/react'
-import {__} from '@/stores'
-import {cn} from '@/utils'
+import { usePoll } from '@inertiajs/react'
+import { __ } from '@/stores'
 
 import {
   useTask,
@@ -12,26 +11,32 @@ import {
   inertiaResourceSync
 } from '@/hooks'
 
-import {TaskOverviewSheet, TaskDesktopView, TaskMobileView} from '@/components'
+import {
+  TaskOverviewSheet,
+  TaskDesktopView,
+  TaskMobileView
+} from '@/components'
 
-const Dashboard = ({tasks: initTasks}) => {
-  const {filters, filtersRef} = useFilter({
+const Dashboard = ({ tasks: initTasks }) => {
+  const { filters, filtersRef } = useFilter({
     defaultValues: {
-      assignedTo: {field: 'assignedTo', type: 'like', value: null},
-      status_id: {field: 'status_id', type: '=', value: null},
-      team_id: {field: 'team_id', type: '=', value: null}
+      assignedTo: { field: 'assignedTo', type: 'like', value: null },
+      status_id: { field: 'status_id', type: '=', value: null },
+      team_id: { field: 'team_id', type: '=', value: null }
     },
-    options: {filterFromUrlParams: true}
+    options: { filterFromUrlParams: true }
   })
-  const {tasks, setTasks, mergeTasks, todoTasks, openTasks, setPagination} = useTask(initTasks, filters.get())
-  const {newEvent} = useWebSocket()
-  const [sheetState, setSheetState] = useState({open: false, task: null})
-  const {isMobile} = useIsMobile()
+  const { tasks, setTasks, mergeTasks, todoTasks, openTasks, setPagination } =
+    useTask(initTasks, filters.get())
+  const { newEvent } = useWebSocket()
+  const [sheetState, setSheetState] = useState({ open: false, task: null })
+  const { isMobile } = useIsMobile()
   const lastUpdatedTaskRef = useRef(null)
 
   // Poll every 5 minutes as a fallback for WebSockets (300000 ms)
   usePoll(300000, {
-    onSuccess: ({props}) => {
+    only: ['tasks'],
+    onSuccess: ({ props }) => {
       setTasks(props?.tasks?.data)
     }
   })
@@ -42,7 +47,7 @@ const Dashboard = ({tasks: initTasks}) => {
 
     if (newEvent.type === 'task_created' || newEvent.type === 'task_updated') {
       inertiaResourceSync(['tasks'], {
-        onSuccess: ({tasks}) => {
+        onSuccess: ({ tasks }) => {
           handleTasksRecon(tasks)
         }
       })
@@ -67,7 +72,7 @@ const Dashboard = ({tasks: initTasks}) => {
   }, [newEvent])
 
   const handleTaskUpdate = useCallback((updatedTask, options = {}) => {
-    const {scroll = false} = options
+    const { scroll = false } = options
     lastUpdatedTaskRef.current = updatedTask
     lastUpdatedTaskRef.scroll = scroll
 
@@ -82,7 +87,7 @@ const Dashboard = ({tasks: initTasks}) => {
 
   const handleTasksRecon = useCallback(
     data => {
-      const {data: tasks, ...rest} = data
+      const { data: tasks, ...rest } = data
       setPagination(rest)
       mergeTasks(tasks)
     },

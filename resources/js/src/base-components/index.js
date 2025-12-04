@@ -1,8 +1,6 @@
 import 'zoom-vanilla.js/dist/zoom-vanilla.min.js'
 import Chart from './chart/Main'
 import Litepicker from './litepicker/Main'
-import Tippy from './tippy/Main'
-import TippyContent from './tippy-content/Main'
 import TomSelect from './tom-select/Main'
 import LoadingIcon from './loading-icon/Main'
 import TinySlider from './tiny-slider/Main'
@@ -28,11 +26,11 @@ export * from './date-time-picker'
 
 export * from './avatar-stack'
 
+export * from './tooltip'
+
 export {
   Chart,
   Litepicker,
-  Tippy,
-  TippyContent,
   TomSelect,
   LoadingIcon,
   TinySlider,

@@ -1,15 +1,15 @@
-import {useState, useEffect} from 'react'
-import {cn} from '@/utils'
+import { useState, useEffect } from 'react'
+import { cn } from '@/utils'
 import {
   Avatar,
   AvatarImage,
   AvatarFallback,
   Heroicon,
   Loader,
-  Tippy
+  Tooltip
 } from '@/base-components'
 
-export const AvatarStack = ({avatars, maxAvatars = 4, className}) => {
+export const AvatarStack = ({ avatars, maxAvatars = 4, className }) => {
   avatars = avatars || [] // Ensure it's always an array
   avatars.slice(0, maxAvatars)
   const remainingAvatarsCount = avatars.length - maxAvatars
@@ -25,17 +25,15 @@ export const AvatarStack = ({avatars, maxAvatars = 4, className}) => {
   return (
     <div className="flex items-center">
       {avatars.map(avatar => (
-        <Tippy
+        <Tooltip
           key={avatar.id}
           content={`${avatar.firstname} ${avatar.lastname}`}
         >
-          <Avatar
-            className={cn('inline-block w-6 h-6 mr-1', className)}
-          >
+          <Avatar className={cn('inline-block w-6 h-6 mr-1', className)}>
             <AvatarImage src={avatar.image_path} alt={avatar.lastname} />
             <AvatarFallback>{avatar.lastname.charAt(0)}</AvatarFallback>
           </Avatar>
-        </Tippy>
+        </Tooltip>
       ))}
 
       {remainingAvatarsCount > 0 && (
@@ -52,30 +50,12 @@ export const AvatarStack = ({avatars, maxAvatars = 4, className}) => {
 }
 
 export const AvatarStackRemovable = ({
-  avatars: initialAvatars,
-  onValueChange = () => {}
+  avatars = [],
+  loading = false,
+  onRemove = () => {}
 }) => {
-  const [avatars, setAvatars] = useState([])
-
-  // Whenever the initialAvatars prop changes, update the local state.
-  useEffect(() => {
-    if (initialAvatars !== '{{loading}}' && initialAvatars.length > 0) {
-      setAvatars(initialAvatars)
-    }
-  }, [initialAvatars])
-
-  if (initialAvatars === '{{loading}}') {
-    return <Loader />
-  }
-
-  if (initialAvatars.length === 0) {
-    return null
-  }
-
-  const handleValueChange = value => {
-    setAvatars(avatars.filter(avatar => avatar.id !== value))
-    onValueChange(value)
-  }
+  if (loading) return <Loader />
+  if (!avatars.length) return null
 
   return (
     <div className="flex items-center space-x-1">
@@ -83,13 +63,12 @@ export const AvatarStackRemovable = ({
         <div key={avatar.id} className="relative">
           <Avatar>
             <AvatarImage src={avatar.image_path} alt={avatar.lastname} />
-            <AvatarFallback>{avatar.lastname.charAt(0)}</AvatarFallback>
+            <AvatarFallback>{avatar.lastname?.charAt(0)}</AvatarFallback>
           </Avatar>
-          {/* Delete Icon */}
           <Heroicon
             title="Toewijzing verwijderen"
             icon="XMark"
-            onClick={() => handleValueChange(avatar.id)}
+            onClick={() => onRemove(avatar.id)}
             className="h-4 w-4 absolute top-1 right-1 transform translate-x-1/2 -translate-y-1/2 cursor-pointer text-red-800"
             size={16}
           />
@@ -99,11 +78,11 @@ export const AvatarStackRemovable = ({
   )
 }
 
-export const AvatarStackWrap = ({children}) => {
+export const AvatarStackWrap = ({ children }) => {
   return <div className="flex flex-col">{children}</div>
 }
 
-export const AvatarStackHeader = ({title = '', icon = null}) => {
+export const AvatarStackHeader = ({ title = '', icon = null }) => {
   return (
     <div className="flex items-center space-x-1 min-w-0 text-sm text-slate-500">
       {icon}

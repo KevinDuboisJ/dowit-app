@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\TaskPriorityEnum;
+
 return [
 
     /*
@@ -34,7 +36,7 @@ return [
             ],
             'config'  => [
                 // the three fixed levels
-                'levels' => ['low', 'Medium', 'high'],
+                'levels' => array_column(TaskPriorityEnum::cases(), 'value'),
 
                 // each “field” that every level gets
                 'fields' => [

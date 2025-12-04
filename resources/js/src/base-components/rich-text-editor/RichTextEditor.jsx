@@ -31,9 +31,10 @@ export const RichText = ({text, className}) => {
   return (
     <div
       className={cn(
-        className,
         'xl:[&_img]:max-w-[480px]', // Any <img> descendant will get max-width:480px & preserve aspect ratio
         'xl:[&_img]:h-auto',
+        'leading-tight',
+        className
       )}
       dangerouslySetInnerHTML={{__html: text}}
     ></div>
@@ -60,10 +61,8 @@ export const RichTextEditor = ({
         HTMLAttributes: {
           rel: 'noopener noreferrer',
           target: '_blank'
-        }
-      }),
+        },
 
-      Link.extend({
         inclusive: false
       }),
 
@@ -75,15 +74,14 @@ export const RichTextEditor = ({
     editorProps: {
       attributes: {
         class: cn(
-          'p-4 h-auto resize-y overflow-hidden border border-0 overflow-y-auto outline-none prose max-w-none',
+          'p-4 pb-8 resize-y border overflow-y-auto border-0 outline-none prose max-w-none',
           className
         )
       }
     },
     onUpdate: ({editor}) => {
       if (!readonly) {
-        const content = editor.getText() ? editor.getHTML() : ''
-        onUpdate(content)
+        onUpdate(editor.isEmpty ? '' : editor.getHTML())
       }
     }
   })
@@ -132,7 +130,7 @@ const RichTextToolbar = ({editor}) => {
     try {
       editor.chain().focus().extendMarkRange('link').setLink({href: url}).run()
     } catch (e) {
-      alert(e.message)
+      alert(e)
     }
   }, [editor])
 
@@ -169,9 +167,26 @@ const RichTextToolbar = ({editor}) => {
       </button>
 
       <CameraButton
-        callback={base64 =>
-          editor.chain().focus().setImage({src: base64}).run()
-        }
+        callback={base64 => {
+          editor
+            .chain()
+            .focus()
+            .insertContent([
+              {type: 'image', attrs: {src: base64}},
+              {type: 'paragraph'}
+            ])
+            .setTextSelection(editor.state.doc.content.size)
+            .run()
+
+
+            setTimeout(editor
+            .chain()
+            .focus()
+            .insertContent([
+              {type: 'paragraph'}
+            ]).focus().setTextSelection(editor.state.doc.content.size).run(), 3000); // Will alert once, after a second.
+
+        }}
       />
 
       {/* <button

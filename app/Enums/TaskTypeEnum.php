@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
+use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
 enum TaskTypeEnum: int implements HasLabel
 {
+    use HasEnumCaseNames;
+
     case PatientTransportInBed = 1;
     case Cleaning = 2;
     case PeriodicCheck = 3;
@@ -31,14 +34,24 @@ enum TaskTypeEnum: int implements HasLabel
         };
     }
 
-    public static function getPatientTransportIds(): array
+    public static function fromCollection($collection): array
     {
-        return [
-            self::PatientTransportInBed->value,
-            self::PatientTransportInWheelchair->value,
-            self::PatientTransportOnFootAssisted->value,
-            self::PatientTransportNotify->value,
-            self::PatientTransportWithCrutches->value,
-        ];
+        return $collection
+            ->mapWithKeys(function ($item) {
+                $enum = self::from($item->id);
+                return [$enum->name => $enum];
+            })
+            ->all();
+    }
+
+    public function isPatientTransport(): bool
+    {
+        return in_array($this, [
+            self::PatientTransportInBed,
+            self::PatientTransportInWheelchair,
+            self::PatientTransportOnFootAssisted,
+            self::PatientTransportNotify,
+            self::PatientTransportWithCrutches,
+        ], true);
     }
 }

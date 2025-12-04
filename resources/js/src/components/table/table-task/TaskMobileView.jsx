@@ -1,20 +1,18 @@
-import {isValidElement, useEffect, useRef} from 'react'
+import { isValidElement, useEffect, useRef } from 'react'
 import {
   AnnouncementFeed,
   PriorityText,
   getPriority,
   TaskActionButton
 } from '@/components'
-import {usePage, router} from '@inertiajs/react'
-import {__, getColor} from '@/stores'
-import Lottie from 'lottie-react'
-import helpAnimation from '@json/animation-help.json'
-import {useLoader} from '@/hooks'
+import { usePage, router } from '@inertiajs/react'
+import { __, getColor } from '@/stores'
+import { useLoader } from '@/hooks'
 
 import {
   Lucide,
   Heroicon,
-  Tippy,
+  Tooltip,
   Separator,
   Accordion,
   AccordionContent,
@@ -25,7 +23,12 @@ import {
   ScrollArea
 } from '@/base-components'
 
-import {FilterBar, AnnouncementSheet, TaskSheet} from '@/components'
+import {
+  FilterBar,
+  AnnouncementSheet,
+  TaskSheet,
+  HelpAnimation
+} from '@/components'
 
 export const TaskMobileView = ({
   todoTasks,
@@ -37,8 +40,8 @@ export const TaskMobileView = ({
   lastUpdatedTaskRef,
   filtersRef
 }) => {
-  const {announcements, settings, user} = usePage().props
-  const {loading, setLoading, Loader} = useLoader()
+  const { announcements, settings, user } = usePage().props
+  const { loading, setLoading, Loader } = useLoader()
   const todoTasksContainer = useRef()
   const openTasksContainer = useRef()
 
@@ -75,9 +78,9 @@ export const TaskMobileView = ({
     return (
       <div key={task.id} className="flex">
         <div
-          style={{backgroundColor: priority.color}}
+          style={{ backgroundColor: priority.color }}
           className="shrink-0 shadow-[2px_0_3px_rgba(0,0,0,0.1)] w-[32px] transform transform transition duration-150 active:translate-x-1 cursor-pointer"
-          onClick={() => setSheetState({open: true, taskId: task.id})}
+          onClick={() => setSheetState({ open: true, taskId: task.id })}
         ></div>
         <div className="flex-1 min-w-0 bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm px-4 py-3 rounded-tl-none rounded-bl-none">
           <div className="flex items-center ">
@@ -101,7 +104,9 @@ export const TaskMobileView = ({
             {/* Priority */}
             <InfoRow
               minWidth="50px"
-              icon={<Heroicon icon="Signal" className="w-4 h-4 text-slate-500" />}
+              icon={
+                <Heroicon icon="Signal" className="w-4 h-4 text-slate-500" />
+              }
               label="Status:"
               value={
                 <span className={`text-sm font-medium ml-1 ${statusColor}`}>
@@ -149,17 +154,14 @@ export const TaskMobileView = ({
           {/* Avatars */}
           <div className="flex items-center">
             <div className="flex -space-x-2">
-              {task.needs_help > 0 && (
-                <Tippy
-                  content={'Hulp gevraagd'}
-                  options={{allowHTML: true, offset: [30, 20]}}
-                >
-                  <Lottie
-                    className="w-5 h-5 mr-2 cursor-help"
-                    animationData={helpAnimation}
-                  />
-                </Tippy>
-              )}
+              <Tooltip content="Hulp gevraagd">
+                <HelpAnimation
+                  needsHelp={task.needs_help}
+                  isAssignedToCurrentUser={
+                    task.capabilities.isAssignedToCurrentUser
+                  }
+                />
+              </Tooltip>
 
               <AvatarStack avatars={task.assignees} />
             </div>
@@ -175,7 +177,7 @@ export const TaskMobileView = ({
               <Heroicon
                 className="cursor-pointer w-5 h-5"
                 icon="EllipsisVertical"
-                onClick={() => setSheetState({open: true, taskId: task.id})}
+                onClick={() => setSheetState({ open: true, taskId: task.id })}
               />
             </div>
           </div>
@@ -185,121 +187,121 @@ export const TaskMobileView = ({
   }
 
   return (
-      <ScrollArea className="flex flex-col h-full min-h-0 fadeInUp space-y-2">
-        <div className="p-4">
-          <Accordion type="single" collapsible>
-            <AccordionItem className="border-b-0" value="item-1">
-              <AccordionTrigger className="p-0 hover:no-underline">
-                Filters
-              </AccordionTrigger>
-              <AccordionContent className="p-1 py-2">
-                <FilterBar
-                  filtersRef={filtersRef}
-                  onApplyFilters={({activeFilters}) => {
-                    setLoading(true)
-                    router.get(
-                      '/',
-                      {filters: activeFilters},
-                      {
-                        only: ['tasks'],
-                        queryStringArrayFormat: 'indices',
-                        preserveState: true,
-                        onSuccess: ({props}) => {
-                          setTasks(props.tasks.data)
-                          setLoading(false)
-                        },
-                        onError: error => {
-                          console.log(error)
-                        }
+    <ScrollArea className="flex flex-col h-full min-h-0 fadeInUp space-y-2">
+      <div className="p-4">
+        <Accordion type="single" collapsible>
+          <AccordionItem className="border-b-0" value="item-1">
+            <AccordionTrigger className="p-0 hover:no-underline">
+              Filters
+            </AccordionTrigger>
+            <AccordionContent className="p-1 py-2">
+              <FilterBar
+                filtersRef={filtersRef}
+                onApplyFilters={({ activeFilters }) => {
+                  setLoading(true)
+                  router.get(
+                    '/',
+                    { filters: activeFilters },
+                    {
+                      only: ['tasks'],
+                      queryStringArrayFormat: 'indices',
+                      preserveState: true,
+                      onSuccess: ({ props }) => {
+                        setTasks(props.tasks.data)
+                        setLoading(false)
+                      },
+                      onError: error => {
+                        console.log(error)
                       }
-                    )
-                  }}
-                />
+                    }
+                  )
+                }}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+        <div className="flex gap-x-3 my-2">
+          <AnnouncementSheet />
+          <TaskSheet />
+        </div>
+        <AnnouncementFeed announcements={announcements} />
+
+        {/* To-Do Tasks */}
+        <div className="relative">
+          {loading && (
+            <div className="flex justify-center items-center z-30 h-full w-full absolute bg-gray-100 opacity-50 pointer-events-none">
+              {' '}
+              <Loader width={80} height={80} className="z-40 relative" />
+            </div>
+          )}
+          <Accordion
+            className="h-full my-2 m-0 p-0 space-y-4 shadow-none"
+            type="multiple"
+            defaultValue={['item-1', 'item-2']}
+          >
+            {/* Assigned tasks */}
+            <AccordionItem
+              className="bg-lime-50/30 mb-0 p-0 border rounded-xl"
+              value="item-1"
+            >
+              <AccordionTrigger className="text-sm p-4 cursor-pointer hover:no-underline">
+                <span className="flex">
+                  Aan mij toegewezen
+                  <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 flex items-center justify-center rounded-full">
+                    {todoTasks.length}
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent asChild>
+                <div ref={todoTasksContainer} className="space-y-3">
+                  {todoTasks.length > 0 ? (
+                    todoTasks.map(renderTaskRow)
+                  ) : (
+                    <div className="p-4 text-sm text-gray-500">
+                      Geen taken toegewezen
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Open tasks */}
+            <AccordionItem
+              className="bg-blue-50/50 mb-0 p-0 border rounded-xl"
+              value="item-2"
+            >
+              <AccordionTrigger className="text-sm p-4 cursor-pointer hover:no-underline">
+                <span className="flex">
+                  Niet aan mij toegewezen
+                  <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 px-2 flex items-center justify-center rounded-full">
+                    {openTasks.length}
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent asChild>
+                <div ref={openTasksContainer} className="space-y-3">
+                  {openTasks.length > 0 ? (
+                    openTasks.map(renderTaskRow)
+                  ) : (
+                    <div className="p-4 text-sm text-gray-500">
+                      Geen taken gevonden
+                    </div>
+                  )}
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <div className="flex gap-x-3">
-            <AnnouncementSheet />
-            <TaskSheet />
-          </div>
-          <AnnouncementFeed announcements={announcements} />
-
-          {/* To-Do Tasks */}
-          <div className="relative">
-            {loading && (
-              <div className="flex justify-center items-center z-30 h-full w-full absolute bg-gray-100 opacity-50 pointer-events-none">
-                {' '}
-                <Loader width={80} height={80} className="z-40 relative" />
-              </div>
-            )}
-            <Accordion
-              className="h-full my-2 m-0 p-0 space-y-4 shadow-none"
-              type="multiple"
-              defaultValue={['item-1', 'item-2']}
-            >
-              {/* Assigned tasks */}
-              <AccordionItem
-                className="bg-lime-50/30 mb-0 p-0 border rounded-xl"
-                value="item-1"
-              >
-                <AccordionTrigger className="text-sm p-4 cursor-pointer hover:no-underline">
-                  <span className="flex">
-                    Aan mij toegewezen
-                    <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 flex items-center justify-center rounded-full">
-                      {todoTasks.length}
-                    </span>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent asChild>
-                  <div ref={todoTasksContainer} className="space-y-3">
-                    {todoTasks.length > 0 ? (
-                      todoTasks.map(renderTaskRow)
-                    ) : (
-                      <div className="p-4 text-sm text-gray-500">
-                        Geen taken toegewezen
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Open tasks */}
-              <AccordionItem
-                className="bg-blue-50/50 mb-0 p-0 border rounded-xl"
-                value="item-2"
-              >
-                <AccordionTrigger className="text-sm p-4 cursor-pointer hover:no-underline">
-                  <span className="flex">
-                    Niet aan mij toegewezen
-                    <span className="text-[10px] !text-white ml-1 bg-green-700 min-w-[1.5rem] h-6 w-6 px-2 flex items-center justify-center rounded-full">
-                      {openTasks.length}
-                    </span>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent asChild>
-                  <div ref={openTasksContainer} className="space-y-3">
-                    {openTasks.length > 0 ? (
-                      openTasks.map(renderTaskRow)
-                    ) : (
-                      <div className="p-4 text-sm text-gray-500">
-                        Geen taken gevonden
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
         </div>
-      </ScrollArea>
+      </div>
+    </ScrollArea>
   )
 }
 
-const InfoRow = ({icon = null, label, value, minWidth = '90px'}) => {
+const InfoRow = ({ icon = null, label, value, minWidth = '90px' }) => {
   return (
     <div className="flex items-start">
       <div
-        style={{minWidth: minWidth}}
+        style={{ minWidth: minWidth }}
         className="flex items-center space-x-1 min-w-0"
       >
         {icon}

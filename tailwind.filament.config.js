@@ -12,8 +12,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Inter', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
-                roboto: ["Roboto"],
+                sans: ['Geist', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
             },
             colors: {
 

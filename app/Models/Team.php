@@ -20,6 +20,13 @@ class Team extends Model
 {
     use HasFactory, SoftDeletes, HasCreator;
 
+    protected static function booted(): void
+    {
+        static::addGlobalScope('exclude_fallback', function (Builder $query) {
+            $query->where('teams.id', '<>', '1');
+        });
+    }
+
     protected $casts = [
         'autoassign_rules' => 'array'
     ];
@@ -67,13 +74,18 @@ class Team extends Model
             ->using(SettingTeam::class);
     }
 
+    public function teamRelationPath()
+    {
+        return 'users.teams';
+    }
+
     public function scopeByTeamsUserBelongsTo(Builder $query)
     {
         $user = Auth::user();
 
         if ($user) {
             // Get all team IDs the user belongs to
-            $teamIds = $user->teams->pluck('id')->toArray();
+            $teamIds = $user->getTeamIds();
 
             // Apply the filter based on the user's teams
             $query->whereIn('teams.id', $teamIds);

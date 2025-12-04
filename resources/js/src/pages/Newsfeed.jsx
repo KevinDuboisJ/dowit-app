@@ -5,7 +5,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
   Loader,
   ScrollArea,
 } from '@/base-components'
@@ -13,7 +12,7 @@ import {useState, useEffect, useRef, useCallback} from 'react'
 import {router} from '@inertiajs/react'
 import {__} from '@/stores'
 
-const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, teams}) => {
+const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
   const [newsfeed, setNewsfeed] = useState(initNewsfeed.data)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -142,7 +141,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, teams}) => {
 
           <Select
             onValueChange={e => {
-              handleSearch('teams.id', '=', e)
+              handleSearch('team_id', '=', e)
             }}
           >
             <SelectTrigger className="w-[180px] bg-white text-sm text-slate-500">
@@ -150,7 +149,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, teams}) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={null}>Team</SelectItem>
-              {teams.map(team => (
+              {user.teams.map(team => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
                 </SelectItem>
@@ -177,10 +176,8 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, teams}) => {
           </Select>
         </div>
 
-        <Separator />
-
-        <ScrollArea className="fadeInUp">
-          <div className="flex flex-col h-full">
+        <ScrollArea className="fadeInUp pt-3">
+          <div className="flex flex-col h-full gap-8">
             {newsfeed.map((item, index) => (
               <div
                 key={item.id}

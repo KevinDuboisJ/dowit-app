@@ -2,19 +2,71 @@
 
 namespace App\Services;
 
+use App\Enums\TaskPriorityEnum;
 use App\Models\Task;
 use App\Models\User;
-use App\Models\Comment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
-use App\Enums\TaskStatus as TaskStatusEnum;
+use App\Enums\TaskStatusEnum;
 
 class TaskService
 {
+  public function create(array $data): Task
+  {
+    try {
+
+      $userId =  Auth::id() ?? config('app.system_user_id');
+      $usesPatientlist = isset($data['visit']);
+
+      DB::connection('mysql')->beginTransaction();
+      if ($usesPatientlist) {
+        DB::connection('patientlist')->beginTransaction();
+      }
+
+      // build payload
+      $taskPayload = $data['task'];
+
+      if ($usesPatientlist) {
+        $taskPayload['visit_id'] = $data['visit']['id'];
+      }
+
+      // Create task
+      $task = Task::create($taskPayload);
+
+      //Sync side stuff (tags, assignees, teams)
+      $task->syncTags($data['tags']);
+      $task->syncAssignees($data['assignees']);
+      $task->syncTeams($data['teamsMatchingAssignment']);
+
+      // Task created comment
+      $task->comments()->create([
+        'created_by' => $userId,
+        'content' => 'Taak aangemaakt',
+      ]);
+
+      // commit
+      DB::connection('mysql')->commit();
+
+      if ($usesPatientlist) {
+        DB::connection('patientlist')->commit();
+      }
+
+      // eager
+      return $task->load(Task::getRelationships());
+    } catch (\Throwable $e) {
+
+      DB::connection('mysql')->rollBack();
+      if ($usesPatientlist) {
+        DB::connection('patientlist')->rollBack();
+      }
+      throw $e;
+    }
+  }
+
   public function updateTask(Task $task, array $data)
   {
     $clientTimestamp = Carbon::parse($data['beforeUpdateAt']);
@@ -36,11 +88,19 @@ class TaskService
         'updated_at',
       ]));
 
-      $metadata = $this->trackMetadataChanges($task);
-      $this->handleUserAssignments($task, $data, $metadata);
-      $comment = $task->addComment($data['comment'] ?? '', $metadata);
-      $this->handleAutoStatusReset($task, $data, $comment);
+      $task->comments()->create([
+        'status_id' => $task->isDirty('status_id') ? $task->status_id : null,
+        'needs_help' => $task->isDirty('needs_help') ? $task->needs_help : null,
+        'content' => $data['comment'] ?? '',
+        'metadata' => $this->trackTaskMetaDataChanges($task, $data),
+      ]);
 
+      // Only sync assignees if the client actually sent them
+      if (array_key_exists('assignees', $data)) {
+        $task->syncAssignees($data['assignees']);
+      }
+
+      $this->handleAutoStatusReset($task, $data);
       $task->save();
     });
 
@@ -56,66 +116,77 @@ class TaskService
     ];
   }
 
-  private function trackMetadataChanges(Task $task): array
+  private function handleAutoStatusReset(Task $task, array $data): void
   {
-    $metadata = [];
-
-    if ($task->isDirty('status_id')) {
-      $metadata['changed_keys']['status'] = $task->status->name;
-    }
-
-    if ($task->isDirty('priority')) {
-      $metadata['changed_keys']['priority'] = $task->priority;
-    }
-
-    if ($task->isDirty('needs_help')) {
-      $metadata['changed_keys']['needs_help'] = $task->needs_help;
-    }
-
-    return $metadata;
-  }
-
-  private function handleUserAssignments(Task $task, array $data, array &$metadata): void
-  {
-    if (!empty($data['usersToAssign'])) {
-      // Get IDs of already assigned users
-      $alreadyAssignedIds = $task->assignees()->pluck('users.id')->toArray();
-
-      // Filter only the new user IDs that are not already assigned
-      $newUsersToAssign = array_diff($data['usersToAssign'], $alreadyAssignedIds);
-
-      // Assign all users (if your assignUsers method handles duplicates gracefully)
-      $task->assignUsers($data['usersToAssign']);
-
-      // Only update metadata for truly new users
-      if (!empty($newUsersToAssign)) {
-        $metadata['changed_keys']['assignees'] = User::whereIn('id', $newUsersToAssign)
-          ->pluck(DB::raw("CONCAT(firstname, ' ', lastname)"))
-          ->toArray();
-      }
-    }
-
-    if (!empty($data['usersToUnassign'])) {
-      $task->unassignUsers($data['usersToUnassign']);
-      $metadata['changed_keys']['unassignees'] = User::whereIn('id', $data['usersToUnassign'])
-        ->pluck(DB::raw("CONCAT(firstname, ' ', lastname)"))
-        ->toArray();
-    }
-  }
-
-  private function handleAutoStatusReset(Task $task, array $data, Comment $comment): void
-  {
+    // If there are no assignees after unassignment, reset status to 'Added'
     if ($task->assignees->isEmpty() && !empty($data['usersToUnassign'])) {
       $task->update(['status_id' => TaskStatusEnum::Added->value]);
-
       $task->comments()->create([
         'created_by' => config('app.system_user_id'),
         'content' => 'Status werd automatisch omgezet naar Toegevoegd',
-        'created_at' => $comment->created_at->addSecond(),
       ]);
-
-      $task->load('comments');
     }
+  }
+
+  public function trackTaskMetaDataChanges(Task $task, array $data): ?array
+  {
+    $changed = [];
+
+    // Current assignees from DB
+    $currentAssignees = $task->assignees()->pluck('users.id')->all();
+
+    // Status
+    if ($task->isDirty('status_id')) {
+      $changed['status'] = $task->status->name;
+    }
+
+    // Priority (guard against missing key for partial updates)
+    if ($task->isDirty('priority') && array_key_exists('priority', $data)) {
+      $priorityEnum = TaskPriorityEnum::tryFrom($data['priority']);
+      $changed['priority'] = $priorityEnum?->name ?? $data['priority'];
+    }
+
+    // Needs help
+    if ($task->isDirty('needs_help')) {
+      $changed['needs_help'] = $task->needs_help;
+    }
+
+    // Assignees (only if the client actually sent them)
+    if (array_key_exists('assignees', $data)) {
+      $newAssignees = $data['assignees'] ?? [];
+
+      $assigned   = array_values(array_diff($newAssignees, $currentAssignees));
+      $unassigned = array_values(array_diff($currentAssignees, $newAssignees));
+
+      if (!empty($assigned) || !empty($unassigned)) {
+
+        $allChangedIds = array_unique([...$assigned, ...$unassigned]);
+
+        // One query for all changed users
+        $namesById = User::whereIn('id', $allChangedIds)
+          ->pluck(DB::raw("CONCAT(firstname, ' ', lastname)"), 'id');
+
+        if (!empty($assigned)) {
+          $changed['assignees'] = array_values(
+            $namesById->only($assigned)->all()
+          );
+        }
+
+        if (!empty($unassigned)) {
+          $changed['unassignees'] = array_values(
+            $namesById->only($unassigned)->all()
+          );
+        }
+      }
+    }
+
+    if (empty($changed)) {
+      return null;
+    }
+
+    return [
+      'changed_keys' => $changed,
+    ];
   }
 
   public function fetchAndCombineTasks($request)
@@ -132,7 +203,7 @@ class TaskService
       'assignees',
       'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
     ];
-    
+
     $filters = $request->filled('filters') ? $request->input('filters') : null;
     $sorters = $request->filled('sorters') ? $request->input('sorters') : null;
 

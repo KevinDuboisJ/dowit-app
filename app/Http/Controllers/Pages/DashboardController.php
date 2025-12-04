@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Pages;
 
+use App\Enums\TaskPriorityEnum;
+use App\Enums\TaskStatusEnum;
+use App\Enums\TaskTypeEnum;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use App\Models\Task;
@@ -10,12 +13,12 @@ use Illuminate\Http\Request;
 use App\Models\Comment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
-use App\Http\Requests\StoreAnnouncementRequest;
 use App\Services\TaskAssignmentService;
-use Illuminate\Contracts\Auth\Authenticatable;
-use App\Events\BroadcastEvent;
+use App\Models\Announcement;
 use App\Services\TaskService;
 use App\Models\TaskType;
+use App\Models\Team;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -25,8 +28,6 @@ class DashboardController extends Controller
     $settings = $user->getSettings();
     $userTeamsIds = $user->getTeamIds();
 
-    //$settings = PrioritySettingResource::collection($settings)->toArray(request());
-
     return Inertia::render('Dashboard', [
       'tasks' => fn() => $taskService->fetchAndCombineTasks($request),
 
@@ -34,10 +35,8 @@ class DashboardController extends Controller
 
       'statuses' => fn() => DB::table('task_statuses')
         ->select('id', 'name')
-        ->whereIn('id', [1, 2, 4, 5, 6, 12])
+        ->whereIn('id', [1, 2, 4, 5, 6, 7, 12])
         ->get(),
-
-      'teams' => fn() => $user->getTeams(),
 
       'campuses' => Inertia::lazy(function () {
         return DB::table('campuses')
@@ -73,17 +72,21 @@ class DashboardController extends Controller
       }),
 
       'task_types' => Inertia::lazy(function () {
-        return TaskType::select('id', 'name')
-          ->get()
-          ->map(fn($item) => [
-            'value' => $item->id,
-            'label' => $item->name,
-          ]);
+        return array_map(
+          fn($enum) =>
+          [
+            'value' => $enum->name,
+            'isPatientTransport' => $enum->isPatientTransport()
+          ],
+          TaskTypeEnum::fromCollection(TaskType::all())
+        );
       }),
+
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
+
         $task = new Task([
           'campus_id' => $request->input('campus') ?? null,
-          'task_type_id' => $request->input('taskType') ?? null,
+          'task_type_id' => TaskTypeEnum::fromCaseName($request->input('taskType') ?? '')?->value,
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
         ]);
@@ -94,16 +97,7 @@ class DashboardController extends Controller
             ->map(fn($id) => ['id' => (int) $id])
         );
 
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams($task)->get();
-      }),
-
-      'patients' => Inertia::lazy(function () use ($request) {
-        return TaskAssignmentService::getTeamsFromTheAssignmentRulesByTaskMatchAndTeams(new Task([
-          'campus_id' => $request->input('campus') ?? null,
-          'task_type_id' => $request->input('taskType') ?? null,
-          'space_id' => $request->input('space') ?? null,
-          'space_to_id' => $request->input('spaceTo') ?? null,
-        ]))->get();
+        return TaskAssignmentService::getAssignmentRuleTeamsByTaskMatchAndTeams($task)->get();
       }),
 
       'announcements' => Comment::with('creator')
@@ -127,29 +121,78 @@ class DashboardController extends Controller
                 ->orWhereNull('end_date');
             });
         })
+        ->whereNull('deleted_at')
         ->orderBy('start_date')
         ->get(),
+
+      'ownAnnouncements' => Inertia::optional(function () {
+        // 1) Get announcements
+        $announcements = Announcement::where('created_by', Auth::id())
+          ->whereNull('deleted_at')
+          ->orderBy('created_at', 'desc')
+          ->get();
+
+        // 2) Collect all user + team IDs from all announcements
+        $userIds = $announcements->pluck('recipient_users') // collection of arrays
+          ->flatten()
+          ->filter()
+          ->unique()
+          ->values()
+          ->all();
+
+        $teamIds = $announcements->pluck('recipient_teams')
+          ->flatten()
+          ->filter()
+          ->unique()
+          ->values()
+          ->all();
+
+        // 3) Load all users/teams in one go and index by ID
+        $users = User::whereIn('id', $userIds)
+          ->select('id', 'firstname', 'lastname')
+          ->get()
+          ->keyBy('id');
+
+        $teams = Team::whereIn('id', $teamIds)
+          ->select('id', 'name')
+          ->get()
+          ->keyBy('id');
+
+        // 4) Attach users[] and teams[] to each announcement
+        return $announcements->map(function ($announcement) use ($users, $teams) {
+          $announcement->users = collect($announcement->recipient_users ?? [])
+            ->map(fn($id) => $users->get($id))
+            ->filter()
+            ->map(fn($user) => [
+              'value' => $user->id,
+              'label' => "{$user->firstname} {$user->lastname}",
+            ])
+            ->values()
+            ->all();
+
+          $announcement->teams = collect($announcement->recipient_teams ?? [])
+            ->map(fn($id) => $teams->get($id))
+            ->filter()
+            ->map(fn($team) => [
+              'value' => $team->id,
+              'label' => $team->name,
+            ])
+            ->values()
+            ->all();
+
+          return $announcement;
+        });
+      }),
+
+      'priorities' => array_column(TaskPriorityEnum::cases(), 'value'),
+
+      'task_statuses' => [
+        TaskStatusEnum::Added->name,
+        TaskStatusEnum::InProgress->name,
+        TaskStatusEnum::WaitingForSomeone->name,
+        TaskStatusEnum::Completed->name,
+      ],
+
     ]);
-  }
-
-  public function markAsRead(Comment $comment, Authenticatable $user)
-  {
-    // Add the user ID to the `read_by` column if it's not already there
-    $readBy = $comment->read_by ?? [];
-    if (!in_array($user->id, $readBy)) {
-      $readBy[] = $user->id;
-      $comment->read_by = $readBy;
-      $comment->save();
-    }
-
-    return to_route('dashboard.index'); // return redirect()->back();
-  }
-
-  public function announce(StoreAnnouncementRequest $request)
-  {
-    $data = $request->prepareForDatabase();
-    $announcement = Comment::create($data);
-    broadcast(new BroadcastEvent($announcement, 'announcement_created', 'dashboard-announce'));
-    return response()->json($announcement);
   }
 }

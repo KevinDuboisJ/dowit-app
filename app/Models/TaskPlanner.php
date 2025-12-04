@@ -18,12 +18,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use App\Services\TaskPlannerService;
 use App\Traits\HasJsonAssignees;
-use App\Traits\HasTeamOrUserScope;
+use App\Traits\HasAccessScope;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 class TaskPlanner extends Model
 {
-    use SoftDeletes, HasCreator, HasTeams, HasJsonAssignees, HasTeamOrUserScope;
+    use SoftDeletes, HasCreator, HasTeams, HasJsonAssignees, HasAccessScope;
 
     protected $casts = [
         'frequency' => TaskPlannerFrequency::class,
@@ -130,7 +131,7 @@ class TaskPlanner extends Model
     //     return $query->whereRaw('DATE_SUB(next_run_at, INTERVAL task_types.creation_time_offset MINUTE) <= ?', [$now]);
     // }
 
-    public function getNextRunDate(?Carbon $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon
+    public function getNextRunDate(Carbon|CarbonImmutable|null $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon|CarbonImmutable
     {
         // Fallback to the model's properties if no arguments are passed
         $next_run_at = $next_run_at ?? $this->next_run_at;
@@ -192,7 +193,7 @@ class TaskPlanner extends Model
         }
     }
 
-    public function getNextWeekdayInMonth(Carbon $fromDate, int $weekNumber, string $dayOfWeek): Carbon
+    public function getNextWeekdayInMonth(Carbon|CarbonImmutable $fromDate, int $weekNumber, string $dayOfWeek): Carbon
     {
         // Store original time
         $hour = $fromDate->hour;
@@ -232,7 +233,7 @@ class TaskPlanner extends Model
         }
     }
 
-    protected function getNextSpecificDay(Carbon $currentDate, array $interval)
+    protected function getNextSpecificDay(Carbon|CarbonImmutable $currentDate, array $interval)
     {
         // Convert days to Carbon day numbers (0 = Sunday, 1 = Monday, etc.)
         $dayNumbers = array_map(function ($day) {

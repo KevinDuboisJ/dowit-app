@@ -2,17 +2,13 @@
 
 namespace App\Enums;
 
-use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
-enum TaskPriority implements HasLabel
+enum TaskPriorityEnum: string implements HasLabel
 {
-    use HasEnumCaseNames;
-
-    case Low;
-    case Medium;
-    case High;
-
+    case Low = 'low';
+    case Medium = 'medium';
+    case High = 'high';
 
     public function getLabel(): ?string
     {

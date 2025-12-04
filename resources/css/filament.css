@@ -22,17 +22,20 @@
  |
  */
 @import './views/_filament.css';
+@import '../../vendor/awcodes/filament-table-repeater/resources/css/plugin.css';
 
 /*
  |--------------------------------------------------------------------------
- | Theme
+ | Font
  |--------------------------------------------------------------------------
  |
- | Import filament theme
+ | Import fonts
  |
  |
   */
-@import '../../vendor/awcodes/filament-table-repeater/resources/css/plugin.css';
+
+@import './fonts/_geist.css';
+
 
 /*
  |--------------------------------------------------------------------------
@@ -43,4 +46,4 @@
  |
  |
  */
- @config '../../tailwind.filament.config.js';
+@config '../../tailwind.filament.config.js';

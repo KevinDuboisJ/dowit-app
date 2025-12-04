@@ -16,9 +16,7 @@ trait HasCreator
     public static function bootHasCreator()
     {
         static::creating(function ($model) {
-            if (Auth::check()) {
-                $model->created_by = Auth::id() ?? config('app.system_user_id');
-            }
+            $model->created_by ??= Auth::id() ?? config('app.system_user_id');
         });
     }
 

@@ -1,10 +1,10 @@
 import { helper } from '@/utils'
 import {
-  Tippy,
+  Tooltip,
 } from '@/base-components'
 
 function TextValue({ value }) {
-  return (value?.length > 25) ? <Tippy className="cursor-help" options={{ zIndex: 99999 }} content={value}> {helper.cutText(value, 25)} </Tippy> : <span>{value}</span>
+  return (value?.length > 25) ? <Tooltip className="cursor-help" options={{ zIndex: 99999 }} content={value}> {helper.cutText(value, 25)} </Tooltip> : <span>{value}</span>
 }
 function BooleanValue({ value }) {
   return <span>{value === 1 ? '1' : '0'}</span>

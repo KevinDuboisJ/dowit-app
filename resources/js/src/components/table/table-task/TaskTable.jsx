@@ -30,7 +30,6 @@ export const TaskTable = ({
   const [grouping, setGrouping] = useState(['assignedGroup'])
   const [expanded, setExpanded] = useState(true) // Controls expanded rows
   const columns = useTaskTableColumns({
-    tasks,
     handleTaskUpdate,
     handleTasksRecon
   })
@@ -75,10 +74,6 @@ export const TaskTable = ({
       expanded
     },
 
-    defaultColumn: {
-      size: 'auto' //starting column size
-    },
-
     onExpandedChange: setExpanded, // Handles expand/collapse
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(), // Enables grouping
@@ -88,24 +83,17 @@ export const TaskTable = ({
   return (
     <div className="flex flex-col h-full min-h-0 intro-y ">
       <ScrollArea className="relative">
-        <table className="table w-full border-separate border-spacing-0 caption-bottom text-sm">
+        <table className="table table-fixed w-full border-separate border-spacing-0 caption-bottom text-sm">
           <TableHeader className="!sticky top-0 z-10 bg-zinc-50">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map(header => {
+
                   return (
                     header.id !== 'assignedGroup' && (
                       <TableHead
                         key={header.id}
-                        style={{
-                          width:
-                            typeof header.getSize() === 'number'
-                              ? `${header.getSize()}px`
-                              : header.getSize(),
-                          maxWidth: header.column.columnDef.maxSize
-                            ? `${header.column.columnDef.maxSize}px`
-                            : header.column.columnDef.maxSize
-                        }}
+                        style={{ width: header.getSize() !== 150 ? header.getSize() : '100%' }}
                         className="bg-zinc-50 text-sm text-primary"
                       >
                         {header.isPlaceholder

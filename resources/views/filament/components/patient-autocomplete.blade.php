@@ -1,61 +1,77 @@
-@assets
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.10.2/lottie.min.js"></script>
-@endassets
-
-@script
-<script>
-    window.lottieAnimation = @json(json_decode(file_get_contents(public_path('images/loading.json')), true));
-</script>
-@endscript
-
 <x-dynamic-component
     :component="$getFieldWrapperView()"
     :field="$field">
 
-    <div x-data="{
-    searchValue: @js(
-        $getState()
-            ? ($getState()['patient']['firstname'] . ' ' . $getState()['patient']['lastname'] . ' (' . ($getState()['patient']['gender'] ?? '') . ') - ' . ($getState()['bed']['room']['number'] ?? '') . ', ' . ($getState()['bed']['number'] ?? ''))
-            : ''
-    ),
-    visit: $wire.entangle('{{ $getStatePath() }}'),
-    visitList: [],
-    loading: false,
-    showDropdown: false,
-    async fetchPatient() {
-        if (this.searchValue.length === 8 || (isNaN(this.searchValue) && this.searchValue.length > 2)) {
-            this.loading = true;
-			this.startLottie();
-						
-            try {
-                const response = await fetch('/visit/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    },
-                    body: JSON.stringify({ search: this.searchValue })
-                });
+    <div
+        wire:ignore
+        x-init="$nextTick(() => initLottie())"
+        x-data="{
+        searchValue: @js(
+            $getState()
+                ? ($getState()['patient']['firstname'] . ' ' . $getState()['patient']['lastname'] . ' (' . ($getState()['patient']['gender'] ?? '') . ') - ' . ($getState()['bed']['room']['number'] ?? '') . ', ' . ($getState()['bed']['number'] ?? ''))
+                : ''
+        ),
+        visit: $wire.{{ $applyStateBindingModifiers("entangle('{$getStatePath()}')") }},
+        visitList: [],
+        loading: false,
+        showDropdown: false,
+        lottieInstance: null,
 
-                if (response.ok) {
-                    const data = await response.json();
-                    this.visitList = data;
-                    this.showDropdown = true;
-                    this.loading = false;
-			        this.stopLottie();
-                }
-            } catch (e) {
-                console.error(e)
+        async initLottie() {
+            if (!this.$refs.lottieContainer) return
+
+            if (!this.lottieInstance) {
+                this.lottieInstance = await window.initLottie(
+                    this.$refs.lottieContainer,
+                    '{{ asset('images/loading.json') }}'
+                )
             }
+        },
 
-        } else {
-        this.visitList = [];
-        this.visit = null;
-        this.showDropdown = false
-        }
-    },
+        async fetchPatient() {
+            if (this.searchValue.length === 8 || (isNaN(this.searchValue) && this.searchValue.length > 2)) {
+                this.loading = true
+                this.startLottie()
+                try {
+                    const response = await fetch('/visit/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        },
+                        body: JSON.stringify({ search: this.searchValue }),
+                    })
 
-    clear() {
+                    if (response.ok) {
+                        const data = await response.json()
+                        this.visitList = data
+                        this.showDropdown = true
+                    }
+                } catch (e) {
+                    console.error(e)
+                } finally {
+                    this.loading = false
+                    this.stopLottie()
+                }
+            } else {
+                this.visitList = []
+                this.visit = null
+                this.showDropdown = false
+            }
+        },
+
+        startLottie() {
+
+            this.lottieInstance.play()
+        },
+
+        stopLottie() {
+            if (this.lottieInstance) {
+                this.lottieInstance.stop()
+            }
+        },
+
+        clear() {
         this.searchValue = '';
         this.visit = null;
         this.visitList = [];
@@ -70,33 +86,6 @@
         const bedNum = visit.bed?.number ?? '';
         const bedInfo = (room || bedNum) ? ` - ${room}, ${bedNum}` : '';
         return `${name}${gender}${bedInfo}`.trim();
-    },
-
-	startLottie() {
-        if (this.$refs.lottieContainer && !this.lottieInstance) {
-            this.lottieInstance = lottie.loadAnimation({
-                container: this.$refs.lottieContainer,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                animationData: window.lottieAnimation,
-                 rendererSettings: {
-                    preserveAspectRatio: 'xMidYMid slice',
-                    width: '100%',
-                    height: '100%',
-                    viewBoxSize:'200 200 1920 1080'
-                
-                }
-            });
-        } else if (this.lottieInstance) {
-            this.lottieInstance.play();
-        }
-    },
-
-    stopLottie() {
-        if (this.lottieInstance) {
-            this.lottieInstance.stop();
-        }
     },
 
     maxLength() {

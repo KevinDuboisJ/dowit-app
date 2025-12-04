@@ -4,8 +4,9 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
 
-class StoreAnnouncementRequest extends FormRequest
+class AnnouncementRequest extends FormRequest
 {
     public function authorize()
     {
@@ -24,7 +25,8 @@ class StoreAnnouncementRequest extends FormRequest
             'selectedTeams.*.value' => ['integer'],
 
             'date' => ['required', 'array'],
-            'date.from' => ['required', 'date', 'after_or_equal:today'],
+            'date.from' => ['required', 'date'],
+            'date.to' => ['nullable', 'date'],
 
             'announcement' => ['required', 'string', 'min:1'],
         ];
@@ -61,7 +63,7 @@ class StoreAnnouncementRequest extends FormRequest
         return [
             'content' => $validated['announcement'],
             'start_date' => isset($validated['date']['from']) ? date('Y-m-d H:m:s', strtotime($validated['date']['from'])) : null,
-            'end_date' => isset($validated['date']['to']) ? date('Y-m-d', strtotime($validated['date']['from'])) : null,
+            'end_date' => isset($validated['date']['to']) ? date('Y-m-d', strtotime($validated['date']['to'])) : null,
             'recipient_users' => $validated['selectedUsers'] ? collect($validated['selectedUsers'])->pluck('value')->toArray() : null,
             'recipient_teams' => $validated['selectedTeams'] ? collect($validated['selectedTeams'] ?? null)->pluck('value')->toArray() : null,
         ];

@@ -1,16 +1,15 @@
-import React, {useEffect, useState} from 'react'
-import {toast} from 'sonner'
-import {CalendarIcon} from 'lucide-react'
-import {cn} from '@/utils'
-import {format, isBefore, startOfToday} from 'date-fns'
-import {nlBE} from 'date-fns/locale'
-import {__} from '@/stores'
-import {zodResolver} from '@hookform/resolvers/zod'
-import {useForm, useWatch} from 'react-hook-form'
-import {z} from 'zod'
-import {useInertiaFetchList, useAxiosFetchByInput} from '@/hooks'
+import React, { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { CalendarIcon } from 'lucide-react'
+import { cn } from '@/utils'
+import { format } from 'date-fns'
+import { nlBE } from 'date-fns/locale'
+import { __ } from '@/stores'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useWatch } from 'react-hook-form'
+import { z } from 'zod'
+import { useInertiaFetchList, useAxiosFetchByInput } from '@/hooks'
 import axios from 'axios'
-import {isPatientTransportTask} from '@/stores/enums'
 
 import {
   Sheet,
@@ -44,7 +43,7 @@ import {
   Loader
 } from '@/base-components'
 
-import {PatientAutocomplete} from '@/components'
+import { PatientAutocomplete } from '@/components'
 
 export const TaskSheet = React.memo(() => {
   const [sheetState, setSheetState] = useState(false)
@@ -95,28 +94,28 @@ const CreateTaskForm = () => {
   const [loading, setLoading] = useState(false)
 
   const {
-    list: {campuses, task_types: taskTypes, tags: tagsEager}
+    list: { campuses, task_types, tags: tagsEager }
   } = useInertiaFetchList({
     only: ['campuses', 'task_types', 'tags'],
     eager: true
   })
 
-  const {list: spaces, fetchList: fetchSpaces} = useAxiosFetchByInput({
+  const { list: spaces, fetchList: fetchSpaces } = useAxiosFetchByInput({
     url: '/spaces/search',
     queryKey: 'userInput'
   })
 
-  const {list: users, fetchList: fetchUsers} = useAxiosFetchByInput({
+  const { list: users, fetchList: fetchUsers } = useAxiosFetchByInput({
     url: '/users/search',
     queryKey: 'userInput'
   })
 
-  const {list: tagsList, fetchList: fetchTags} = useAxiosFetchByInput({
+  const { list: tagsList, fetchList: fetchTags } = useAxiosFetchByInput({
     url: '/tags/search',
     queryKey: 'userInput'
   })
 
-  const {list: assets, fetchList: fetchAssets} = useAxiosFetchByInput({
+  const { list: assets, fetchList: fetchAssets } = useAxiosFetchByInput({
     url: '/assets',
     method: 'get',
     queryKey: 'search'
@@ -128,6 +127,97 @@ const CreateTaskForm = () => {
       tag => !(tagsEager ?? []).some(existing => existing.id === tag.id)
     )
   ]
+
+  const FormSchema = React.useMemo(() => {
+    return (
+      z
+        .object({
+          name: z.string().min(1, 'Naam is verplicht'),
+          startDateTime: z.date({
+            required_error: 'Gelieve een Startdatum te kiezen',
+            invalid_type_error: 'Startdatum moet een geldige datum zijn'
+          }),
+          description: z
+            .string()
+            .min(1, 'Gelieve een omschrijving in te vullen'),
+          taskType: z.string().min(1, 'Gelieve een taaktype te kiezen'),
+          campus: z.string().min(1, 'Gelieve een campus te kiezen'),
+          visit: z
+            .object({
+              id: z.number().optional()
+            })
+            .optional(),
+          space: z
+            .array(
+              z.object({
+                label: z.string(),
+                value: z.number()
+              })
+            )
+            .optional(),
+          spaceTo: z
+            .array(
+              z.object({
+                label: z.string(),
+                value: z.number()
+              })
+            )
+            .optional(),
+          tags: z
+            .array(
+              z.object({
+                label: z.string(),
+                value: z.number()
+              })
+            )
+            .optional(),
+          assets: z
+            .array(
+              z.object({
+                label: z.string(),
+                value: z.number()
+              })
+            )
+            .optional(),
+          assignees: z
+            .array(
+              z.object({
+                label: z.string(),
+                value: z.number()
+              })
+            )
+            .optional(),
+          teamsMatchingAssignment: z.array(z.any()).optional()
+        })
+        // at least one team or one assignee
+        .refine(
+          data =>
+            !(
+              (data.teamsMatchingAssignment?.length ?? 0) === 0 &&
+              (data.assignees?.length ?? 0) === 0
+            ),
+          {
+            path: ['assignees'],
+            message:
+              'Gelieve een teamtaaktoewijzingsregel aan te maken of de taak rechtstreeks aan een persoon toe te wijzen'
+          }
+        )
+        // patient required if task type is patient transport
+        .refine(
+          data => {
+            const type = task_types?.[data.taskType] // now in scope
+            if (type?.isPatientTransport) {
+              return !!data.visit?.id
+            }
+            return true
+          },
+          {
+            path: ['visit'],
+            message: 'Gelieve een patiënt te kiezen'
+          }
+        )
+    )
+  }, [task_types])
 
   const form = useForm({
     resolver: zodResolver(FormSchema),
@@ -141,7 +231,7 @@ const CreateTaskForm = () => {
       space: [],
       spaceTo: [],
       tags: [],
-      assignTo: [],
+      assignees: [],
       teamsMatchingAssignment: []
     }
   })
@@ -154,15 +244,19 @@ const CreateTaskForm = () => {
   })
 
   async function onSubmit(data) {
-    const cleanData = {...data}
+    const payload = {
+      ...data,
+      tags: data.tags.map(u => u.value),
+      assignees: data.assignees.map(u => u.value)
+    }
     setLoading(true)
 
     if (!data.visit.id) {
-      delete cleanData.visit
+      delete payload.visit
     }
 
     try {
-      const response = await axios.post('/task/store', {...cleanData})
+      const response = await axios.post('/task/store', { ...payload })
 
       if (response.status === 200) {
         toast.success('Taak is succesvol aangemaakt')
@@ -196,7 +290,7 @@ const CreateTaskForm = () => {
             <FormField
               control={form.control}
               name="name"
-              render={({field}) => (
+              render={({ field }) => (
                 <FormItem className="basis-0 grow">
                   <FormLabel>Naam</FormLabel>
                   <FormControl>
@@ -217,7 +311,7 @@ const CreateTaskForm = () => {
             <FormField
               control={form.control}
               name="startDateTime"
-              render={({field}) => (
+              render={({ field }) => (
                 <FormItem className="basis-0 grow">
                   <FormLabel>Startdatum</FormLabel>
                   <Popover>
@@ -231,7 +325,7 @@ const CreateTaskForm = () => {
                           )}
                         >
                           {field.value ? (
-                            format(field.value, 'PPP p', {locale: nlBE})
+                            format(field.value, 'PPP p', { locale: nlBE })
                           ) : (
                             <span>Startdatum</span>
                           )}
@@ -254,7 +348,7 @@ const CreateTaskForm = () => {
           <FormField
             control={form.control}
             name="description"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Omschrijving</FormLabel>
                 <FormControl>
@@ -277,7 +371,7 @@ const CreateTaskForm = () => {
             <FormField
               control={form.control}
               name="taskType"
-              render={({field}) => {
+              render={({ field }) => {
                 return (
                   <FormItem className="grow">
                     <FormLabel>Taaktype</FormLabel>
@@ -298,7 +392,14 @@ const CreateTaskForm = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <CreateSelectOptions rows={taskTypes} />
+                        <SelectContent>
+                          {task_types &&
+                            Object.values(task_types).map(item => (
+                              <SelectItem key={item.value} value={item.value}>
+                                {__(item.value)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -309,7 +410,7 @@ const CreateTaskForm = () => {
             <FormField
               control={form.control}
               name="campus"
-              render={({field}) => (
+              render={({ field }) => (
                 <FormItem className="grow">
                   <FormLabel>Campus</FormLabel>
                   <Select
@@ -341,7 +442,7 @@ const CreateTaskForm = () => {
           <FormField
             control={form.control}
             name="tags"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Tags</FormLabel>
                 <FormControl>
@@ -385,11 +486,11 @@ const CreateTaskForm = () => {
           /> */}
 
           {/* Conditionally Rendered PatientVisit Field */}
-          {isPatientTransportTask(taskType) && (
+          {taskType && task_types[taskType]?.isPatientTransport && (
             <FormField
               control={form.control}
               name="visit"
-              render={({field}) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Patiënt</FormLabel>
                   <FormControl>
@@ -407,7 +508,7 @@ const CreateTaskForm = () => {
             <FormField
               control={form.control}
               name="space"
-              render={({field}) => (
+              render={({ field }) => (
                 <FormItem className="grow">
                   <FormLabel>Locatie</FormLabel>
                   <FormControl>
@@ -428,11 +529,11 @@ const CreateTaskForm = () => {
               )}
             />
             {/* Conditionally rendered spaceTo field */}
-            {isPatientTransportTask(taskType) && (
+            {taskType && task_types[taskType]?.isPatientTransport && (
               <FormField
                 control={form.control}
                 name="spaceTo"
-                render={({field}) => (
+                render={({ field }) => (
                   <FormItem className="grow">
                     <FormLabel>Bestemmingslocatie</FormLabel>
                     <FormControl>
@@ -456,8 +557,8 @@ const CreateTaskForm = () => {
           </div>
           <FormField
             control={form.control}
-            name="assignTo"
-            render={({field}) => (
+            name="assignees"
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Toewezen</FormLabel>
                 <FormControl>
@@ -490,7 +591,7 @@ const CreateTaskForm = () => {
   )
 }
 
-const CreateSelectOptions = ({rows}) =>
+const CreateSelectOptions = ({ rows }) =>
   rows && rows.length > 0 ? (
     rows.map(item => (
       <SelectItem key={item.value} value={String(item.value)}>
@@ -503,13 +604,14 @@ const CreateSelectOptions = ({rows}) =>
     </SelectItem>
   )
 
-const TeamsMatchingAssignmentRules = ({control, setValue}) => {
+const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
   const [taskType, campus, space, spaceTo, tags] = useWatch({
     control,
-    name: ['taskType', 'campus', 'tags']
+    name: ['taskType', 'campus', 'space', 'spaceTo', 'tags']
   })
+
   const {
-    list: teamsMatchingAssignmentRules,
+    list: teamsMatchingAssignmentRules = [],
     fetchList: fetchTeamsMatchingAssignmentRules
   } = useInertiaFetchList({
     only: ['teamsMatchingAssignmentRules'],
@@ -527,7 +629,12 @@ const TeamsMatchingAssignmentRules = ({control, setValue}) => {
   }, [taskType, campus, tags])
 
   useEffect(() => {
-    setValue('teamsMatchingAssignment', teamsMatchingAssignmentRules) // Update form state
+    const ids = teamsMatchingAssignmentRules
+      .flat()
+      .filter(t => t?.id !== undefined)
+      .map(t => t.id)
+
+    setValue('teamsMatchingAssignment', ids)
   }, [teamsMatchingAssignmentRules])
 
   return (
@@ -544,7 +651,7 @@ const TeamsMatchingAssignmentRules = ({control, setValue}) => {
             <span
               key={team.id}
               className={cn(
-                {'ml-2': index > 0},
+                { 'ml-2': index > 0 },
                 'text-sm text-slate-500 font-medium rounded-sm border p-1 bg-gray-100'
               )}
             >
@@ -562,94 +669,3 @@ const TeamsMatchingAssignmentRules = ({control, setValue}) => {
     </div>
   )
 }
-
-const FormSchema = z
-  .object({
-    name: z.string().min(1, 'Naam is verplicht'), // Required string with a custom error message
-    startDateTime: z.date({
-      required_error: 'Gelieve een Startdatum te kiezen',
-      invalid_type_error: 'Startdatum moet een geldige datum zijn'
-    }),
-
-    description: z.string().min(1, 'Gelieve een omschrijving in te vullen'), // Required string
-    taskType: z.string().min(1, 'Gelieve een taaktype te kiezen'), // Required string for selected campus
-    campus: z.string().min(1, 'Gelieve een campus te kiezen'), // Required string for selected campus
-
-    visit: z
-      .object({
-        id: z.number().optional(),
-      })
-      .optional(),
-
-    space: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(), //.min(1, "Gelieve een locatie te kiezen"),
-
-    spaceTo: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    tags: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    assets: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    assignTo: z
-      .array(
-        z.object({
-          label: z.string(),
-          value: z.number()
-        })
-      )
-      .optional(),
-
-    teamsMatchingAssignment: z.array(z.any()).optional() // Add this field if not already present
-  })
-  .refine(
-    data =>
-      !(
-        data?.teamsMatchingAssignment?.length === 0 &&
-        data?.assignTo?.length === 0
-      ),
-    {
-      path: ['assignTo'], // Attach error to assignTo field
-      message:
-        'Gelieve een teamtaaktoewijzingsregel aan te maken of de taak rechtstreeks aan een persoon toe te wijzen'
-    }
-  )
-  .refine(
-    data => {
-      if (isPatientTransportTask(data.taskType)) {
-        return data.visit && data.visit.id !== undefined
-      }
-      return true
-    },
-    {
-      path: ['visit'],
-      message: 'Gelieve een patiënt te kiezen',
-      required_error: 'Gelieve een patiënt te kiezen'
-    }
-  )

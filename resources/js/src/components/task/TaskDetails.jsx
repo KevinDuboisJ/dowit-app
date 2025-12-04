@@ -39,7 +39,6 @@ export const TaskDetails = ({task}) => {
     axios
       .get(`/tasks/${task.id}/comments`)
       .then(res => {
-        console.log(res.data)
         setComments(res.data)
       })
       .catch(err => {
@@ -82,7 +81,7 @@ export const TaskDetails = ({task}) => {
 
       <div className="space-y-5 my-2">
         <div className="space-y-3 border rounded-lg p-4 bg-white shadow-xs dark:bg-darkmode-500 dark:border-darkmode-400">
-          <RichText text={task.description} className="text-sm text-gray-900" />
+          <RichText text={task.description} className="!font-geist text-sm text-gray-900" />
 
           <InfoRow
             icon={

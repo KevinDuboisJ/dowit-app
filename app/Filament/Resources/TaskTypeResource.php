@@ -15,7 +15,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Section;
 use App\Traits\HasFilamentTeamFields;
 use Filament\Forms\Components\Group;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\Select;
+use Illuminate\Support\HtmlString;
 
 class TaskTypeResource extends Resource
 {
@@ -35,11 +36,22 @@ class TaskTypeResource extends Resource
     {
         return $form
             ->schema([
-                
                 Group::make()
                     ->schema(
                         [
-                            HasFilamentTeamFields::belongsToTeamsField(),
+                            HasFilamentTeamFields::belongsToTeamsField(label: 'Uitvoerende teams', tooltip: 'Teams die dit type taken kunnen aanvragen en uitvoeren'),
+
+                            Select::make('requesting_teams')
+                                ->label('Aanvraagende teams')
+                                ->multiple()
+                                ->relationship('requestingTeams', 'name')
+                                ->preload()
+                                ->searchable()
+                                ->hint(
+                                    new HtmlString(view('filament.components.hint-icon', [
+                                        'tooltip' => 'Teams die dit type taken kunnen aanvragen',
+                                    ])->render())
+                                )
                         ]
                     )
                     ->columnSpanFull(),
@@ -70,7 +82,6 @@ class TaskTypeResource extends Resource
                             ->extraAttributes([
                                 'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
                             ]),
-
                     ])
                     ->extraAttributes([
                         'class' => 'h-full',
@@ -79,7 +90,8 @@ class TaskTypeResource extends Resource
                     ->columnSpanFull(),
 
                 HasFilamentTeamFields::creatorField(),
-            ])->columns(10);
+            ])
+            ->columns(10);
     }
 
     public static function table(Table $table): Table
