@@ -157,7 +157,8 @@ class TeamResource extends Resource
             ->filters([])
             ->recordClasses(fn(Model $record) => match (true) {
                 default => $record->classname,
-            });
+            })
+            ->defaultSort('name', 'asc');
     }
 
     public static function getRelations(): array

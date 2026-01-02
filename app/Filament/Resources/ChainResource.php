@@ -139,8 +139,9 @@ class ChainResource extends Resource
                             }
                         });
                     })
-                    ->deselectRecordsAfterCompletion(),
-            ]);
+                    ->deselectRecordsAfterCompletion()
+            ])
+            ->defaultSort('identifier', 'asc');
     }
 
     public static function getPages(): array

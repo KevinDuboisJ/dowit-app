@@ -33,9 +33,7 @@ import {
 export const TaskMobileView = ({
   todoTasks,
   openTasks,
-  setTasks,
   setSheetState,
-  handleTasksRecon,
   handleTaskUpdate,
   lastUpdatedTaskRef,
   filtersRef
@@ -85,8 +83,15 @@ export const TaskMobileView = ({
         <div className="flex-1 min-w-0 bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm px-4 py-3 rounded-tl-none rounded-bl-none">
           <div className="flex items-center ">
             <div className="flex flex-col w-full min-w-0">
-              {/* Task Title */}
+              {/* Task name */}
               <div className="text-lg font-bold leading-4">{task.name}</div>
+
+              {/* Task patient */}
+              {task?.visit && (
+                <p className="truncate text-gray-500 text-xs">
+                  {`${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}`}
+                </p>
+              )}
 
               {/* Task description */}
               <RichText
@@ -115,20 +120,6 @@ export const TaskMobileView = ({
               }
             />
 
-            {task?.patient && (
-              <InfoRow
-                minWidth="50px"
-                icon={
-                  <Heroicon
-                    icon="UserCircle"
-                    className="w-4 h-4 text-slate-500"
-                  />
-                }
-                label="Wie:"
-                value={`${task.patient.firstname} ${task.patient.lastname} (${task.patient.birthdate}) (${task.patient.gender}) - ${task.patient.room_id}, ${task.patient.bed_id}`}
-              />
-            )}
-
             {task.space && (
               <InfoRow
                 minWidth="50px"
@@ -136,16 +127,18 @@ export const TaskMobileView = ({
                   <Heroicon icon="MapPin" className="w-4 h-4 text-slate-500" />
                 }
                 label="Van:"
-                value={task.space.name}
+                value={`${task?.space?.name} (${task?.space?._spccode})`}
               />
             )}
 
-            {task?.spaceTo && (
+            {task?.space_to && (
               <InfoRow
-                minWidth="70px"
-                icon={<Lucide icon="Map" className="w-4 h-4 text-slate-500" />}
+                minWidth="50px"
+                icon={
+                  <Lucide icon="MapPin" className="w-4 h-4 text-slate-500" />
+                }
                 label="Naar:"
-                value={task.spaceTo.name}
+                value={`${task?.space_to?.name} (${task?.space_to?._spccode})`}
               />
             )}
           </div>
@@ -154,15 +147,13 @@ export const TaskMobileView = ({
           {/* Avatars */}
           <div className="flex items-center">
             <div className="flex -space-x-2">
-              <Tooltip content="Hulp gevraagd">
-                <HelpAnimation
-                  needsHelp={task.needs_help}
-                  isAssignedToCurrentUser={
-                    task.capabilities.isAssignedToCurrentUser
-                  }
-                />
-              </Tooltip>
-
+              {task.needs_help &&
+                task.is_active &&
+                !task.capabilities.isAssignedToCurrentUser && (
+                  <Tooltip content="Hulp gevraagd">
+                    <HelpAnimation />
+                  </Tooltip>
+                )}
               <AvatarStack avatars={task.assignees} />
             </div>
 
@@ -172,7 +163,6 @@ export const TaskMobileView = ({
                 task={task}
                 user={user}
                 handleTaskUpdate={handleTaskUpdate}
-                handleTasksRecon={handleTasksRecon}
               />
               <Heroicon
                 className="cursor-pointer w-5 h-5"
@@ -206,8 +196,7 @@ export const TaskMobileView = ({
                       only: ['tasks'],
                       queryStringArrayFormat: 'indices',
                       preserveState: true,
-                      onSuccess: ({ props }) => {
-                        setTasks(props.tasks.data)
+                      onSuccess: () => {
                         setLoading(false)
                       },
                       onError: error => {

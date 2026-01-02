@@ -14,15 +14,7 @@ const NL = {
   needs_help: 'Collega nodig',
   priority: 'Prioriteit',
   assignees: 'Toegewezen personen',
-  patienttransportinbed: 'Patiëntentransport - in bed',
-  cleaning: 'Poets',
-  periodiccheck: 'Periodieke controle',
-  securityguardtask: 'Taak bewaking',
-  endofstaycleaning: 'Eindpoets',
-  patienttransportinwheelchair: 'Patiëntentransport - in rolstoel',
-  patienttransportonfootassisted: 'Patiëntentransport - te voet begeleid',
-  patienttransportnotify: 'Patiëntentransport - verwittigen',
-  patienttransportwithcrutches: 'Patiëntentransport - met krukken'
+  unassignees: 'Niet meer toegewezen personen',
 }
 
 export function __(word) {

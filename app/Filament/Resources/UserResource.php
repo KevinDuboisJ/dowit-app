@@ -89,7 +89,11 @@ class UserResource extends Resource
                         return is_null($record->object_sid);
                     }),
             ])
-            ->bulkActions([]);
+            ->bulkActions([])
+            ->defaultSort(function (Builder $query): Builder {
+                return $query->orderBy('firstname', 'asc')
+                    ->orderBy('lastname', 'asc');
+            });
     }
 
     public static function getRelations(): array

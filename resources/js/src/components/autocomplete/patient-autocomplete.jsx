@@ -83,7 +83,6 @@ const PatientAutocomplete = ({onValueChange = null}) => {
   }
 
   const handleSelect = visit => {
-    console.log('Selected visit:', visit)
     setSelectedVisit(visit)
     setSearchValue(formatPatientDisplay(visit))
     setShowDropdown(false)

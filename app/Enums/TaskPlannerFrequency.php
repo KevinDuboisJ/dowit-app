@@ -11,6 +11,7 @@ enum TaskPlannerFrequency implements HasLabel
     case Monthly;
     case Quarterly;
     case EachXDay;
+    case EachXMonth;
     case SpecificDays;
     case Weekdays;
     case WeekdayInMonth;
@@ -22,7 +23,8 @@ enum TaskPlannerFrequency implements HasLabel
             self::Weekly => 'Wekelijks',
             self::Monthly => 'Maandelijks',
             self::Quarterly => 'Per kwartaal',
-            self::EachXDay => 'Elke x dag',
+            self::EachXDay => 'Elke x dagen',
+            self::EachXMonth => 'Elke x maanden',
             self::SpecificDays => 'Specifieke dagen',
             self::Weekdays => 'Weekdagen',
             self::WeekdayInMonth => 'Weekdag van de maand',

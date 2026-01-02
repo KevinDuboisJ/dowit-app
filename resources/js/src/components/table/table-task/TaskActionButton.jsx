@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react'
 import {
   Button,
   AlertDialog,
@@ -11,22 +12,18 @@ import {
   AlertDialogCancel,
   Lucide
 } from '@/base-components'
+
 import { updateTask } from '@/hooks'
 
-export const TaskActionButton = ({
-  task,
-  user,
-  handleTasksRecon,
-  handleTaskUpdate
-}) => {
-  if (!task.capabilities?.can_modify) {
+export const TaskActionButton = ({ task, user, handleTaskUpdate }) => {
+  
+  if (!task.is_active) {
     return null
   }
 
   const configs = getTaskActionConfigs({
     task,
     user,
-    handleTasksRecon,
     handleTaskUpdate
   })
 
@@ -66,12 +63,7 @@ export const TaskActionButton = ({
   )
 }
 
-const getTaskActionConfigs = ({
-  task,
-  user,
-  handleTasksRecon,
-  handleTaskUpdate
-}) => {
+const getTaskActionConfigs = ({ task, user, handleTaskUpdate }) => {
   const userId = user.id
   const isAssignedToCurrentUser = task.capabilities?.isAssignedToCurrentUser
   const hasAssignees = task.assignees?.length > 0
@@ -83,7 +75,11 @@ const getTaskActionConfigs = ({
   if (statusName === 'Added' && !isAssignedToCurrentUser && !hasAssignees) {
     actions.push({
       trigger: (
-        <Button className="w-24 h-6 font-normal rounded" variant="secondary" size="sm">
+        <Button
+          className="w-24 h-6 font-normal rounded"
+          variant="secondary"
+          size="sm"
+        >
           Starten
         </Button>
       ),
@@ -92,11 +88,10 @@ const getTaskActionConfigs = ({
       alertDialogAction: 'Starten',
       onConfirm: () =>
         updateTask({ assignees: [userId], status: 'InProgress' }, task, {
-          onBefore: ({ original, updatedAt }) => {
+          onBefore: ({ original }) => {
             handleTaskUpdate(
               {
                 ...original,
-                updated_at: updatedAt,
                 assignees: '{{loading}}',
                 status: {
                   ...original.status,
@@ -110,17 +105,20 @@ const getTaskActionConfigs = ({
               { scroll: true }
             )
           },
-          onSuccess: ({ data }) => handleTasksRecon(data),
           onError: ({ original }) => handleTaskUpdate(original)
         })
     })
   }
 
   // 2) Complete task (current user is assignee)
-  if (statusName !== 'Completed' && isAssignedToCurrentUser) {
+  if (isAssignedToCurrentUser) {
     actions.push({
       trigger: (
-        <Button className="w-24 h-6 font-normal rounded" variant="success" size="sm">
+        <Button
+          className="w-24 h-6 font-normal rounded"
+          variant="success"
+          size="sm"
+        >
           Afhandelen
         </Button>
       ),
@@ -129,17 +127,21 @@ const getTaskActionConfigs = ({
       alertDialogAction: 'Afhandelen',
       onConfirm: () =>
         updateTask({ status: 'Completed' }, task, {
-          onBefore: ({ original, updatedAt }) => {
-            handleTaskUpdate({
-              ...original,
-              updated_at: updatedAt,
-              status: {
-                ...original.status,
-                name: 'Completed'
-              }
+          onBefore: ({ original }) => {
+            router.replace({
+              props: prevProps => ({
+                ...prevProps,
+                tasks: {
+                  ...prevProps.tasks,
+                  data: prevProps.tasks.data.filter(
+                    row => row.id !== original.id
+                  )
+                }
+              }),
+              preserveScroll: true,
+              preserveState: true
             })
           },
-          onSuccess: ({ data }) => handleTasksRecon(data),
           onError: ({ original }) => handleTaskUpdate(original)
         })
     })
@@ -149,7 +151,11 @@ const getTaskActionConfigs = ({
   if (task.needs_help && !isAssignedToCurrentUser) {
     actions.push({
       trigger: (
-        <Button className="w-24 h-6 font-normal rounded" variant="success" size="sm">
+        <Button
+          className="w-24 h-6 font-normal rounded"
+          variant="request"
+          size="sm"
+        >
           Helpen
         </Button>
       ),
@@ -158,10 +164,26 @@ const getTaskActionConfigs = ({
       alertDialogAction: 'Helpen',
       onConfirm: () =>
         updateTask(
-          { assignees: [userId], needs_help: false, status: 'InProgress' },
+          { assignees: [...(task.assignees ?? []).map(item => item.id), userId], needs_help: false, status: 'InProgress' },
           task,
           {
-            onSuccess: ({ data }) => handleTasksRecon(data),
+            onBefore: ({ original }) => {
+              handleTaskUpdate(
+                {
+                  ...original,
+                  assignees: '{{loading}}',
+                  status: {
+                    ...original.status,
+                    name: 'InProgress'
+                  },
+                  capabilities: {
+                    ...original.capabilities,
+                    isAssignedToCurrentUser: true
+                  }
+                },
+                { scroll: true }
+              )
+            },
             onError: ({ original }) => handleTaskUpdate(original)
           }
         )
@@ -173,7 +195,7 @@ const getTaskActionConfigs = ({
     actions.push({
       trigger: (
         <Button className="h-6 w-6 p-0 rounded" variant="destructive">
-          <Lucide icon="X"/>
+          <Lucide icon="X" />
         </Button>
       ),
       alertDialogDescription:
@@ -181,7 +203,6 @@ const getTaskActionConfigs = ({
       alertDialogAction: 'Afwijzen',
       onConfirm: () =>
         updateTask({ status: 'Rejected' }, task, {
-          onSuccess: ({ data }) => handleTasksRecon(data),
           onError: ({ original }) => handleTaskUpdate(original)
         })
     })

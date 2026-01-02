@@ -16,8 +16,7 @@ class PincodeLoginService implements UserAuthenticator
 
   public function authenticate(string $username, string $password): User
   {
-    $user = User::whereNull('object_sid')
-      ->where('username', $username)
+    $user = User::where('username', $username)
       ->where('is_active', true)
       ->firstOrFail();
 

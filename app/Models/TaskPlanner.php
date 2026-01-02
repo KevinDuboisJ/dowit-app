@@ -164,6 +164,41 @@ class TaskPlanner extends Model
                 }
                 return $next_run_at->copy()->addDays((int) $interval);
 
+            case 'EachXMonth':
+                if (!$interval) {
+                    throw new InvalidArgumentException("Interval must be provided for 'EachXMonth'.");
+                }
+
+                // Support either a plain integer (e.g., 3) or an array of options.
+                if (is_array($interval)) {
+                    if (!isset($interval['months'])) {
+                        throw new InvalidArgumentException("Interval array for 'EachXMonth' must contain a 'months' key.");
+                    }
+
+                    $months = (int) $interval['months'];
+                    $noOverflow = array_key_exists('no_overflow', $interval) ? (bool) $interval['no_overflow'] : true;
+                    $anchorDay = $interval['day_of_month'] ?? null;
+
+                    $date = $noOverflow
+                        ? $next_run_at->copy()->addMonthsNoOverflow($months)
+                        : $next_run_at->copy()->addMonths($months);
+
+                    if ($anchorDay !== null) {
+                        $anchorDay = (int) $anchorDay;
+                        if ($anchorDay < 1 || $anchorDay > 31) {
+                            throw new InvalidArgumentException("'day_of_month' must be between 1 and 31 for 'EachXMonth'.");
+                        }
+                        // Clamp to the last day of the target month if anchor exceeds it
+                        $lastDayOfMonth = $date->copy()->endOfMonth()->day;
+                        $date->day(min($anchorDay, $lastDayOfMonth));
+                    }
+
+                    return $date;
+                }
+
+                // If it's just a scalar, treat it as the month count and use no-overflow by default.
+                return $next_run_at->copy()->addMonthsNoOverflow((int) $interval);
+
             case 'SpecificDays':
 
                 if (!$interval) {

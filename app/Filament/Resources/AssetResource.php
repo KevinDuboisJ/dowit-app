@@ -94,7 +94,8 @@ class AssetResource extends Resource
 
                     DeleteAction::make(),
                 ])
-            ]);
+            ])
+            ->defaultSort('name', 'asc');
     }
 
     public static function getPages(): array

@@ -10,7 +10,7 @@ class UserPolicy
     // Allow all actions for admins
     public function before(User $user)
     {
-        return $user->isSuperAdmin() ? true : null;
+        return true;
     }
 
     /**

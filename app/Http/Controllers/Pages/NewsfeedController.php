@@ -24,7 +24,7 @@ class NewsfeedController extends Controller
     // Main team based filtering is handled via the HasTeams trait
     $newsfeed = Comment::query()
       ->with([
-        'creator',
+        'creator' => fn($q) => $q->withoutGlobalScopes(),
         'task.assignees',
         'status:id,name',
       ])

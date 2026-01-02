@@ -130,7 +130,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={null}>Medewerker</SelectItem>
-              {teammates.map(member => (
+              {teammates?.map(member => (
                 <SelectItem
                   key={member.id}
                   value={member.id}
@@ -149,7 +149,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={null}>Team</SelectItem>
-              {user.teams.map(team => (
+              {user?.teams?.map(team => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
                 </SelectItem>
@@ -167,7 +167,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={null}>Status</SelectItem>
-              {statuses.map(status => (
+              {statuses?.map(status => (
                 <SelectItem key={status.id} value={status.id}>
                   {__(status.name)}
                 </SelectItem>
@@ -178,18 +178,18 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
 
         <ScrollArea className="fadeInUp pt-3">
           <div className="flex flex-col h-full gap-8">
-            {newsfeed.map((item, index) => (
+            {newsfeed?.map((item, index) => (
               <div
                 key={item.id}
                 ref={
-                  newsfeed.length === index + 1 ? lastNewsItemElementRef : null
+                  newsfeed?.length === index + 1 ? lastNewsItemElementRef : null
                 }
               >
                 <NewsItem newsItem={item} />
               </div>
             ))}
 
-            {newsfeed.length === 0 && <p>Geen gegevens om weer te geven</p>}
+            {newsfeed?.length === 0 && <p>Geen gegevens om weer te geven</p>}
 
             {loading && (
               <div className="flex w-full intems-center justify-center">

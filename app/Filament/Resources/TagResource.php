@@ -38,7 +38,7 @@ class TagResource extends Resource
     {
         return $form
             ->schema([
-                
+
                 Group::make()
                     ->schema(
                         [
@@ -99,7 +99,8 @@ class TagResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     //Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('name', 'asc');
     }
 
     public static function getRelations(): array

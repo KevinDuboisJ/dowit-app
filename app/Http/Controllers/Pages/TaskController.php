@@ -15,6 +15,8 @@ use App\Events\BroadcastEvent;
 use App\Models\Comment;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
@@ -52,7 +54,15 @@ class TaskController extends Controller
       abort(404);
     }
 
-    return response()->json(Comment::with(['creator', 'status' => fn($query) => $query->select('id', 'name')])->where('task_id', $id)->orderBy('created_at', 'desc')->get());
+    return response()->json(
+      Comment::with([
+        'creator' => fn($q) => $q->withoutGlobalScopes(),
+        'status'  => fn($q) => $q->select('id', 'name'),
+      ])
+        ->where('task_id', $id)
+        ->orderByDesc('created_at')
+        ->get()
+    );
   }
 
   public function store(StoreTaskRequest $request, TaskService $taskService)
@@ -65,8 +75,7 @@ class TaskController extends Controller
         broadcast(new BroadcastEvent($task, 'task_created', 'dashboard'));
       }
 
-      return response()->json($task);
-      
+      return redirect()->back();
     } catch (\Throwable $e) {
       logger()->error('Task creation failed', [
         'message' => $e->getMessage(),
@@ -76,30 +85,61 @@ class TaskController extends Controller
         'code'    => $e->getCode(),
       ]);
 
-      return response()->json([
+      return back()->withErrors([
         'message' => 'Gelieve dit te melden bij de helpdesk: #' . $request->attributes->get('log_id'),
-      ], 422);
+      ]);
     }
   }
 
-  public function update(UpdateTaskRequest $request, TaskService $taskService, Task $task)
+  public function update(UpdateTaskRequest $request, TaskService $taskService, Task $task): RedirectResponse
   {
     try {
-      $result = $this->taskService->updateTask($task, $request->prepareForDatabase());
-      $tasks = $taskService->fetchAndCombineTasks($request);
+      $result = $taskService->updateTask($task, $request->prepareForDatabase());
 
       if (isset($result['conflict'])) {
-        return response()->json([
-          'message' => $result['message'],
-          'data' => $result['latestData'],
-        ], 409);
+        return back()->withErrors([
+          'error' => $result['message'],
+          // 'data' => $result['latestData'], // optional: so frontend can show diff
+        ]);
       }
 
-      return response()->json(['data' => $tasks, 'updatedTask' => $result['task']]);
+      // For Inertia partial reload: the page that executed this method must provide `tasks` prop.
+      return redirect()->back();
+    } catch (\Throwable $e) {
+      logger()->error([
+        'message' => 'Task update failed: ' . $e->getMessage(),
+        'file'    => $e->getFile(),
+        'line'    => $e->getLine(),
+        'trace'   => $e->getTraceAsString(),
+      ]);
+
+      return back()->withErrors([
+        'message' => 'Gelieve dit te melden bij de helpdesk: #' . $request->attributes->get('log_id'),
+      ]);
+    }
+  }
+
+  public function requestHelp(Request $request, Task $task, TaskService $taskService)
+  {
+    try {
+      $this->authorize('update', $task);
+
+      if (! $task->needs_help) {
+        $task = $task->forceFill(['needs_help' => true]);
+        $task->comments()->create([
+          'needs_help' => $task->isDirty('needs_help') ? $task->needs_help : null,
+          'metadata' => $taskService->trackTaskMetaDataChanges($task, ['needs_help' => true]),
+        ]);
+
+        $task->save();
+        broadcast(new BroadcastEvent($task, 'task_updated', 'dashboard'));
+      }
+
+      return redirect()->back();
     } catch (\Exception $e) {
       logger()->error(
         [
-          'message' => 'Task update failed: ' . $e->getMessage(),
+          'message' => 'Help request failed: ' . $e->getMessage(),
           'file'    => $e->getFile(),
           'line'    => $e->getLine(),
           'trace'   => $e->getTraceAsString(),

@@ -6,9 +6,7 @@ import {AnnouncementSheet, TaskSheet, FilterBar, TaskTable} from '@/components'
 export const TaskDesktopView = ({
   filtersRef,
   tasks,
-  setTasks,
   setSheetState,
-  handleTasksRecon,
   handleTaskUpdate
 }) => {
   const {loading, setLoading, Loader} = useLoader()
@@ -27,8 +25,7 @@ export const TaskDesktopView = ({
                 only: ['tasks'],
                 queryStringArrayFormat: 'indices',
                 preserveState: true,
-                onSuccess: ({props}) => {
-                  setTasks(props.tasks.data)
+                onSuccess: () => {
                   setLoading(false)
                 },
                 onError: error => {
@@ -51,9 +48,7 @@ export const TaskDesktopView = ({
       )}
       <TaskTable
         tasks={tasks}
-        setTasks={setTasks}
         setSheetState={setSheetState}
-        handleTasksRecon={handleTasksRecon}
         handleTaskUpdate={handleTaskUpdate}
       />
     </div>

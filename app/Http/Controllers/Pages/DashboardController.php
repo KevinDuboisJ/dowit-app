@@ -72,21 +72,21 @@ class DashboardController extends Controller
       }),
 
       'task_types' => Inertia::lazy(function () {
-        return array_map(
-          fn($enum) =>
-          [
-            'value' => $enum->name,
-            'isPatientTransport' => $enum->isPatientTransport()
+
+        return TaskType::all()->mapWithKeys(fn($t) => [
+          $t->id => [
+            'name' => $t->name,
+            'value' => $t->id,
+            'isPatientTransport' => TaskTypeEnum::tryFrom($t->id)?->isPatientTransport(),
           ],
-          TaskTypeEnum::fromCollection(TaskType::all())
-        );
+        ]);
       }),
 
       'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
 
         $task = new Task([
           'campus_id' => $request->input('campus') ?? null,
-          'task_type_id' => TaskTypeEnum::fromCaseName($request->input('taskType') ?? '')?->value,
+          'task_type_id' => $request->input('taskType'),
           'space_id' => $request->input('space') ?? null,
           'space_to_id' => $request->input('spaceTo') ?? null,
         ]);

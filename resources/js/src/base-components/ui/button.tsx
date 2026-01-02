@@ -23,6 +23,8 @@ const buttonVariants = cva(
           "text-sm rounded bg-orange-400/20 text-orange-400 border border-orange/20 hover:bg-orange-400/20",
         success:
           "text-sm rounded-md bg-success/10 text-success-700 border border-success/30 hover:bg-success/200",
+        request:
+          "text-sm rounded-md bg-amber-500/30 text-amber-700 border border-amber-500/40 hover:bg-amber-500/40",
       },
       size: {
         default: "h-[9] px-3 py-2",

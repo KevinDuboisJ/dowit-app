@@ -236,7 +236,8 @@ class TaskAssignmentRuleResource extends Resource
                 ]),
 
             ])
-            ->bulkActions([]);
+            ->bulkActions([])
+            ->defaultSort('description', 'asc');
     }
 
     public static function getRelations(): array

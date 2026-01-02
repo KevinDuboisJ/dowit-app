@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePage } from '@inertiajs/react'
+import { usePage, router } from '@inertiajs/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -57,15 +57,12 @@ const FormSchema = z.object({
 
   needs_help: z.boolean().optional(),
 
+  updated_at: z.coerce.date(),
+
   comment: z.string().optional()
 })
 
-export function TaskForm({
-  task,
-  handleTaskUpdate,
-  handleTasksRecon,
-  setActiveTab
-}) {
+export function TaskForm({ task, setActiveTab }) {
   const { priorities, task_statuses } = usePage().props
   const [loading, setLoading] = useState(false)
   const { list, fetchList } = useAxiosFetchByInput({
@@ -79,6 +76,7 @@ export function TaskForm({
     status: task.status.name,
     priority: task.priority,
     needs_help: task.needs_help,
+    updated_at: task.updated_at,
     comment: ''
   }
 
@@ -104,22 +102,14 @@ export function TaskForm({
     setLoading(true)
 
     updateTask(payload, task, {
-      onSuccess: ({ data }) => {
-        setActiveTab('details')
-        handleTasksRecon(data)
+      onSuccess: () => {
         form.resetField('usersToAssign')
         toast.success('De gegevens zijn bijgewerkt')
       },
 
-      onError: ({ status, data }) => {
-        if (status === 409) {
-          console.log(data)
-          handleTaskUpdate(data.data)
-        }
-      },
-
       onComplete: () => {
         setLoading(false)
+        setActiveTab('details')
       }
     })
   }

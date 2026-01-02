@@ -178,10 +178,19 @@ class TaskPlannerService
   public function applyExecutionRules(TaskPlanner $taskPlanner): TaskPlannerEvaluationResultEnum
   {
     if ($taskPlanner->visit_id && $taskPlanner->visit?->bed_id === null && $taskPlanner->visit?->discharged_at === null) {
-      Mail::html('<p>Patiënt met opnamenummer: ' . $taskPlanner->visit->number . ' heeft geen bed en is nog niet ontslagen</p>', function (Message $message) {
-        $message->to('kevin.dubois@azmonica.be')
-          ->subject('Dowit - Patiënt in taakplanner zonder bed');
-      });
+      try {
+        Mail::html(
+          '<p>Patiënt met opnamenummer: ' . $taskPlanner->visit->number . ' heeft geen bed en is nog niet ontslagen</p>',
+          function ($message) {
+            $server = gethostname();
+            $subject = "Dowit - Patiënt in taakplanner zonder bed [{$server}]";
+            $message->to('kevin.dubois@azmonica.be')->subject($subject);
+          }
+        );
+      } catch (\Throwable $e) {
+        // Any other unexpected failure
+        Log::error('Unexpected mail error: ' . $e->getMessage(), ['exception' => $e]);
+      }
     }
 
     if ($taskPlanner->visit_id && $taskPlanner->visit?->discharged_at !== null) {
