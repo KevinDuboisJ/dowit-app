@@ -25,13 +25,12 @@ export const TaskTable = ({
   tasks,
   setSheetState,
   handleTaskUpdate,
-  handleTasksRecon
 }) => {
   const [grouping, setGrouping] = useState(['assignedGroup'])
   const [expanded, setExpanded] = useState(true) // Controls expanded rows
   const columns = useTaskTableColumns({
     handleTaskUpdate,
-    handleTasksRecon
+
   })
 
   // This is a hack to ensure that the group headers are always shown
@@ -110,7 +109,7 @@ export const TaskTable = ({
             ))}
           </TableHeader>
 
-          <TableBody className="sticky top-[39px] z-10">
+          <TableBody>
             <tr>
               <td colSpan="100%">
                 <AnnouncementFeed />

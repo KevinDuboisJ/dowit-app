@@ -103,7 +103,12 @@ class TaskTypeResource extends Resource
                     ->width('300px'),
 
                 TextColumn::make('teams.name')
-                    ->label('Naam')
+                    ->label('Teams')
+                    ->width('300px')
+                    ->listWithLineBreaks(),
+                    
+                TextColumn::make('requestingTeams.name')
+                    ->label('Aanvraagende teams')
                     ->width('300px')
                     ->listWithLineBreaks(),
 

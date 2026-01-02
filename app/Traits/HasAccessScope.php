@@ -13,15 +13,14 @@ trait HasAccessScope
     {
         static::addGlobalScope('access_scope', function (Builder $query) {
 
-            if (static::class === User::class) {
+            $guard = Auth::guard();
+
+            if (! $guard->hasUser() || $guard->user()->isSuperAdmin()) {
                 return;
             }
 
-            $user = Auth::user()?->loadMissing('teams:id,name');
-
-            if (! $user || $user->isSuperAdmin()) {
-                return;
-            }
+            $user = $guard->user(); // safe
+            $user->loadMissing('teams:id,name');
 
             /** @var self $model */
             $model = new static;

@@ -84,9 +84,16 @@ class TaskPlannerResource extends Resource
                     ->relationship('taskType', 'name')
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function (Set $set, ?string $state, Get $get) {
-                        $set('name', TaskTypeEnum::from($state)->getLabel());
-                        $set('visit_id', null);
+                    ->afterStateUpdated(function (Select $component, Set $set, ?string $state, Get $get) {
+                        $taskType = $component->getSelectedRecord(); // TaskType model or null (no extra query)
+                        if (! $taskType) {
+                            return;
+                        }
+                        $set('name', $taskType->name);
+
+                        if (!TaskTypeEnum::tryFrom((int) $state)?->isPatientTransport()) {
+                            $set('visit_id', null);
+                        }
                     }),
 
                 Select::make('campus_id')
@@ -150,7 +157,7 @@ class TaskPlannerResource extends Resource
                     ->label('Patiënt')
                     ->required()
                     ->visible(
-                        fn(Get $get): bool => TaskTypeEnum::tryFrom((int) $get('task_type_id'))->isPatientTransport()
+                        fn(Get $get): bool => TaskTypeEnum::tryFrom((int) $get('task_type_id'))?->isPatientTransport() ?? false
                     )
                     ->afterStateHydrated(function ($component, $state) {
                         if ($state) {
@@ -188,21 +195,14 @@ class TaskPlannerResource extends Resource
                     ->relationship(
                         name: 'space',
                         titleAttribute: 'name',
-                        modifyQueryUsing: function (Builder $query, $livewire, ?string $search) {
+                        modifyQueryUsing: function (Builder $query, $get, ?string $search) {
 
                             $search = trim((string) $search);
 
-                            if (($livewire->source ?? null) === 'Revalidatie' && blank($search)) {
-                                $query->byRevalidatieDefault();
+                            if (TaskTypeEnum::tryFrom((int) $get('task_type_id'))?->isPatientTransport() && blank($search)) {
+                                $query->whereIn('id', [2069, 2859, 1977, 2149, $get('space_id')]);
                             } else {
                                 $query->byUserInput($search);
-                            }
-
-                            // Always include the currently selected space_id
-                            $currentSpaceId = data_get($livewire, 'data.space_id');
-
-                            if ($currentSpaceId) {
-                                $query->orWhere('id', $currentSpaceId);
                             }
 
                             return $query->limit(50);
@@ -218,35 +218,50 @@ class TaskPlannerResource extends Resource
 
                 Select::make('space_to_id')
                     ->label('Bestemmingslocatie')
-                    ->relationship(
-                        name: 'spaceTo',
-                        titleAttribute: 'name',
-                        modifyQueryUsing: function (Builder $query, $livewire, ?string $search) {
+                    ->options(function ($livewire, $get) {
 
-                            $search = trim((string) $search);
+                        $ids = [];
 
-                            if (($livewire->source ?? null) === 'Revalidatie' && blank($search)) {
-                                $query->byRevalidatieDefault();
-                            } else {
-                                $query->byUserInput($search);
-                            }
-
-                            // Always include the currently selected space_id
-                            $currentSpaceId = data_get($livewire, 'data.space_id');
-
-                            if ($currentSpaceId) {
-                                $query->orWhere('id', $currentSpaceId);
-                            }
-
-                            return $query->limit(50);
+                        if (TaskTypeEnum::tryFrom((int) $get('task_type_id'))?->isPatientTransport()) {
+                            $ids = [2069, 2859, 1977, 2149, $get('space_id')];
                         }
-                    )
-                    ->getOptionLabelFromRecordUsing(fn(Model $space) => "{$space->name} ({$space->_spccode})")
-                    ->searchable(['name', '_spccode'])
+
+                        if ($ids) {
+                            return Space::whereIn('id', $ids)->pluck('name', 'id')->toArray();
+                        }
+
+                        return [];
+                    })
+
+                    ->getSearchResultsUsing(function (string $search) {
+                        $search = trim($search);
+
+                        $query = Space::query()->byUserInput($search);
+
+                        return $query
+                            ->limit(3)
+                            ->select([
+                                'id',
+                                DB::raw("CONCAT(name, ' (', _spccode, ')') as label")
+                            ])
+                            ->pluck('label', 'id');
+                    })
+
+                    ->getOptionLabelUsing(function ($state) {
+                        $space = $state
+                            ? Space::select('name', '_spccode')->find($state)
+                            : null;
+
+                        return $space
+                            ? trim("{$space->name} ({$space->_spccode})", ' ()')
+                            : null;
+                    })
+
+                    ->searchable()
                     ->preload()
                     ->visible(
                         fn(Get $get): bool =>
-                        TaskTypeEnum::tryFrom((int) $get('task_type_id'))->isPatientTransport()
+                        TaskTypeEnum::tryFrom((int) $get('task_type_id'))?->isPatientTransport() ?? false
                     )
                     ->extraAttributes([
                         'wire:target' => 'data.visit_id',

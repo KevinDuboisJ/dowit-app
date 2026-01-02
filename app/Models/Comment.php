@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TaskStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\Auth;
 class Comment extends Model
 {
     use SoftDeletes, HasFactory, HasCreator;
+
+    protected $appends = [
+        'is_completed',
+    ];
 
     protected $fillable = [
         'content',
@@ -78,6 +83,13 @@ class Comment extends Model
     {
         $query->whereJsonDoesntContain('read_by', Auth::user()->id)
             ->orWhereNull('read_by');
+    }
+
+    protected function isCompleted(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => !is_null($this->status_id) && !TaskStatusEnum::isActiveStatus($this->status_id),
+        );
     }
 
     protected function content(): Attribute

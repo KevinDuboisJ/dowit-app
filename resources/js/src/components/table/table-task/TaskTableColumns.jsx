@@ -8,8 +8,8 @@ import { TaskActionButton, getPriority, HelpAnimation } from '@/components'
 
 const columnHelper = createColumnHelper()
 
-export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
-  const { settings, user } = usePage().props
+export const useTaskTableColumns = ({ handleTaskUpdate }) => {
+  const { settings, user, tasks } = usePage().props
 
   const columns = useMemo(
     () => [
@@ -36,14 +36,9 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
             data.priority,
             settings.TASK_PRIORITY.value
           )
-          return row.original.needs_help ? (
+          return row.original.needs_help && row.original.is_active && !row.original.capabilities.isAssignedToCurrentUser ? (
             <Tooltip content="Hulp gevraagd">
-                <HelpAnimation
-                  needsHelp={row.original.needs_help}
-                  isAssignedToCurrentUser={
-                    row.original.capabilities.isAssignedToCurrentUser
-                  }
-                />
+              <HelpAnimation/>
             </Tooltip>
           ) : (
             <Tooltip content={priorityInfo.state}>
@@ -170,13 +165,12 @@ export const useTaskTableColumns = ({ handleTaskUpdate, handleTasksRecon }) => {
               task={cell.row.original}
               user={user}
               handleTaskUpdate={handleTaskUpdate}
-              handleTasksRecon={handleTasksRecon}
             />
           </div>
         )
       })
     ],
-    [settings, user, handleTaskUpdate, handleTasksRecon]
+    [settings, user, handleTaskUpdate, tasks.data]
   )
 
   return columns

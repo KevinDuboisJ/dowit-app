@@ -23,7 +23,6 @@ class UpdateTaskRequest extends FormRequest
         // Convert to app timezone as all javascript datetime function uses UTC(0)
         $this->merge([
             'updated_at' => Carbon::parse($this->updated_at)->setTimezone(config('app.timezone')),
-            //'beforeUpdateAt' => Carbon::parse($this->beforeUpdateAt)->setTimezone(config('app.timezone')),
         ]);
     }
 
@@ -57,11 +56,6 @@ class UpdateTaskRequest extends FormRequest
             ],
 
             'updated_at' => [
-                'required',
-                'date',
-            ],
-
-            'beforeUpdateAt' => [
                 'required',
                 'date',
             ],

@@ -34,6 +34,10 @@ enum TaskStatusEnum: int implements HasLabel
         return self::ACTIVE_STATUSES;
     }
 
+    public static function isActiveStatus($statusId): bool {
+        return in_array($statusId, self::activeStatuses());
+    }
+
     public function getLabel(): ?string
     {
         return match ($this) {

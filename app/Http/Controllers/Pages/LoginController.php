@@ -18,18 +18,24 @@ class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        // Retrieve Dowit accounts where the associated contract does not have an AD account
-        $users = Account::select('an_userid_1 as username')
-            ->byDowitAccount()
-            ->whereDoesntHave('contract', function ($query) {
-                $query->whereHas('accounts', function ($query) {
-                    $query->where('an_at_id', 2);
-                });
-            })
-            ->get();
-
         return Inertia::render('Login', [
-            'users' => $users,
+            'users' => Inertia::optional(function () use ($request) {
+                $search = $request->get('search');
+
+                $query = User::select('username', 'firstname', 'lastname')
+                    ->whereNull('object_sid');
+
+                // Only apply filtering when we actually have 2+ characters
+                if ($search && strlen($search) >= 2) {
+                    $query->where(function ($q) use ($search) {
+                            $q->where('firstname', 'like', $search . '%')
+                            ->orWhere('lastname', 'like', $search . '%');
+                    });
+                }
+
+                // Limit returned results
+                return $query->limit(20)->get();
+            }),
         ]);
     }
 

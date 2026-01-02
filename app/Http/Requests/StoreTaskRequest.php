@@ -22,7 +22,8 @@ class StoreTaskRequest extends FormRequest
             'startDateTime' => 'required|date',
             'taskType' => [
                 'required',
-                'in:' . implode(',', array_column(TaskTypeEnum::cases(), 'name'))
+                'integer',
+                'exists:task_types,id',
             ],
             'campus' => 'required|exists:campuses,id',
             'visit' => 'sometimes|array',
@@ -30,7 +31,7 @@ class StoreTaskRequest extends FormRequest
                 'sometimes',
                 'required_with:visit',
                 Rule::requiredIf(function () {
-                    return TaskTypeEnum::fromCaseName($this->input('taskType'))->isPatientTransport();
+                    return TaskTypeEnum::tryFrom($this->input('taskType'))?->isPatientTransport();
                 }),
                 'numeric',
             ],
@@ -41,7 +42,7 @@ class StoreTaskRequest extends FormRequest
             'spaceTo.*.value' => 'required|exists:spaces.spaces,id',
             'assignees' => 'array',
             'teamsMatchingAssignment' => 'array',
-             // 'assets' => 'array',
+            // 'assets' => 'array',
 
         ];
     }
@@ -55,7 +56,7 @@ class StoreTaskRequest extends FormRequest
                 'name' => $validated['name'],
                 'description' => $validated['description'],
                 'start_date_time' => Carbon::parse($validated['startDateTime'])->setTimezone(config('app.timezone')),
-                'task_type_id' => TaskTypeEnum::fromCaseName($validated['taskType'])->value,
+                'task_type_id' => $validated['taskType'],
                 'campus_id' => $validated['campus'],
                 'space_id' => !empty($validated['space']) ? array_column($validated['space'], 'value')[0] : null,
                 'space_to_id' => !empty($validated['spaceTo']) ? array_column($validated['spaceTo'], 'value')[0] : null,

@@ -7,7 +7,6 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
@@ -69,9 +68,8 @@ class TaskService
 
   public function updateTask(Task $task, array $data)
   {
-    $clientTimestamp = Carbon::parse($data['beforeUpdateAt']);
-
-    if ($clientTimestamp->lt($task->updated_at)) {
+    // Compare the task's updated_at from the client with the database value. To detect whether the task was already modified.
+    if ($data['updated_at']->lt($task->updated_at)) {
       return [
         'conflict' => true,
         'message' => 'Het bijwerken van de taak is mislukt omdat deze onlangs al is bijgewerkt',
@@ -200,6 +198,7 @@ class TaskService
       'status',
       'taskType' => fn($query) => $query->with(['assets']),
       'space',
+      'spaceTo',
       'assignees',
       'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
     ];
@@ -207,8 +206,8 @@ class TaskService
     $filters = $request->filled('filters') ? $request->input('filters') : null;
     $sorters = $request->filled('sorters') ? $request->input('sorters') : null;
 
-    // Get assigned tasks (non-paginated)
-    $assignedTasks = Task::with($relationships)
+    // Get tasks
+    $tasks = Task::with($relationships)
       ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
         $this->applyFilters($query, $filters, $hasFilterByStatus);
       })
@@ -231,62 +230,30 @@ class TaskService
           }
         }
       })
-      ->orderBy('start_date_time', 'desc')
+      // nulls last equivalent for DESC: COALESCE(null, 0) keeps nulls at the bottom
+      ->orderByDesc(DB::raw('COALESCE(tasks.needs_help, 0)'))
+      // "task_type_id = 5 first" -> 0 first, then others
+      ->orderBy(DB::raw('tasks.task_type_id != 5')) // ASC by default
+      // Custom order for status_id: (1, 2) first; keep FIELD if MySQL/MariaDB
+      ->orderByRaw('FIELD(status_id, ?, ?) DESC', [1, 2])
+      ->orderByDesc('start_date_time')
       ->select('tasks.*')
-      ->get();
-
-    // Get team tasks (paginated with joins for sorting)
-    $teamTasks = Task::query()
-      ->with($relationships)
-      ->where(function ($query) {
-        $query
-          ->withoutAssignees(Auth::user());
-      })
-      ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
-        $this->applyFilters($query, $filters, $hasFilterByStatus);
-      })
-      ->when(!$hasFilterByStatus, function ($query) {
-        $query->byActive();
-      })
-      ->when($sorters, function ($query) use ($request) {
-        foreach ($request->input('sorters', []) as $sorter) {
-          if ($sorter['field'] === 'status.name') {
-            // Add join for sorting by status name
-            $query->leftJoin('task_statuses', 'tasks.status_id', '=', 'task_statuses.id')
-              ->orderBy('task_statuses.name', $sorter['dir']);
-          } elseif ($sorter['field'] === 'task_type.name') {
-            // Add join for sorting by task type name
-            $query->join('task_types', 'tasks.task_type_id', '=', 'task_types.id')
-              ->orderBy('task_types.name', $sorter['dir']);
-          } else {
-            // Default sorting on the main table
-            $query->orderBy($sorter['field'], $sorter['dir']);
-          }
-        }
-      })
-      ->orderBy('start_date_time', 'desc')
-      ->select('tasks.*') // Ensure only columns from `tasks` table are selected else ids of join wil also come in and confuse the eloquent model
       ->paginate($request->input('size', 1000));
 
     // Build pagination metadata
     $pagination = [
-      'total' => $teamTasks->total(),
-      'per_page' => $teamTasks->perPage(),
-      'current_page' => $teamTasks->currentPage(),
-      'last_page' => $teamTasks->lastPage(),
-      'from' => $teamTasks->firstItem(),
-      'to' => $teamTasks->lastItem(),
+      'total' => $tasks->total(),
+      'per_page' => $tasks->perPage(),
+      'current_page' => $tasks->currentPage(),
+      'last_page' => $tasks->lastPage(),
+      'from' => $tasks->firstItem(),
+      'to' => $tasks->lastItem(),
     ];
-
-    // Merge assigned and team tasks
-    $combinedTasks = $assignedTasks
-      ->merge(collect($teamTasks->items())->values()) // Reset keys for team tasks
-      ->unique('id'); // Avoid duplicates
 
     // Return results
     return [
       ...$pagination,
-      'data' => $combinedTasks,
+      'data' => collect($tasks->items())->values(),
     ];
   }
 

@@ -1,11 +1,11 @@
-import {isValidElement, useState, useMemo, useEffect} from 'react'
-import {format, parseISO} from 'date-fns'
-import {__} from '@/stores'
-import {HiHandRaised} from 'react-icons/hi2'
+import { isValidElement, useState, useMemo, useEffect } from 'react'
+import { format, parseISO } from 'date-fns'
+import { __ } from '@/stores'
+import { HiHandRaised } from 'react-icons/hi2'
 import Lottie from 'lottie-react'
 import fireAnimation from '@json/fire'
-import {cn} from '@/utils'
-import {usePage} from '@inertiajs/react'
+import { cn } from '@/utils'
+import { usePage, router } from '@inertiajs/react'
 import axios from 'axios'
 import {
   Lucide,
@@ -20,22 +20,25 @@ import {
   Loader
 } from '@/base-components'
 
-import {getPriority, TaskActivity, TaskIcon, PriorityText} from '@/components'
+import { getPriority, TaskActivity, TaskIcon, PriorityText } from '@/components'
 
-export const TaskDetails = ({task}) => {
-  const {user, settings} = usePage().props
+export const TaskDetails = ({ task: selectedTask }) => {
+  const { user, settings, tasks } = usePage().props
+  const [comments, setComments] = useState([])
+  const [loadingComments, setLoadingComments] = useState(true)
+  const task = useMemo(
+    () => tasks?.data?.find(t => t.id === selectedTask.id) ?? null,
+    [tasks.data]
+  )
+console.log(task)
   const priorityObj = getPriority(
     task.created_at,
     task.priority,
     settings.TASK_PRIORITY.value
   )
 
-  const [comments, setComments] = useState([])
-  const [loadingComments, setLoadingComments] = useState(true)
-
   useEffect(() => {
     if (!task?.id) return
-
     axios
       .get(`/tasks/${task.id}/comments`)
       .then(res => {
@@ -48,7 +51,7 @@ export const TaskDetails = ({task}) => {
         // always runs, success or error
         setLoadingComments(false)
       })
-  }, [task?.id]) // runs when opening a new task
+  }, [tasks.data]) // runs when opening a new task
 
   const opacity = useMemo(() => {
     const firstComment = task.comments?.[0]
@@ -71,7 +74,7 @@ export const TaskDetails = ({task}) => {
           <Badge
             key={tag.id}
             className="rounded-xl"
-            style={{backgroundColor: tag.bg_color}}
+            style={{ backgroundColor: tag.bg_color }}
           >
             <TaskIcon iconName={tag.icon} />
             {tag.name}
@@ -81,7 +84,10 @@ export const TaskDetails = ({task}) => {
 
       <div className="space-y-5 my-2">
         <div className="space-y-3 border rounded-lg p-4 bg-white shadow-xs dark:bg-darkmode-500 dark:border-darkmode-400">
-          <RichText text={task.description} className="!font-geist text-sm text-gray-900" />
+          <RichText
+            text={task.description}
+            className="!font-geist text-sm text-gray-900"
+          />
 
           <InfoRow
             icon={
@@ -109,7 +115,23 @@ export const TaskDetails = ({task}) => {
               />
             }
             label="Tijd:"
-            value={format(parseISO(task.start_date_time), 'PP HH:mm')}
+            value={<div className='text-sm'>
+           
+                {format(parseISO(task.start_date_time), 'PP HH:mm')}
+
+                {task.visit_id && (
+                  <>
+                    <span className="mx-1 text-gray-500">→</span>
+                    <span className="text-gray-500">
+                      {format(
+                        parseISO(task.start_date_time_with_offset),
+                        'HH:mm'
+                      )}
+                    </span>
+                  </>
+                )}
+             
+            </div>}
           />
 
           {task?.visit && (
@@ -140,7 +162,7 @@ export const TaskDetails = ({task}) => {
             />
           )}
 
-          {task?.spaceTo && (
+          {task?.space_to && (
             <InfoRow
               icon={
                 <Heroicon
@@ -150,7 +172,7 @@ export const TaskDetails = ({task}) => {
                 />
               }
               label="Naar:"
-              value={task.spaceTo.name}
+              value={task.space_to.name}
             />
           )}
 
@@ -166,11 +188,11 @@ export const TaskDetails = ({task}) => {
             value={<TeamTag user={user} teams={task?.teams} />}
           />
 
-          <InfoRow
-            icon={<HiHandRaised className="w-4 h-4 text-slate-400" />}
-            label="Collega nodig:"
-            value={task.needs_help ? 'Ja' : 'Nee'}
-          />
+          {task.capabilities.can_update && (
+            <div className="flex items-center justify-end gap-2 w-full">
+              <AskHelpButton task={task} disabled={task.needs_help} />
+            </div>
+          )}
 
           <Separator className="bg-slate-200/60 dark:bg-darkmode-400" />
 
@@ -201,7 +223,7 @@ export const TaskDetails = ({task}) => {
                 title="Er is de afgelopen 5 dagen activiteit geweest"
                 animationData={fireAnimation}
                 loop={true}
-                style={{opacity}}
+                style={{ opacity }}
               />
             )}
           </div>
@@ -237,7 +259,7 @@ const InfoRow = ({
     >
       {/* Left Section: Icon + Label */}
       <div
-        style={{minWidth: minWidth}}
+        style={{ minWidth: minWidth }}
         className="flex items-center space-x-1 min-w-0"
       >
         {icon}
@@ -250,7 +272,69 @@ const InfoRow = ({
   )
 }
 
-const TeamTag = ({user, teams}) => {
+const AskHelpButton = ({ task, disabled }) => {
+  const [loading, setLoading] = useState(false)
+
+  const handleClick = () => {
+    if (disabled || loading) return
+
+    setLoading(true)
+
+    router.patch(
+      `/task/${task.id}/request-help`,
+      { needs_help: true },
+      {
+        preserveScroll: true,
+        preserveState: true,
+
+        only: ['tasks'],
+        onSuccess: ({ props }) => {
+          setLoading(false)
+        }
+      }
+    )
+
+    router.replace({
+      props: prevProps => ({
+        ...prevProps,
+        tasks: {
+          ...prevProps.tasks,
+          data: prevProps.tasks.data.map(row =>
+            row.id === task.id ? { ...row, needs_help: true } : row
+          )
+        }
+      }),
+      preserveScroll: true,
+      preserveState: true
+    })
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled || loading}
+      className={cn(
+        'inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition',
+        'bg-amber-500 text-white hover:bg-amber-500/80',
+        'disabled:opacity-50 disabled:cursor-not-allowed'
+      )}
+    >
+      {/* Icon visible ONLY when NOT loading */}
+      {!loading && <HiHandRaised className="w-4 h-4 mr-1" />}
+
+      {/* Loader only when loading */}
+      {loading && (
+        <Loader className="border-t-white mr-1" variant="circle" size="15" />
+      )}
+
+      {/* Text */}
+      {loading ? 'Vraag hulp' : disabled ? 'Hulp gevraagd' : 'Vraag hulp'}
+    </button>
+  )
+}
+
+const TeamTag = ({ user, teams }) => {
   // Ensure `teams` is always an array
   teams = teams || []
 
@@ -263,7 +347,7 @@ const TeamTag = ({user, teams}) => {
       <span
         key={team.id}
         className={cn(
-          {'ml-0': index === 0, 'ml-2': index > 0},
+          { 'ml-0': index === 0, 'ml-2': index > 0 },
           'text-sm text-gray-900 rounded-sm'
         )}
       >
@@ -277,7 +361,7 @@ const TeamTag = ({user, teams}) => {
   )
 }
 
-const AssetList = ({assets}) => {
+const AssetList = ({ assets }) => {
   // Ensure `assets` is always an array
   assets = assets || []
 

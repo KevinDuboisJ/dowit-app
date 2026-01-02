@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/utils'
@@ -255,29 +256,35 @@ const CreateTaskForm = () => {
       delete payload.visit
     }
 
-    try {
-      const response = await axios.post('/task/store', { ...payload })
+    router.post(
+      '/task/store',
+      { ...payload },
+      {
+        preserveState: true,
+        preserveScroll: true,
 
-      if (response.status === 200) {
-        toast.success('Taak is succesvol aangemaakt')
+        onSuccess: () => {
+          toast.success('Taak is succesvol aangemaakt')
+        },
+
+        onError: errors => {
+          // Inertia validation errors are usually an object: { field: ['msg'] } or { field: 'msg' }
+          const errorMessages = errors
+            ? Object.values(errors)
+                .flatMap(v => (Array.isArray(v) ? v : [v]))
+                .join(', ')
+            : 'Er is een fout opgetreden. Gelieve dit te melden aan de helpdesk'
+
+          toast.error(errorMessages)
+          console.error('Inertia error:', errors)
+        },
+
+        onFinish: () => {
+          form.reset()
+          setLoading(false)
+        }
       }
-    } catch (error) {
-      // Extract error messages
-      const errorMessages = error.response?.data.message
-        ? error.response?.data.message
-        : error.response?.data.errors
-        ? Object.values(error.response.data.errors)
-            .flat() // Flatten arrays of messages
-            .join(', ') // Join messages with commas
-        : 'Er is een fout opgetreden. Gelieve dit te melden aan de helpdesk' // Fallback to the generic error message
-
-      // Show the combined error messages in a toast
-      toast.error(`${errorMessages}`)
-      console.error(`${error.message}: `, error.response)
-    } finally {
-      form.reset()
-      setLoading(false)
-    }
+    )
   }
 
   return (
@@ -395,8 +402,8 @@ const CreateTaskForm = () => {
                         <SelectContent>
                           {task_types &&
                             Object.values(task_types).map(item => (
-                              <SelectItem key={item.value} value={item.value}>
-                                {__(item.value)}
+                              <SelectItem key={item.value} value={String(item.value)}>
+                                {item.name}
                               </SelectItem>
                             ))}
                         </SelectContent>
@@ -609,7 +616,7 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
     control,
     name: ['taskType', 'campus', 'space', 'spaceTo', 'tags']
   })
-
+  
   const {
     list: teamsMatchingAssignmentRules = [],
     fetchList: fetchTeamsMatchingAssignmentRules

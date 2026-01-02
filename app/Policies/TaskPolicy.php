@@ -20,49 +20,34 @@ class TaskPolicy
     }
 
     /**
-     * Determine if the user can view the task.
+     * Determine if the user can view the task. This is handled by the HasAccessScope
      */
     public function view(): bool
     {
-        // Allow if the user is assigned to the task or if the task is unassigned
         return true;
     }
 
     /**
-     * Determine if the user can update the task.
+     *  Allow updates when the task is unassigned, the user is assigned to the task, or the user is an admin
+     *  Disallow updates when the task type is request-only for the user
      */
     public function update(User $user, Task $task): bool
     {
-        // Allow if the user is assigned to the task
-        return $task->assignees->contains($user) || $user->isAdmin();
-    }
-
-    public function modify(User $user, Task $task): bool
-    {
         $userTeamIds = $user->getTeamIds();
 
-        return !$task->taskType
-            ->requestingTeams()
+        if ($task?->taskType?->requestingTeams()
             ->whereIn('teams.id', $userTeamIds)
-            ->exists();
+            ->exists()
+        ) {
+            return false;
+        }
+
+        return $task->assignees->isEmpty() || $task->assignees->contains($user) || $user->isAdmin();
     }
 
     public function reject(User $user): bool
     {
         // Allow if the user is admin and belongs to team with ID 3 (e.g., Schoonmaak CA)
         return $user->isAdmin() && $user->belongsToTeam(3);
-    }
-
-    public function assign(User $user, Task $task): bool
-    {
-        // Allow if the user is assigned to the task or if the task is unassigned
-        return $task->assignees->contains($user) || $task->assignees->isEmpty() || $user->isAdmin() || $user->isSuperAdmin();
-    }
-
-    public function isAssignedToCurrentUser(User $user, Task $task): bool
-    {
-        // Check if the task is assigned to the current user.
-        // If not, the user can click the help button for assistance.
-        return $task->assignees->contains($user);
     }
 }

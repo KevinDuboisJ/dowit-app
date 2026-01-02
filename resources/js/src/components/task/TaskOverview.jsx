@@ -17,8 +17,6 @@ import {TaskForm, TaskDetails, TaskIcon} from '@/components'
 
 export const TaskOverview = ({
   task,
-  handleTaskUpdate,
-  handleTasksRecon,
   handleSheetClose
 }) => {
   const canUpdateTask = task?.capabilities?.can_update
@@ -119,8 +117,6 @@ export const TaskOverview = ({
             <TabsContent className="p-8 py-4 fadeInUp" value="edit">
               <TaskForm
                 task={task}
-                handleTaskUpdate={handleTaskUpdate}
-                handleTasksRecon={handleTasksRecon}
                 setActiveTab={setActiveTab}
               />
             </TabsContent>

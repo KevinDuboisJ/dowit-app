@@ -15,7 +15,7 @@ export const AvatarStack = ({ avatars, maxAvatars = 4, className }) => {
   const remainingAvatarsCount = avatars.length - maxAvatars
 
   if (avatars === '{{loading}}') {
-    return <Loader />
+    return <Loader size={40} className='-top-0'/>
   }
 
   if (avatars.length === 0) {

@@ -11,7 +11,6 @@ export const TaskOverviewSheet = ({
   sheetState,
   setSheetState,
   tasks,
-  handleTasksRecon,
   handleTaskUpdate,
   handleSheetClose,
 }) => {
@@ -35,7 +34,6 @@ export const TaskOverviewSheet = ({
         {sheetState.open && currentTask && (
           <TaskOverview
             task={currentTask}
-            handleTasksRecon={handleTasksRecon}
             handleTaskUpdate={handleTaskUpdate}
             handleSheetClose={handleSheetClose}
           />

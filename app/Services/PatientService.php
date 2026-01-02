@@ -142,37 +142,39 @@ class PatientService
             logger("Room: {$bedVisit->bed->room->number} for visit number: {$bedVisit->visit->number} not found in Ultimo for cleaning task");
           }
 
-          // if ($bedVisit->visit->department->number == '2214') {
+          $allowedDepartments = ['2214', '3112', '2112', '3111'];
 
-          $data = [
-            'task' => [
-              'name' => 'Eindpoets patiëntkamer',
-              'start_date_time' => $now,
-              'description' => "Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname),
-              'campus_id' => $bedVisit->bed->room->campus_id,
-              'task_type_id' => TaskTypeEnum::EndOfStayCleaning->value,
-              'space_id' => $spaceId ?? null,
-              'priority' => TaskPriorityEnum::Medium->value,
-              'bed_visit_id' => $bedVisit->id,
-            ],
-            'tags' => [],
-            'assignees' => [],
-            'teamsMatchingAssignment' => [],
-          ];
+          if (in_array($bedVisit->visit->department->number, $allowedDepartments, true)) {
 
-          if ($bedVisit->bed->room->campus_id === 1) {
-            $data['teamsMatchingAssignment'] = [3]; // Teams id for Antwerp
+            $data = [
+              'task' => [
+                'name' => 'Eindpoets patiëntkamer',
+                'start_date_time' => $now,
+                'description' => "Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname),
+                'campus_id' => $bedVisit->bed->room->campus_id,
+                'task_type_id' => TaskTypeEnum::EndOfStayCleaning->value,
+                'space_id' => $spaceId ?? null,
+                'priority' => TaskPriorityEnum::Medium->value,
+                'bed_visit_id' => $bedVisit->id,
+              ],
+              'tags' => [],
+              'assignees' => [],
+              'teamsMatchingAssignment' => [],
+            ];
+
+            if ($bedVisit->bed->room->campus_id === 1) {
+              $data['teamsMatchingAssignment'] = [3]; // Teams id for Antwerp
+            }
+
+            if ($bedVisit->bed->room->campus_id === 2) {
+              $data['teamsMatchingAssignment'] = [6]; // Teams id for Deurne
+            }
+
+            $taskService = new TaskService();
+            $task = $taskService->create($data);
+
+            broadcast(new BroadcastEvent($task, 'task_created', $chain->identifier));
           }
-
-          if ($bedVisit->bed->room->campus_id === 2) {
-            $data['teamsMatchingAssignment'] = [6]; // Teams id for Deurne
-          }
-
-          $taskService = new TaskService();
-          // $task = $taskService->create($data);
-
-          // broadcast(new BroadcastEvent($task, 'task_created', $chain->identifier));
-          // }
         }
       }
 

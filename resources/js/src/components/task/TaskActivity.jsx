@@ -1,8 +1,7 @@
 import { format, parseISO, isToday } from 'date-fns'
 import { nl } from 'date-fns/locale'
-import { cn } from '@/utils'
 import { __ } from '@/stores'
-import { RichText, Heroicon, Separator } from '@/base-components'
+import { RichText, Heroicon } from '@/base-components'
 
 export const TaskActivity = ({ comments }) => {
   const lastIndex = comments.length - 1
@@ -26,12 +25,19 @@ export const TaskActivity = ({ comments }) => {
 
           {comments.map((item, index) => {
             const isLastItem = index === lastIndex
-            const isEdited = item?.metadata?.changed_keys ?? false
             const activity = {
               ...item,
               isLastItem: isLastItem,
-              isEdited: isEdited,
-              type: getType(item, isLastItem, isEdited)
+              metadata:
+                !!item?.metadata?.changed_keys &&
+                Object.entries(item.metadata.changed_keys).filter(
+                  ([key, value]) => {
+                    // if (['assignees', 'unassignees'].includes(key)) return false
+                    if (key === 'needs_help') return value === false
+                    return true
+                  }
+                ),
+              type: getType(item, isLastItem)
             }
 
             return (
@@ -49,12 +55,23 @@ export const TaskActivity = ({ comments }) => {
 }
 
 /* ---------------- helpers ---------------- */
+const getType = (item, isLastItem) => {
+  if (isLastItem && !item.metadata?.changed_keys) return 'content' // first item only
 
-const getType = (item, isLastItem, isEdited) => {
-  if (isLastItem && !isEdited) return 'content' // first item only
+  if (
+    Object.keys(item.metadata?.changed_keys ?? {}).length === 2 &&
+    'assignees' in item.metadata.changed_keys &&
+    'needs_help' in item.metadata.changed_keys &&
+    item.metadata.changed_keys.needs_help === false
+  )
+    return 'helping'
+
   if (item?.needs_help) return 'help'
-  if (item?.status === 'Completed') return 'done'
-  if (isEdited) return 'update'
+
+  if (item?.is_completed) return 'done'
+
+  if (item.metadata?.changed_keys) return 'update'
+
   return 'generic'
 }
 
@@ -95,6 +112,14 @@ const TimelineIcon = ({ type, index }) => {
   let circle = (
     <div className="absolute z-10 -left-[8.5px] top-0 bg-gray-400 w-4 h-4 rounded-full flex items-center justify-center" />
   )
+
+  if (type === 'Helping') {
+    circle = (
+      <div className="absolute z-10 -left-[8.5px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-[#9CA3AF]">
+        <Heroicon icon="HandRaised" variant="solid" />
+      </div>
+    )
+  }
 
   if (type === 'help') {
     circle = (
@@ -146,13 +171,7 @@ const renderByType = ({ activity }) => {
     case 'done':
     case 'generic':
     default:
-      return (
-        <UpdateBox
-          activity={activity}
-          changed={activity.isEdited}
-          type={activity.type}
-        />
-      )
+      return <UpdateBox activity={activity} type={activity.type} />
   }
 }
 
@@ -163,69 +182,74 @@ const ContentBox = ({ activity }) => {
   return (
     <div className="space-y-1">
       <div className="flex flex-col border rounded-lg px-4 py-3 bg-gray-100">
-        <RichText text={activity.content} className="text-sm text-gray-600"/>
+        <RichText text={activity.content} className="text-sm text-gray-600" />
       </div>
       <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
     </div>
   )
 }
 
-const UpdateBox = ({ activity, changed, type }) => {
+const UpdateBox = ({ activity, type }) => {
   const name = fullName(activity.creator)
-
-  // filter once
-  const showAssignees =
-    Array.isArray(changed.assignees) && changed.assignees.length > 0
-  const showUnassignees =
-    Array.isArray(changed.unassignees) && changed.unassignees.length > 0
-
-  const filtered = Object.entries(changed).filter(([key, value]) => {
-    if (key === 'assignees' || key === 'unassignees') return false
-    if (key === 'needs_help') return !value
-    return true
-  })
-
+  const metadata = activity.metadata
+  const labels = {
+    help: 'Collega nodig',
+    helping: 'Hulp toegezegd',
+    done: 'Afgerond'
+  }
   return (
     <div className="flex flex-col space-y-1">
-      <p className="text-sm text-slate-600">
-        {type === 'help'
-          ? 'Collega nodig'
-          : type === 'done'
-          ? 'Afgerond'
-          : 'Bewerking'}
+      <p
+        className={`text-sm ${
+          type === 'help' ? 'text-slate-600' : 'text-slate-600'
+        }`}
+      >
+        {labels[type] ?? 'Bewerking'}
       </p>
 
-      <div className="flex flex-col border rounded-lg px-4 py-3 bg-gray-100 [&:has(>div:first-child>*)]:gap-1">
-        <div>
-          {activity.content && (
-            <RichText text={activity.content} className="text-sm" />
-          )}
+      {type !== 'helping' && metadata.length > 0 && (
+        <div className="flex flex-col border rounded-lg px-4 py-3 bg-gray-100 [&:has(>div:first-child>*)]:gap-1">
+          <div>
+            {activity.content && (
+              <RichText text={activity.content} className="text-sm" />
+            )}
 
-          {showAssignees && (
-            <MetaUsers
-              id={activity.id}
-              title="Toegewezen aan:"
-              users={changed.assignees}
-            />
-          )}
-          {showUnassignees && (
-            <MetaUsers
-              id={activity.id}
-              title="Niet meer toegewezen aan:"
-              users={changed.unassignees}
-            />
-          )}
+            {metadata.map(([key, value]) => {
+              if (key === 'assignees' && Array.isArray(value)) {
+                return (
+                  <MetaUsers
+                    key={key}
+                    id={activity.id}
+                    title="Toegewezen aan:"
+                    users={value}
+                  />
+                )
+              }
 
-          {filtered.map(([key, value]) => (
-            <div className="flex" key={key}>
-              <p className="text-sm capitalize mr-1">{__(key)}:</p>
-              <p className="text-sm text-gray-600">
-                {key === 'needs_help' ? 'Nee' : __(String(value))}
-              </p>
-            </div>
-          ))}
+              if (key === 'unassignees' && Array.isArray(value)) {
+                return (
+                  <MetaUsers
+                    key={key}
+                    id={activity.id}
+                    title="Niet meer toegewezen aan:"
+                    users={value}
+                  />
+                )
+              }
+
+              // 👇 ELSE (everything that is NOT assignees / unassignees)
+              return (
+                <div className="flex" key={key}>
+                  <p className="text-sm capitalize mr-1">{__(key)}:</p>
+                  <p className="text-sm text-gray-600">
+                    {key === 'needs_help' ? 'Nee' : __(String(value))}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
       <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
     </div>
   )

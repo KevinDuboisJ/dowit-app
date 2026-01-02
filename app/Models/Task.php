@@ -23,7 +23,7 @@ class Task extends Model
     use HasAssignees, HasCreator, HasTeams, HasAccessScope;
 
     protected $with = ['taskType'];
-    protected $appends = ['capabilities', 'start_date_time_with_offset'];
+    protected $appends = ['capabilities', 'is_active', 'start_date_time_with_offset'];
 
     protected $casts = [
         'needs_help' => 'boolean', // Cast tinyint(1) to boolean
@@ -45,12 +45,17 @@ class Task extends Model
     {
         return Attribute::make(
             get: fn() => [
-                'can_modify' => auth()->user()?->can('modify', $this),
                 'can_update' => auth()->user()?->can('update', $this),
-                'can_assign' => auth()->user()?->can('assign', $this),
                 'can_reject' => auth()->user()?->can('reject', $this),
-                'isAssignedToCurrentUser' => auth()->user()?->can('isAssignedToCurrentUser', $this),
+                'isAssignedToCurrentUser' => $this->assignees->contains(Auth::user()),
             ],
+        );
+    }
+
+    protected function isActive(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => TaskStatusEnum::isActiveStatus($this->status_id),
         );
     }
 
@@ -82,6 +87,11 @@ class Task extends Model
     public function space()
     {
         return $this->belongsTo(Space::class);
+    }
+
+    public function spaceTo()
+    {
+        return $this->belongsTo(Space::class, 'space_to_id');
     }
 
     public function taskType()

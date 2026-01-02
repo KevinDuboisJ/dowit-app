@@ -1,33 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from 'react'
 
 export const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1280);
-  const hasTransitionedToMobile = useRef(false);
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    function handleResize() {
-      
-      const currentlyMobile = window.innerWidth <= 1280;
+    const media = window.matchMedia('(max-width: 1280px)')
 
-      // Detect transition to mobile
-      if (!isMobile && currentlyMobile) {
-        hasTransitionedToMobile.current = true;
-      }
+    const handler = () => setIsMobile(media.matches)
 
-      if (!isMobile && !currentlyMobile) {
-        hasTransitionedToMobile.current = false;
-      }
+    handler()
+    media.addEventListener('change', handler)
 
-      setIsMobile(currentlyMobile);
-    }
+    return () => media.removeEventListener('change', handler)
+  }, [])
 
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []); // Empty dependency array ensures the event listener is added only once
-
-  return { isMobile, hasTransitionedToMobile: hasTransitionedToMobile.current };
-
-};
+  return { isMobile }
+}

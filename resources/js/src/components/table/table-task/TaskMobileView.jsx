@@ -33,9 +33,7 @@ import {
 export const TaskMobileView = ({
   todoTasks,
   openTasks,
-  setTasks,
   setSheetState,
-  handleTasksRecon,
   handleTaskUpdate,
   lastUpdatedTaskRef,
   filtersRef
@@ -140,12 +138,12 @@ export const TaskMobileView = ({
               />
             )}
 
-            {task?.spaceTo && (
+            {task?.space_to && (
               <InfoRow
-                minWidth="70px"
-                icon={<Lucide icon="Map" className="w-4 h-4 text-slate-500" />}
+                minWidth="50px"
+                icon={<Lucide icon="MapPin" className="w-4 h-4 text-slate-500" />}
                 label="Naar:"
-                value={task.spaceTo.name}
+                value={task.space_to.name}
               />
             )}
           </div>
@@ -154,15 +152,13 @@ export const TaskMobileView = ({
           {/* Avatars */}
           <div className="flex items-center">
             <div className="flex -space-x-2">
-              <Tooltip content="Hulp gevraagd">
-                <HelpAnimation
-                  needsHelp={task.needs_help}
-                  isAssignedToCurrentUser={
-                    task.capabilities.isAssignedToCurrentUser
-                  }
-                />
-              </Tooltip>
-
+              {task.needs_help &&
+                task.is_active &&
+                !task.capabilities.isAssignedToCurrentUser && (
+                  <Tooltip content="Hulp gevraagd">
+                    <HelpAnimation/>
+                  </Tooltip>
+                )}
               <AvatarStack avatars={task.assignees} />
             </div>
 
@@ -172,7 +168,6 @@ export const TaskMobileView = ({
                 task={task}
                 user={user}
                 handleTaskUpdate={handleTaskUpdate}
-                handleTasksRecon={handleTasksRecon}
               />
               <Heroicon
                 className="cursor-pointer w-5 h-5"
@@ -206,8 +201,7 @@ export const TaskMobileView = ({
                       only: ['tasks'],
                       queryStringArrayFormat: 'indices',
                       preserveState: true,
-                      onSuccess: ({ props }) => {
-                        setTasks(props.tasks.data)
+                      onSuccess: () => {
                         setLoading(false)
                       },
                       onError: error => {
