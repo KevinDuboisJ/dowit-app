@@ -56,8 +56,8 @@ trait HasAccessScope
                     }
 
                     if ($model instanceof HasRequestingTeamsScopeInterface) {
-                        $q->orWhere(function ($subQuery) use ($user, $model) {
-                            $model->scopeByRequestingTeams($subQuery, $user);
+                        $q->orWhere(function ($subQuery) use ($teamIds, $model) {
+                            $model->scopeByRequestingTeams($subQuery, $teamIds);
                         });
                     }
                 });

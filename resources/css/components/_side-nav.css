@@ -1,6 +1,6 @@
 .side-nav {
   transition-property: width, margin-left;
-  @apply h-full w-[235px] flex flex-col pl-6 pr-2 relative overflow-hidden bg-primary bg-gradient-to-b from-primary via-primary/70 to-black/30 duration-300 ease-in-out dark:bg-darkmode-800 dark:bg-none;
+  @apply h-full w-[235px] flex flex-col pl-6 pr-2 relative bg-primary bg-gradient-to-b from-primary via-primary/70 to-black/30 duration-300 ease-in-out dark:bg-darkmode-800 dark:bg-none;
   &:before {
     content: '';
     background-size: auto;
@@ -13,7 +13,7 @@
   }
   &:after {
     content: '';
-    @apply w-full h-full absolute top-0 left-0 mt-[3.5rem] bg-gradient-to-b from-primary via-primary/70 to-black/10 dark:from-darkmode-800 dark:via-darkmode-800/70;
+    @apply w-full h-full absolute top-0 left-0 bg-gradient-to-b from-primary via-primary/70 to-black/10 dark:from-darkmode-800 dark:via-darkmode-800/70;
   }
   @include media-breakpoint-down(xl) {
     @apply absolute z-[999] -ml-[100%];
@@ -124,7 +124,7 @@
       rgba(0, 0, 0, 0),
       black 30px
     );
-    @apply h-full overflow-y-auto pt-5 pb-5;
+    @apply flex-1 overflow-y-auto pt-5 pb-5;
     &::-webkit-scrollbar {
       @apply w-0 bg-transparent;
     }

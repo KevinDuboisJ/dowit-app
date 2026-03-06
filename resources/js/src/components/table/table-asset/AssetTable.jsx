@@ -5,8 +5,8 @@ import {
   getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
+  useReactTable
+} from '@tanstack/react-table'
 
 import {
   Table,
@@ -15,43 +15,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Input,
-} from "@/base-components"
+  Input
+} from '@/base-components'
 
-import {
-  Pagination,
-} from "@/components"
-
-import classNames from "classnames"
+import classNames from 'classnames'
 import { useState } from 'react'
 import { router } from '@inertiajs/react'
-import { debounce } from 'lodash';
-
+import { debounce } from 'lodash'
 
 export const AssetTable = ({ columns, data }) => {
-
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [sorting, setSorting] = useState({ column: null, direction: 'ASC' })
 
   const sortHandler = ({ column }) => {
-
     const columnKey = column.columnDef.accessorKey
-    const canSort = !column.columnDef.hasOwnProperty('canSort') || (column.columnDef.hasOwnProperty('canSort') && column.columnDef.canSort)
-    let sortColumn = sorting.column;
-    let sortDirection = sorting.direction;
+    const canSort =
+      !column.columnDef.hasOwnProperty('canSort') ||
+      (column.columnDef.hasOwnProperty('canSort') && column.columnDef.canSort)
+    let sortColumn = sorting.column
+    let sortDirection = sorting.direction
 
     if (!canSort) {
-      return;
+      return
     }
 
     if (sortColumn === columnKey) {
       // If the same column is being sorted, toggle the direction
-      sortDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC';
+      sortDirection = sortDirection === 'ASC' ? 'DESC' : 'ASC'
     } else {
       // If a different column is being sorted, reset the direction to 'ASC'
-      sortDirection = 'ASC';
+      sortDirection = 'ASC'
     }
 
     const newSorts = { column: columnKey, direction: sortDirection }
@@ -63,9 +58,8 @@ export const AssetTable = ({ columns, data }) => {
       preserveState: true
     })
 
-    setSorting(newSorts);
-
-  };
+    setSorting(newSorts)
+  }
 
   const table = useReactTable({
     data: data.data,
@@ -74,7 +68,7 @@ export const AssetTable = ({ columns, data }) => {
       sorting,
       columnVisibility,
       rowSelection,
-      columnFilters,
+      columnFilters
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -84,20 +78,19 @@ export const AssetTable = ({ columns, data }) => {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedUniqueValues: getFacetedUniqueValues()
   })
 
-  const debounceSearch = debounce((e) => {
+  const debounceSearch = debounce(e => {
     router.reload({ data: { search: e.target.value }, preserveState: true })
   }, 250)
 
-  const handleSearch = (e) => {
+  const handleSearch = e => {
     debounceSearch(e)
   }
 
-
   return (
-    <div className="flex flex-col min-h-0 fadeInUp">
+    <div className="flex flex-col h-full min-h-0 fadeInUp">
       <div className="flex items-center mb-2">
         <Input
           placeholder="Zoeken"
@@ -108,47 +101,57 @@ export const AssetTable = ({ columns, data }) => {
       <div className="border rounded-md overflow-auto">
         <Table className="table">
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map(header => {
                   return (
-                    <TableHead key={header.id} onClick={() => sortHandler(header)}>
+                    <TableHead
+                      key={header.id}
+                      onClick={() => sortHandler(header)}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.headerText || header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.headerText ||
+                              header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   )
                 })}
               </TableRow>
             ))}
-
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-
               table.getRowModel().rows?.map((row, index) => (
                 <TableRow
                   key={row.original.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className={
-                    classNames({
+                  data-state={row.getIsSelected() && 'selected'}
+                  className={classNames(
+                    {
                       'table-row ': true,
-                      'table-row-even': index % 2 === 0,
-                    }, 'cursor-default')}
+                      'table-row-even': index % 2 === 0
+                    },
+                    'cursor-default'
+                  )}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   Geen resultaten.
                 </TableCell>
               </TableRow>
@@ -156,8 +159,6 @@ export const AssetTable = ({ columns, data }) => {
           </TableBody>
         </Table>
       </div>
-      <Pagination {...data} />
     </div>
-
   )
 }

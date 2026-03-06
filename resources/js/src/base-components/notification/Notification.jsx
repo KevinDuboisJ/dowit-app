@@ -36,7 +36,7 @@ const Notification = ({ user }) => {
 
   return (
     <DropdownMenu className="fadeInRight h-10">
-      <DropdownMenuTrigger role="button" className="dropdown-toggle flex items-center outline-none">
+      <DropdownMenuTrigger role="button" className="dropdown-toggle outline-none">
 
         <div className={cn('dropdown-toggle notification cursor-pointer fadeInUp', {
           'notification--bullet': message,

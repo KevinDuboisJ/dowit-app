@@ -117,6 +117,7 @@ class TaskPlannerResource extends Resource
                     ->time(true)
                     ->seconds(false)
                     ->native(true)
+                    ->time24hr(true)
                     ->displayFormat(' j F Y H:i')
                     ->default(now()->addMinute())
                     ->after(function ($state, ?string $context, ?TaskPlanner $record) {

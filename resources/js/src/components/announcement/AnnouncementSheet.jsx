@@ -43,7 +43,7 @@ export const AnnouncementSheet = () => {
           <Heroicon icon="ChatBubbleLeftEllipsis" /> Mededeling
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md">
+      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[720px] sm:max-w-screen-md">
         <SheetHeader className="text-left flex flex-col items-center bg-white p-3 pl-1 space-y-3 border-b shrink-0">
           <div className="flex w-full py-2">
             <div className="flex flex-wrap self-start">

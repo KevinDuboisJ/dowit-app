@@ -3,7 +3,6 @@ import { usePoll, router } from '@inertiajs/react'
 import { __ } from '@/stores'
 
 import {
-  useTask,
   useIsMobile,
   useWebSocket,
   useFilter,
@@ -16,16 +15,26 @@ import {
   TaskMobileView
 } from '@/components'
 
-const Dashboard = () => {
-  const { filters, filtersRef } = useFilter({
+const Dashboard = ({ tasks }) => {
+  const { filters } = useFilter({
     defaultValues: {
-      assignedTo: { field: 'assignedTo', type: 'like', value: null },
-      status_id: { field: 'status_id', type: '=', value: null },
-      team_id: { field: 'team_id', type: '=', value: null }
+      assignedTo: { field: 'assignedTo', type: 'contains', value: '' },
+      status_id: { field: 'status_id', type: 'equals', value: '' }, // you store status "name" string
+      team_id: { field: 'team_id', type: 'equals', value: '' },
+      dateRange: {
+        field: 'dateRange',
+        type: 'between',
+        value: { from: null, to: null }
+      },
+      keyword: { field: 'keyword', type: 'contains', value: '' },
+      onlyAssignedToMe: {
+        field: 'onlyAssignedToMe',
+        type: 'equals',
+        value: false
+      }
     },
     options: { filterFromUrlParams: true }
   })
-  const { tasks, todoTasks, openTasks } = useTask()
   const { newEvent } = useWebSocket()
   const [sheetState, setSheetState] = useState({ open: false, task: null })
   const { isMobile } = useIsMobile()
@@ -81,21 +90,18 @@ const Dashboard = () => {
     <>
       {isMobile ? (
         <TaskMobileView
-          todoTasks={todoTasks}
-          openTasks={openTasks}
+          data={tasks}
           handleTaskUpdate={handleTaskUpdate}
           setSheetState={setSheetState}
           lastUpdatedTaskRef={lastUpdatedTaskRef}
-          filtersRef={filtersRef}
+          filters={filters}
         />
       ) : (
         <TaskDesktopView
-          tasks={tasks}
-          todoTasks={todoTasks}
-          openTasks={openTasks}
+          data={tasks}
           handleTaskUpdate={handleTaskUpdate}
           setSheetState={setSheetState}
-          filtersRef={filtersRef}
+          filters={filters}
         />
       )}
 

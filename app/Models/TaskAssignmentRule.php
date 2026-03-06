@@ -91,15 +91,8 @@ class TaskAssignmentRule extends Model implements HasRequestingTeamsScopeInterfa
         return $query;
     }
 
-    public function scopeByRequestingTeams(Builder $query, User $user): Builder
+    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
     {
-        $teamIds = $user->getTeamIds();
-
-        if (empty($teamIds)) {
-            // user has no teams → nothing matches
-            return $query->whereRaw('0 = 1');
-        }
-
         // 1) Get task type IDs that have requestingTeams in user's teams
         $taskTypeIds = TaskType::whereHas('requestingTeams', function (Builder $q) use ($teamIds) {
             $q->whereKey($teamIds);

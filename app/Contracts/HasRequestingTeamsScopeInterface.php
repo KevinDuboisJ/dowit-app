@@ -8,5 +8,5 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 interface HasRequestingTeamsScopeInterface
 {
-  public function scopeByRequestingTeams(Builder $query, User $user): Builder;
+  public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder;
 }

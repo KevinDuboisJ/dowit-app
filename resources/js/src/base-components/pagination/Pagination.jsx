@@ -1,135 +1,122 @@
-import React from 'react'
-import { Link } from '@inertiajs/react'
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
-  DotsHorizontalIcon
-} from '@radix-ui/react-icons'
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md'
 import { cn } from '@/utils'
-import { buttonVariants } from '@/base-components/ui/button'
 
-const Pagination = ({ className, ...props }) => (
-  <nav
-    role="navigation"
-    aria-label="pagination"
-    className={cn('flex items-center justify-end p-2 space-x-5', className)}
-    {...props}
-  />
-)
-Pagination.displayName = 'Pagination'
+export const PaginationBar = ({
+  current_page,
+  last_page,
+  from,
+  to,
+  total,
+  onPageChange
+}) => {
+  if (!current_page) return null
 
-const PaginationContent = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex items-center space-x-2', className)}
-    {...props}
-  />
-))
-PaginationContent.displayName = 'PaginationContent'
+  const canPrev = current_page > 1
+  const canNext = current_page < last_page
 
-const PaginationLink = ({ className, isActive, size = 'icon', ...props }) => {
+  // Compact page window
+  const windowSize = 5
+  const start = Math.max(1, current_page - Math.floor(windowSize / 2))
+  const end = Math.min(last_page, start + windowSize - 1)
+  const pages = []
+  for (let p = Math.max(1, end - windowSize + 1); p <= end; p++) pages.push(p)
 
   return (
-    <Link
-      aria-current={isActive ? 'page' : undefined}
-      className={cn(
-        buttonVariants({
-          variant: isActive ? 'outline' : 'ghost',
-          size
-        }),
-        'flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0',
-        className
+    <div
+      id="paginationBar"
+      className="flex h-14 items-center justify-between gap-3 px-3 py-3 border-t border-slate-200 bg-white"
+    >
+      <div className="text-xs text-slate-500">
+        {total > 0 ? (
+          <>
+            Toont <span className="font-semibold text-slate-700">{from}</span>–
+            <span className="font-semibold text-slate-700">{to}</span> van{' '}
+            <span className="font-semibold text-slate-700">{total}</span>
+          </>
+        ) : (
+          <>Geen resultaten</>
+        )}
+      </div>
+
+      {last_page > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => canPrev && onPageChange(current_page - 1)}
+            disabled={!canPrev}
+            className={cn(
+              'h-9 px-3 rounded-xl text-sm font-semibold flex items-center gap-1 transition-colors',
+              canPrev
+                ? 'border-slate-200 text-slate-700'
+                : 'border-slate-200 text-slate-300 cursor-not-allowed'
+            )}
+          >
+            <MdChevronLeft className="text-lg" />
+            Vorige
+          </button>
+
+          <div className="hidden sm:flex items-center gap-1 mx-1">
+            {pages[0] > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(1)}
+                  className="h-9 w-9 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  1
+                </button>
+                {pages[0] > 2 && <span className="px-1 text-slate-400">…</span>}
+              </>
+            )}
+
+            {pages.map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={cn(
+                  'h-9 w-9 rounded-xl border text-sm font-semibold transition-colors',
+                  p === current_page
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                )}
+              >
+                {p}
+              </button>
+            ))}
+
+            {pages[pages.length - 1] < last_page && (
+              <>
+                {pages[pages.length - 1] < last_page - 1 && (
+                  <span className="px-1 text-slate-400">…</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onPageChange(last_page)}
+                  className="h-9 w-9 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {last_page}
+                </button>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => canNext && onPageChange(current_page + 1)}
+            disabled={!canNext}
+            className={cn(
+              'h-9 px-3 text-sm font-semibold flex items-center gap-1 transition-colors',
+              canNext
+                ? 'border-slate-200 text-slate-700'
+                : 'border-slate-200 text-slate-300 cursor-not-allowed'
+            )}
+          >
+            Volgende
+            <MdChevronRight className="text-lg" />
+          </button>
+        </div>
       )}
-      {...props}
-      preserveState
-    />
+    </div>
   )
-}
-PaginationLink.displayName = 'PaginationLink'
-
-const PaginationPrevious = ({ className, ...props }) => (
-  <PaginationLink
-    aria-label="Ga naar de vorige pagina"
-    size="default"
-    className={cn('', className)}
-    {...props}
-  >
-    <ChevronLeftIcon className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationPrevious.displayName = 'PaginationPrevious'
-
-const PaginationNext = ({ className, ...props }) => (
-  <PaginationLink
-    aria-label="Ga naar de volgende pagina"
-    size="default"
-    className={cn('', className)}
-    {...props}
-  >
-    <ChevronRightIcon className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationNext.displayName = 'PaginationNext'
-
-const PaginationFirst = ({ className, ...props }) => (
-  <PaginationLink
-    aria-label="Ga naar de eerste pagina"
-    size="default"
-    className={cn('', className)}
-    {...props}
-  >
-    <DoubleArrowLeftIcon className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationFirst.displayName = 'PaginationFirst'
-
-const PaginationLast = ({ className, ...props }) => (
-  <PaginationLink
-    aria-label="Ga naar de laatste pagina"
-    size="default"
-    className={cn('', className)}
-    {...props}
-  >
-    <DoubleArrowRightIcon className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationLast.displayName = 'PaginationLast'
-
-const PaginationEllipsis = ({ className, ...props }) => (
-  <span
-    aria-hidden
-    className={cn('flex h-9 w-9 items-center justify-center', className)}
-    {...props}
-  >
-    <DotsHorizontalIcon className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
-  </span>
-)
-PaginationEllipsis.displayName = 'PaginationEllipsis'
-
-const PaginationCounter = ({ className, current_page, last_page }) => (
-  <span
-    aria-hidden
-    className={cn(
-      'flex items-center justify-center text-sm font-medium',
-      className
-    )}
-  >
-    Pagina {current_page} van {last_page}
-  </span>
-)
-PaginationCounter.displayName = 'PaginationCounter'
-
-export {
-  Pagination,
-  PaginationContent,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-  PaginationEllipsis,
-  PaginationCounter,
-  PaginationFirst,
-  PaginationLast
 }

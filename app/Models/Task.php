@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Contracts\HasRequestingTeamsScopeInterface;
 use App\Enums\TaskPriorityEnum;
 use App\Models\Team;
 use App\Models\PATIENTLIST\BedVisit;
@@ -17,8 +18,9 @@ use App\Enums\TaskStatusEnum;
 use App\Traits\HasAssignees;
 use App\Traits\HasAccessScope;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
-class Task extends Model
+class Task extends Model implements HasRequestingTeamsScopeInterface
 {
     use HasAssignees, HasCreator, HasTeams, HasAccessScope;
 
@@ -45,8 +47,9 @@ class Task extends Model
     {
         return Attribute::make(
             get: fn() => [
-                'can_update' => auth()->user()?->can('update', $this),
-                'can_reject' => auth()->user()?->can('reject', $this),
+                'can_execute' => auth()->user()?->can('execute', $this),
+                'can_update'  => auth()->user()?->can('update', $this),
+                'can_reject'  => auth()->user()?->can('reject', $this),
                 'isAssignedToCurrentUser' => $this->assignees->contains(Auth::user()),
             ],
         );
@@ -158,6 +161,13 @@ class Task extends Model
 
         return $query->whereHas('teams', function ($teamQuery) use ($teamIds) {
             $teamQuery->whereIn('teams.id', $teamIds);
+        });
+    }
+
+    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
+    {
+        return $query->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {
+            $q->whereIn('teams.id', $teamIds);
         });
     }
 

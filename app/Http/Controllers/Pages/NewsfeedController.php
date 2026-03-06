@@ -17,9 +17,9 @@ class NewsfeedController extends Controller
   {
     $filters = (array) $request->input('filters', []);
 
-    $createdByFilter = Helper::getFilterByValue($filters, 'created_by');
-    $teamFilter      = Helper::getFilterByValue($filters, 'team_id');
-    $statusFilter    = Helper::getFilterByValue($filters, 'status_id');
+    // $createdByFilter = Helper::getFilterByValue($filters, 'created_by');
+    // $teamFilter      = Helper::getFilterByValue($filters, 'team_id');
+    // $statusFilter    = Helper::getFilterByValue($filters, 'status_id');
 
     // Main team based filtering is handled via the HasTeams trait
     $newsfeed = Comment::query()
@@ -30,26 +30,12 @@ class NewsfeedController extends Controller
       ])
       ->byTeams()
       ->when(
-        $createdByFilter,
+        $filters,
         fn(Builder $q) =>
-        $this->applyFilters($q, $createdByFilter)
-      )
-      ->when($teamFilter, function (Builder $q) use ($teamFilter) {
-        $teamIds = [$teamFilter['value']];
-
-        $q->where(function (Builder $inner) use ($teamIds) {
-          $inner
-            ->where(fn(Builder $sub) => $sub->byRecipientTeams($teamIds))
-            ->orWhere(fn(Builder $sub) => $sub->byTaskTeams($teamIds));
-        });
-      })
-      ->when(
-        $statusFilter,
-        fn(Builder $q) =>
-        $this->applyFilters($q, $statusFilter)
+        $this->applyFilters($q, $filters)
       )
       ->latest('created_at')
-      ->paginate(5)
+      ->paginate(20)
       ->withQueryString();
 
     return Inertia::render('Newsfeed', [
@@ -66,13 +52,27 @@ class NewsfeedController extends Controller
   protected function applyFilters(Builder $query, array $filters): void
   {
     foreach ($filters as $filter) {
-      if (! isset($filter['field'], $filter['type'], $filter['value'])) {
-        continue;
-      }
 
       $field    = $filter['field'];
       $operator = $filter['type'];
       $value    = $filter['value'];
+
+      if (! isset($field, $operator, $value)) {
+        continue;
+      }
+
+      if ($field === 'team_id') {
+
+        $teamIds = is_array($value) ? $value : [$value];
+
+        $query->where(function (Builder $q) use ($teamIds) {
+          $q
+            ->where(fn(Builder $sub) => $sub->byRecipientTeams($teamIds))
+            ->orWhere(fn(Builder $sub) => $sub->byTaskTeams($teamIds));
+        });
+
+        continue;
+      }
 
       $query->where($field, $operator, $value);
     }

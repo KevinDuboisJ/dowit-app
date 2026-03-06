@@ -20,7 +20,6 @@ use App\Services\TaskPlannerService;
 use App\Traits\HasJsonAssignees;
 use App\Traits\HasAccessScope;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\DB;
 
 class TaskPlanner extends Model
 {

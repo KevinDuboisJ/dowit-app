@@ -1,113 +1,42 @@
-import {NewsItem} from '@/components'
+import { NewsItem } from '@/components'
+import { useInfiniteScroll } from '@/hooks'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Loader,
   ScrollArea,
+  Loader
 } from '@/base-components'
-import {useState, useEffect, useRef, useCallback} from 'react'
-import {router} from '@inertiajs/react'
-import {__} from '@/stores'
+import { useState } from 'react'
+import { router } from '@inertiajs/react'
+import { __ } from '@/stores'
 
-const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
-  const [newsfeed, setNewsfeed] = useState(initNewsfeed.data)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [hasMoreToLoad, setHasMoreToLoad] = useState(
-    initNewsfeed.current_page < initNewsfeed.last_page
-  )
+const Newsfeed = ({ newsfeed, teammates, user, statuses }) => {
   const [filters, setFilters] = useState([])
-  const observer = useRef()
-  const lastNewsItemElementRef = useCallback(
-    node => {
-      if (loading) return
-      if (observer.current) observer.current.disconnect()
-
-      observer.current = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting && hasMoreToLoad) {
-          setPage(prevPage => prevPage + 1) // trigger loading of new posts by chaging page no
-        }
-      })
-
-      if (node) observer.current.observe(node)
-    },
-    [loading, hasMoreToLoad]
-  )
-
-  const loadMoreNewsItems = page => {
-    setLoading(true)
-    router.reload({
-      method: 'post',
-      only: ['newsfeed'], // Specify the data to reload
-      data: {page: page}, // Pass the parameters
-      onSuccess: ({props}) => {
-        const newsfeed = props.newsfeed.data
-        const currentPage = props.newsfeed.current_page
-        const lastPage = props.newsfeed.last_page
-
-        setNewsfeed(prevNewsfeed => [...prevNewsfeed, ...newsfeed])
-        setHasMoreToLoad(currentPage < lastPage)
-        setLoading(false)
-      },
-      onError: error => {
-        console.error('Failed to reload newsfeed:', error)
-      }
-    })
-  }
-
-  useEffect(() => {
-    if (page === 1) {
-      return
-    }
-
-    loadMoreNewsItems(page)
-  }, [page])
-
-  // const debounceSearch = debounce((e) => {
-  //   router.reload({ data: { search: e.target.value }, preserveState: true })
-  // }, 250)
+  const { items, loading, lastItemRef, scrollRootRef } = useInfiniteScroll({
+    request: newsfeed,
+    propKey: 'newsfeed',
+    params: { filters }
+  })
 
   const handleSearch = (field, type, value) => {
-    let newFilters = []
-
-    newFilters = [
-      ...filters.filter(filter => filter.field !== field) // Remove existing filter with the same field
-    ]
+    let newFilters = filters.filter(f => f.field !== field)
 
     if (value) {
-      newFilters = [
-        ...newFilters,
-        {
-          field: field,
-          type: type,
-          value: value
-        }
-      ]
+      newFilters = [...newFilters, { field, type, value }]
     }
+
+    setFilters(newFilters)
 
     router.get(
       '/newsfeed',
-      {
-        filters: newFilters
-      },
+      { filters: newFilters },
       {
         only: ['newsfeed'],
         queryStringArrayFormat: 'indices',
-        preserveState: true,
-
-        onSuccess: ({props}) => {
-          const newsfeed = props.newsfeed.data
-          const currentPage = props.newsfeed.current_page
-          const lastPage = props.newsfeed.last_page
-
-          setNewsfeed(newsfeed)
-          setPage(1)
-          setHasMoreToLoad(currentPage < lastPage)
-          setLoading(false)
-        }
+        preserveState: true
       }
     )
   }
@@ -117,12 +46,12 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
       <div className="flex mb-2 items-center flex-nowrap col-span-12 fadeInUp">
         <h2 className="text-lg font-medium justify-start">Newsfeed</h2>
       </div>
+
       <div className="flex flex-col h-full min-h-0 fadeInUp box p-3 gap-y-2">
+        {/* Filters */}
         <div className="flex items-center space-x-2">
           <Select
-            onValueChange={e => {
-              handleSearch('created_by', '=', e)
-            }}
+            onValueChange={e => handleSearch('created_by', '=', e)}
             defaultValue={null}
           >
             <SelectTrigger className="w-[180px] bg-white text-sm text-slate-500">
@@ -131,19 +60,14 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
             <SelectContent>
               <SelectItem value={null}>Medewerker</SelectItem>
               {teammates?.map(member => (
-                <SelectItem
-                  key={member.id}
-                  value={member.id}
-                >{`${member.firstname} ${member.lastname}`}</SelectItem>
+                <SelectItem key={member.id} value={member.id}>
+                  {`${member.firstname} ${member.lastname}`}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select
-            onValueChange={e => {
-              handleSearch('team_id', '=', e)
-            }}
-          >
+          <Select onValueChange={e => handleSearch('team_id', '=', e)}>
             <SelectTrigger className="w-[180px] bg-white text-sm text-slate-500">
               <SelectValue placeholder="Team" />
             </SelectTrigger>
@@ -157,11 +81,7 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
             </SelectContent>
           </Select>
 
-          <Select
-            onValueChange={e => {
-              handleSearch('status_id', '=', e)
-            }}
-          >
+          {/* <Select onValueChange={e => handleSearch('status_id', '=', e)}>
             <SelectTrigger className="w-[180px] bg-white text-sm text-slate-500">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -173,27 +93,30 @@ const Newsfeed = ({newsfeed: initNewsfeed, teammates, statuses, user}) => {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select> */}
         </div>
 
-        <ScrollArea className="fadeInUp pt-3">
+        {/* Infinite scroll list */}
+        <ScrollArea ref={scrollRootRef} className={`fadeInUp pt-3`}>
           <div className="flex flex-col h-full gap-8">
-            {newsfeed?.map((item, index) => (
+            {items?.map((item, index) => (
               <div
                 key={item.id}
-                ref={
-                  newsfeed?.length === index + 1 ? lastNewsItemElementRef : null
-                }
+                ref={items.length === index + 1 ? lastItemRef : null}
               >
                 <NewsItem newsItem={item} />
               </div>
             ))}
 
-            {newsfeed?.length === 0 && <p>Geen gegevens om weer te geven</p>}
+            {items?.length === 0 && !loading && (
+              <p className="text-sm text-slate-500">
+                Geen gegevens om weer te geven
+              </p>
+            )}
 
             {loading && (
-              <div className="flex w-full intems-center justify-center">
-                <Loader/>
+              <div className="flex w-full items-center justify-center">
+                <Loader />
               </div>
             )}
           </div>

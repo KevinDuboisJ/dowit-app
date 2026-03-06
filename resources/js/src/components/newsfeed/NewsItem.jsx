@@ -73,7 +73,7 @@ export const NewsItem = ({ newsItem }) => {
                   className="prose prose-sm max-w-none text-muted-foreground pb-2"
                 />
               )}
-              
+
               {/* Collega nodig */}
               {newsItem?.task_id && meta.needs_help && (
                 <span className="text-xs rounded-full uppercase tracking-wide text-amber-700 shadow-xs">
@@ -96,7 +96,9 @@ export const NewsItem = ({ newsItem }) => {
                     )}
 
                     <span className="text-green-600">
-                      {typeof value === 'string' ? __(value) : value.toString()}
+                      {typeof value === 'string'
+                        ? __(value)
+                        : value?.toString()}
                     </span>
                   </div>
                 ))}

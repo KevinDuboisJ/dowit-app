@@ -1,5 +1,6 @@
 
 
+
 Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen bed toegewezen heeft? Ik moet het weten, want anders kan een taakplanner uitgeschakeld worden omdat die denkt dat de opname geen bed toegewezen heeft. Dan moet anders de discharge_at gebruik maar wel weten dat soms dit blijkbaar niet wordt aangepast in het systeem.
 
   TO-DO's
@@ -10,10 +11,14 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
   20. use the same logic and view of dropdown as the Patient-autocomplete for all the other inputs with dropdown
   36. Add maybe an advanced filters. also when filtered task are showed with the groups of assigned task or not. add filter to show only assigned to me.
   40. Add Phone sound and vibration on task creation
+  41. Patient transport - ophalen: doesnt have a create task comment
+  42. Add Task started instead of bewerking in task historiek
   43. in create task remove the dropdown arrow as this doesnt do anything
   44. Overdragen van accounts werkt niet in EDB Finn Ronsyn is een voorbeeld
   46. Mededelingen voor teams worden niet getoond in de nieuwsfeed
   47. See if i can see if a user is active in an application, and add this information to the user resource in admin panel
+  48. redesign the filters
+
 
 1. it get all data from oazis for all occupied beds.
 2. it get all the bed_visits records that have vacated_at set to null 

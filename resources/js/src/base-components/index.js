@@ -38,5 +38,5 @@ export {
   Notification,
   Alert,
   Lucide,
-  Heroicon,
+  Heroicon
 }

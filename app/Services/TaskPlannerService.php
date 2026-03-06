@@ -129,7 +129,7 @@ class TaskPlannerService
             'visit_id' => $taskPlanner->visit_id,
           ],
           'tags' => $taskPlanner->tags->pluck('id')->toArray(),
-          'assignees' => $taskPlanner->assignments['users'] ?? null,
+          'assignees' => $taskPlanner->assignments['users'] ?? [],
           'teamsMatchingAssignment' => $taskPlanner->teams->pluck('id')->toArray(),
         ];
 
@@ -137,14 +137,18 @@ class TaskPlannerService
         $task = $taskService->create($data);
 
         // Handle one time recurrence for assignees
-        $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? null;
+        $oneTimeOcurrence = $taskPlanner->assignments['one_time_recurrence'] ?? false;
 
         if ($oneTimeOcurrence) {
-          $taskPlanner->assignments = null;
+          $taskPlanner->assignments = ['users' => [], 'one_time_recurrence' => false];
           $taskPlanner->save();
         }
 
-        broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
+        try {
+          broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
+        } catch (\Throwable $e) {
+          Log::critical($e);
+        }
       });
     } catch (\Throwable $e) {
       Log::debug([

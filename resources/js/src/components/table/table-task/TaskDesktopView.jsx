@@ -1,56 +1,54 @@
-import {router} from '@inertiajs/react'
-import {__} from '@/stores'
-import {useLoader} from '@/hooks'
-import {AnnouncementSheet, TaskSheet, FilterBar, TaskTable} from '@/components'
+import { useLoader } from '@/hooks'
+import { PaginationBar } from '@/base-components'
+import {
+  AnnouncementSheet,
+  TaskSheet,
+  FilterBar,
+  TaskTable,
+  TaskTableOnFilter
+} from '@/components'
 
 export const TaskDesktopView = ({
-  filtersRef,
-  tasks,
+  data,
+  filters,
   setSheetState,
   handleTaskUpdate
 }) => {
-  const {loading, setLoading, Loader} = useLoader()
+  const { Loader } = useLoader()
 
   return (
-    <div className="flex flex-col h-full min-h-0 p-4 fadeInUp space-y-2">
-      <div className="flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3">
-        <FilterBar
-          filtersRef={filtersRef}
-          onApplyFilters={({activeFilters}) => {
-            setLoading(true)
-            router.get(
-              '/',
-              {filters: activeFilters},
-              {
-                only: ['tasks'],
-                queryStringArrayFormat: 'indices',
-                preserveState: true,
-                onSuccess: () => {
-                  setLoading(false)
-                },
-                onError: error => {
-                  console.log(error)
-                }
-              }
-            )
-          }}
-        />
-        <div className="ml-auto space-x-2">
-          <AnnouncementSheet/>
-          <TaskSheet />
+    <div id="taskDesktopView" className="flex flex-col h-full min-h-0">
+      <div className="flex flex-col h-full p-4 min-h-0 fadeInUp space-y-2">
+        <div className="flex flex-col xl:items-center xl:flex-row xl:items-end xl:items-start shrink-0 gap-y-3">
+          <FilterBar filters={filters} />
+          <div className="ml-auto space-x-2">
+            <AnnouncementSheet />
+            <TaskSheet />
+          </div>
         </div>
+
+        {/* Loading Overlay */}
+        {filters.loading && (
+          <div className="absolute inset-0 flex justify-center items-center bg-gray-100 bg-opacity-50 z-30 transition-opacity duration-300">
+            <Loader width={80} height={80} className="z-40" />
+          </div>
+        )}
+
+        {filters.hasActive() ? (
+          <TaskTableOnFilter
+            data={data}
+            setSheetState={setSheetState}
+            handleTaskUpdate={handleTaskUpdate}
+          />
+        ) : (
+          <TaskTable
+            data={data}
+            setSheetState={setSheetState}
+            handleTaskUpdate={handleTaskUpdate}
+          />
+        )}
       </div>
-      {/* Loading Overlay */}
-      {loading && (
-        <div className="absolute inset-0 flex justify-center items-center bg-gray-100 bg-opacity-50 z-30 transition-opacity duration-300">
-          <Loader width={80} height={80} className="z-40" />
-        </div>
-      )}
-      <TaskTable
-        tasks={tasks}
-        setSheetState={setSheetState}
-        handleTaskUpdate={handleTaskUpdate}
-      />
+      <PaginationBar {...data} onPageChange={page => filters.apply(page)} />
     </div>
   )
 }

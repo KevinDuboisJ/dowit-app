@@ -34,14 +34,8 @@ class TaskType extends Model implements HasRequestingTeamsScopeInterface
         return $this->belongsToMany(Team::class, 'task_type_requesting_team');
     }
 
-    public function scopeByRequestingTeams(Builder $query, User $user): Builder
+    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
     {
-        $teamIds = $user->getTeamIds();
-
-        if (empty($teamIds)) {
-            return $query;
-        }
-
         return $query->whereHas('requestingTeams', function (Builder $q) use ($teamIds) {
             $q->whereIn('teams.id', $teamIds);
         });

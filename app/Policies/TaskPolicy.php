@@ -12,9 +12,9 @@ class TaskPolicy
      */
     public function before(User $user): ?bool
     {
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
+        // if ($user->isSuperAdmin()) {
+        //     return true;
+        // }
 
         return null;
     }
@@ -33,16 +33,21 @@ class TaskPolicy
      */
     public function update(User $user, Task $task): bool
     {
-        $userTeamIds = $user->getTeamIds();
+        $teamIds = $user->getTeamIds();
 
         if ($task?->taskType?->requestingTeams()
-            ->whereIn('teams.id', $userTeamIds)
+            ->whereIn('teams.id', $teamIds)
             ->exists()
         ) {
             return false;
         }
 
         return $task->assignees->isEmpty() || $task->assignees->contains($user) || $user->isAdmin();
+    }
+
+    public function execute(User $user, Task $task): bool
+    {
+        return $task->taskType?->teams()->exists();
     }
 
     public function reject(User $user): bool

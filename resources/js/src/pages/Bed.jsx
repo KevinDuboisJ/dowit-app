@@ -1,5 +1,5 @@
-import {useState, useMemo} from 'react'
-import {usePoll, router} from '@inertiajs/react'
+import { useState } from 'react'
+import { usePoll, router } from '@inertiajs/react'
 import {
   Card,
   CardContent,
@@ -14,108 +14,87 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger
+  AccordionTrigger,
+  PaginationBar
 } from '@/base-components'
 
-const Bed = ({beds, departments}) => {
-  const [departmentFilter, setDepartmentFilter] = useState('all')
-  const [campusFilter, setCampusFilter] = useState('all')
-  const [roomFilter, setRoomFilter] = useState('all')
-  const [bedFilter, setBedFilter] = useState('all')
-  const [needsCleaningOnly, setNeedsCleaningOnly] = useState(false)
-  const [showOccupiedOnly, setShowOccupiedOnly] = useState(false)
-  const [showCleanedOnly, setShowCleanedOnly] = useState(false)
-  const [roomTypeFilter, setRoomTypeFilter] = useState('all')
+const Bed = ({ beds, filters: initialFilters, filterOptions }) => {
+  const rows = beds.data
 
-  const hasActiveFilters =
-    departmentFilter !== 'all' ||
-    campusFilter !== 'all' ||
-    roomFilter !== 'all' ||
-    bedFilter !== 'all' ||
-    roomTypeFilter !== 'all' ||
-    needsCleaningOnly ||
-    showOccupiedOnly ||
-    showCleanedOnly
-
-  const resetFilters = () => {
-    setDepartmentFilter('all')
-    setCampusFilter('all')
-    setRoomFilter('all')
-    setBedFilter('all')
-    setRoomTypeFilter('all')
-    setNeedsCleaningOnly(false)
-    setShowOccupiedOnly(false)
-    setShowCleanedOnly(false)
-  }
-
-  const departmentList = departments?.map(dep => dep.number) || []
-
-  usePoll(10000, () => {
-    router.reload({only: ['beds']})
+  const [filters, setFilters] = useState({
+    department: initialFilters?.department ?? 'all',
+    campus: initialFilters?.campus ?? 'all',
+    room: initialFilters?.room ?? 'all',
+    bed: initialFilters?.bed ?? 'all',
+    room_type: initialFilters?.room_type ?? 'all',
+    needs_cleaning_only: initialFilters?.needs_cleaning_only ?? false,
+    show_occupied_only: initialFilters?.show_occupied_only ?? false,
+    show_cleaned_only: initialFilters?.show_cleaned_only ?? false
   })
 
-  // Extract unique campuses, rooms, and beds
-  const campusList = useMemo(() => {
-    return [...new Set(beds.map(b => b.room?.campus?.name).filter(Boolean))]
-  }, [beds])
+  const hasActiveFilters =
+    filters.department !== 'all' ||
+    filters.campus !== 'all' ||
+    filters.room !== 'all' ||
+    filters.bed !== 'all' ||
+    filters.room_type !== 'all' ||
+    filters.needs_cleaning_only ||
+    filters.show_occupied_only ||
+    filters.show_cleaned_only
 
-  const roomList = useMemo(() => {
-    return [...new Set(beds.map(b => b.room?.number).filter(Boolean))].sort(
-      (a, b) => Number(a) - Number(b)
-    ) // numeric ascending sort
-  }, [beds])
-
-  const bedList = useMemo(() => {
-    return [...new Set(beds.map(b => b.number).filter(Boolean))].sort(
-      (a, b) => Number(a) - Number(b)
-    ) // numeric ascending sort
-  }, [beds])
-
-  const roomBedCount = useMemo(() => {
-    const countMap = {}
-    beds.forEach(bed => {
-      const roomNumber = bed.room?.number
-      if (roomNumber) {
-        countMap[roomNumber] = (countMap[roomNumber] || 0) + 1
-      }
+  const visitWithFilters = nextParams => {
+    router.get('beds', nextParams, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+      only: ['beds', 'filters']
     })
-    return countMap
-  }, [beds])
+  }
 
-  // Filtering logic
-  const filteredBeds = beds.filter(bed => {
-    const hasToBeCleaned =
-      (!bed.occupied_at && !bed.cleaned_at) ||
-      (bed.occupied_at && !bed.cleaned_at)
-    const isOccupied = !!bed.occupied_at
-    const isCleaned = !!bed.cleaned_at
+  const applyFilters = nextFilters => {
+    setFilters(nextFilters)
 
-    const bedCountInRoom = roomBedCount[bed.room?.number] || 0
+    visitWithFilters({
+      ...nextFilters,
+      page: 1
+    })
+  }
 
-    // Department filter
-    if (
-      departmentFilter !== 'all' &&
-      bed.room.department?.number !== departmentFilter
-    )
-      return false
-    // Campus filter
-    if (campusFilter !== 'all' && bed.room?.campus?.name !== campusFilter)
-      return false
-    // Room filter
-    if (roomFilter !== 'all' && bed.room?.number !== roomFilter) return false
-    // Bed filter
-    if (bedFilter !== 'all' && bed.number !== bedFilter) return false
-    // Needs cleaning filter
-    if (needsCleaningOnly && !hasToBeCleaned) return false
-    // Occupied filter
-    if (showOccupiedOnly && !isOccupied) return false
-    // Cleaned filter
-    if (showCleanedOnly && !isCleaned) return false
-    // Room type filter
-    if (roomTypeFilter === 'one' && bedCountInRoom !== 1) return false
-    if (roomTypeFilter === 'two' && bedCountInRoom !== 2) return false
+  const updateFilter = (key, value) => {
+    applyFilters({
+      ...filters,
+      [key]: value
+    })
+  }
 
-    return true
+  const resetFilters = () => {
+    const cleared = {
+      department: 'all',
+      campus: 'all',
+      room: 'all',
+      bed: 'all',
+      room_type: 'all',
+      needs_cleaning_only: false,
+      show_occupied_only: false,
+      show_cleaned_only: false
+    }
+
+    applyFilters(cleared)
+  }
+
+  const handlePageChange = page => {
+    visitWithFilters({
+      ...filters,
+      page
+    })
+  }
+
+  usePoll(10000, () => {
+    router.reload({
+      only: ['beds'],
+      preserveState: true,
+      preserveScroll: true
+    })
   })
 
   return (
@@ -127,7 +106,6 @@ const Bed = ({beds, departments}) => {
         className="p-4 fadeInUp"
       >
         <AccordionItem value="filters" className="border-b-0">
-          {/* Fixed row with heading & trigger always inline */}
           <div className="flex items-center">
             <h2 className="text-lg font-medium">Bedden</h2>
 
@@ -140,23 +118,22 @@ const Bed = ({beds, departments}) => {
                   Reset filters
                 </button>
               )}
-              {/* Optional chevron icon */}
               <AccordionTrigger className="p-0 hover:no-underline" />
             </div>
           </div>
 
-          {/* AccordionContent always below the heading row */}
           <AccordionContent className="flex flex-col flex-wrap xl:flex-nowrap gap-y-2 p-1">
-            {/* FILTERS */}
             <div className="flex w-full flex-col gap-2 xl:flex-row [&>*]:w-full xl:[&>*]:w-auto items-center">
-              {/* Campus Filter */}
-              <Select value={campusFilter} onValueChange={setCampusFilter}>
+              <Select
+                value={filters.campus}
+                onValueChange={value => updateFilter('campus', value)}
+              >
                 <SelectTrigger className="w-[200px] bg-white text-sm text-slate-500">
                   <SelectValue placeholder="Kies campus" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle campussen</SelectItem>
-                  {campusList.map(campus => (
+                  {filterOptions.campuses.map(campus => (
                     <SelectItem key={campus} value={campus}>
                       {campus}
                     </SelectItem>
@@ -164,17 +141,16 @@ const Bed = ({beds, departments}) => {
                 </SelectContent>
               </Select>
 
-              {/* Department Filter */}
               <Select
-                value={departmentFilter}
-                onValueChange={setDepartmentFilter}
+                value={filters.department}
+                onValueChange={value => updateFilter('department', value)}
               >
                 <SelectTrigger className="w-[200px] bg-white text-sm text-slate-500">
                   <SelectValue placeholder="Kies departement" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle departementen</SelectItem>
-                  {departmentList.map(dep => (
+                  {filterOptions.departments.map(dep => (
                     <SelectItem key={dep} value={dep}>
                       {dep}
                     </SelectItem>
@@ -182,8 +158,10 @@ const Bed = ({beds, departments}) => {
                 </SelectContent>
               </Select>
 
-              {/* Room Type Filter */}
-              <Select value={roomTypeFilter} onValueChange={setRoomTypeFilter}>
+              <Select
+                value={filters.room_type}
+                onValueChange={value => updateFilter('room_type', value)}
+              >
                 <SelectTrigger className="w-[180px] bg-white text-sm text-slate-500">
                   <SelectValue placeholder="Kies kamertype" />
                 </SelectTrigger>
@@ -194,14 +172,16 @@ const Bed = ({beds, departments}) => {
                 </SelectContent>
               </Select>
 
-              {/* Room Filter */}
-              <Select value={roomFilter} onValueChange={setRoomFilter}>
+              <Select
+                value={filters.room}
+                onValueChange={value => updateFilter('room', value)}
+              >
                 <SelectTrigger className="w-[150px] bg-white text-sm text-slate-500">
                   <SelectValue placeholder="Kamer" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle kamers</SelectItem>
-                  {roomList.map(room => (
+                  {filterOptions.rooms.map(room => (
                     <SelectItem key={room} value={room}>
                       {room}
                     </SelectItem>
@@ -209,48 +189,54 @@ const Bed = ({beds, departments}) => {
                 </SelectContent>
               </Select>
 
-              {/* Bed Filter */}
-              <Select value={bedFilter} onValueChange={setBedFilter}>
+              <Select
+                value={filters.bed}
+                onValueChange={value => updateFilter('bed', value)}
+              >
                 <SelectTrigger className="w-[120px] bg-white text-sm text-slate-500">
                   <SelectValue placeholder="Bed" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle bedden</SelectItem>
-                  {bedList.map(b => (
-                    <SelectItem key={b} value={b}>
-                      {b}
+                  {filterOptions.beds.map(bed => (
+                    <SelectItem key={bed} value={bed}>
+                      {bed}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="flex flex-wrap gap-2 items-center justify-between xl:justify-normal">
-              {/* Needs Cleaning Checkbox */}
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={needsCleaningOnly}
-                  onChange={e => setNeedsCleaningOnly(e.target.checked)}
+                  checked={filters.needs_cleaning_only}
+                  onChange={e =>
+                    updateFilter('needs_cleaning_only', e.target.checked)
+                  }
                 />
                 Poetsen nodig
               </label>
 
-              {/* Occupied Beds Checkbox */}
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={showOccupiedOnly}
-                  onChange={e => setShowOccupiedOnly(e.target.checked)}
+                  checked={filters.show_occupied_only}
+                  onChange={e =>
+                    updateFilter('show_occupied_only', e.target.checked)
+                  }
                 />
                 Bezette bedden
               </label>
 
-              {/* Cleaned Beds Checkbox */}
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={showCleanedOnly}
-                  onChange={e => setShowCleanedOnly(e.target.checked)}
+                  checked={filters.show_cleaned_only}
+                  onChange={e =>
+                    updateFilter('show_cleaned_only', e.target.checked)
+                  }
                 />
                 Gepoetste bedden
               </label>
@@ -259,10 +245,9 @@ const Bed = ({beds, departments}) => {
         </AccordionItem>
       </Accordion>
 
-      {/* BED CARDS */}
-      <ScrollArea className="flex flex-col shrink-1 min-h-0 ">
+      <ScrollArea className="flex flex-col h-full shrink-1 min-h-0">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 p-4 pt-2 fadeInUp">
-          {filteredBeds.map(bed => {
+          {rows.map(bed => {
             const currentVisit = bed.bed_visits.find(v => !v.vacated_at)
             const patient = currentVisit?.visit?.patient
             const hasToBeCleaned =
@@ -283,6 +268,7 @@ const Bed = ({beds, departments}) => {
                         {bed.room?.campus?.name}, {bed.room?.department?.number}
                       </p>
                     </div>
+
                     <div className="space-x-2">
                       <Badge
                         variant={
@@ -334,6 +320,8 @@ const Bed = ({beds, departments}) => {
           })}
         </div>
       </ScrollArea>
+
+      <PaginationBar {...beds} onPageChange={handlePageChange} />
     </div>
   )
 }

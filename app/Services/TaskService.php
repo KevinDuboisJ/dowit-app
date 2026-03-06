@@ -11,6 +11,9 @@ use Illuminate\Support\Arr;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Enums\TaskStatusEnum;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 
 class TaskService
 {
@@ -187,105 +190,185 @@ class TaskService
     ];
   }
 
-  public function fetchAndCombineTasks($request)
+  public function fetchAndCombineTasks(Request $request)
   {
     $hasFilterByStatus = false;
 
-    // Get common settings
     $relationships = [
-      'visit' => fn($query) => $query->with(['patient', 'bed.room']),
+      'visit' => fn($q) => $q->with(['patient', 'bed.room']),
       'tags',
       'status',
-      'taskType' => fn($query) => $query->with(['assets']),
+      'taskType' => fn($q) => $q->with(['assets']),
       'space',
       'spaceTo',
       'assignees',
-      'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
+      'teams' => fn($q) => $q->select('teams.id', 'teams.name'),
     ];
 
-    $filters = $request->filled('filters') ? $request->input('filters') : null;
-    $sorters = $request->filled('sorters') ? $request->input('sorters') : null;
+    $filters = $request->input('filters', []);
+    $sorters = $request->input('sorters', []);
+    $hasFilters = !empty($filters);
+    $perPage = 50;
 
-    // Get tasks
-    $tasks = Task::with($relationships)
-      ->when($filters, function ($query) use ($filters, &$hasFilterByStatus) {
-        $this->applyFilters($query, $filters, $hasFilterByStatus);
-      })
-      ->when(!$hasFilterByStatus, function ($query) {
-        $query->byActive();
-      })
-      ->when($sorters, function ($query) use ($request) {
-        foreach ($request->input('sorters', []) as $sorter) {
-          if ($sorter['field'] === 'status.name') {
-            // Add join for sorting by status name
-            $query->leftJoin('task_statuses', 'tasks.status_id', '=', 'task_statuses.id')
-              ->orderBy('task_statuses.name', $sorter['dir']);
-          } elseif ($sorter['field'] === 'task_type.name') {
-            // Add join for sorting by task type name
-            $query->join('task_types', 'tasks.task_type_id', '=', 'task_types.id')
-              ->orderBy('task_types.name', $sorter['dir']);
-          } else {
-            // Default sorting on the main table
-            $query->orderBy($sorter['field'], $sorter['dir']);
+    $query = Task::query()
+      ->with($relationships)
+      ->select('tasks.*')
+      ->distinct();
+
+    // Apply filters (only if active filters exist)
+    if ($hasFilters) {
+      $this->applyFilters($query, $filters, $hasFilterByStatus, $request);
+    }
+
+    // Default active scope if no status filter
+    if (!$hasFilterByStatus && !$hasFilters) {
+      $query->byActive();
+    }
+
+    // Sorters
+    if (!empty($sorters)) {
+      foreach ($sorters as $sorter) {
+        $field = $sorter['field'] ?? null;
+        $dir   = strtolower($sorter['dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+
+        if ($field === 'status.name') {
+          $query->leftJoin('task_statuses', 'tasks.status_id', '=', 'task_statuses.id')
+            ->orderBy('task_statuses.name', $dir);
+        } elseif ($field === 'task_type.name') {
+          $query->leftJoin('task_types', 'tasks.task_type_id', '=', 'task_types.id')
+            ->orderBy('task_types.name', $dir);
+        } elseif ($field) {
+          $allowed = ['id', 'start_date_time', 'status_id', 'task_type_id', 'needs_help', 'created_at', 'updated_at'];
+          if (in_array($field, $allowed, true)) {
+            $query->orderBy("tasks.$field", $dir);
           }
         }
-      })
-      // Nulls last equivalent for DESC: COALESCE(null, 0) keeps nulls at the bottom
+      }
+    }
+
+    // Your existing default ordering
+    $query
+      ->withExists([
+        'assignees as assigned_to_me' => fn($q) => $q->whereKey(Auth::id()),
+      ])
+      ->orderByDesc('assigned_to_me') // true (1) first, false (0) af
       ->orderByDesc(DB::raw('COALESCE(tasks.needs_help, 0)'))
-      ->orderBy('status_id')
-      // This will evaluate to true/false(1 or 0) desc means true/1 comes first
-      ->orderByDesc(DB::raw('task_type_id = 5'))
-      ->orderByDesc('start_date_time')
-      ->select('tasks.*')
-      ->paginate($request->input('size', 1000));
+      ->orderByDesc(DB::raw('tasks.task_type_id = 5'))
+      ->orderBy('tasks.status_id')
+      ->orderByDesc('tasks.start_date_time');
 
-    // 1.needs help . task_type_id 
+    // Paginate only for active filters
+    $tasks = $query->paginate($perPage);
 
-    // Build pagination metadata
-    $pagination = [
+    return [
       'total' => $tasks->total(),
       'per_page' => $tasks->perPage(),
       'current_page' => $tasks->currentPage(),
       'last_page' => $tasks->lastPage(),
       'from' => $tasks->firstItem(),
       'to' => $tasks->lastItem(),
-    ];
-
-    // Return results
-    return [
-      ...$pagination,
       'data' => collect($tasks->items())->values(),
     ];
   }
 
-  // Helper methods for better organization and reusability
-  protected function applyFilters($query, $filters, &$hasFilterByStatus)
+  /**
+   * Apply filters coming from FilterBar.
+   * Expected filter shape: [{ field, type, value }, ...]
+   */
+  protected function applyFilters($query, array $filters, bool &$hasFilterByStatus, Request $request): void
   {
+    // Helper: normalize string for LIKE
+    $like = function (string $mode, string $value) {
+      $value = trim($value);
+
+      return match ($mode) {
+        'startsWith' => [$value . '%'],
+        'endsWith'   => ['%' . $value],
+        'equals'     => [$value],
+        default      => ['%' . $value . '%'], // contains / like
+      };
+    };
 
     foreach ($filters as $filter) {
-      $field = $filter['field'];
-      $type = $filter['type'];
-      $value = $filter['value'];
+      $field = $filter['field'] ?? null;
+      $type  = $filter['type'] ?? 'contains';
+      $value = $filter['value'] ?? null;
 
-      if ($field === 'status_id' && $value) {
+      if ($field === null) continue;
+
+      // status_id (accepts both ID and name)
+      if ($field === 'status_id' && filled($value)) {
         $hasFilterByStatus = true;
-        $taskStatusId = TaskStatusEnum::fromCaseName($value)->value;
-        $query->where('status_id', $type, $taskStatusId);
+        // If $value is already numeric it will be used directly, otherwise convert from name to ID
+        $statusId = is_numeric($value)
+          ? (int) $value
+          : TaskStatusEnum::fromCaseName($value)->value;
+
+        $query->where('tasks.status_id', '=', $statusId);
+        continue;
       }
 
-      if ($field === 'team_id' && $value) {
+      // ---- team_id
+      if ($field === 'team_id' && filled($value)) {
         $query->whereHas('teams', function ($teamQuery) use ($value) {
-          $teamQuery->where('teams.id', $value);
+          $teamQuery->where('teams.id', '=', $value);
         });
+        continue;
       }
 
-      if ($field === 'assignedTo' && $value) {
-        $query->whereHas(
-          'assignees',
-          fn($subQuery) =>
-          $subQuery->where('firstname', $type, $value . '%')
-            ->orWhere('lastname', $type, $value . '%')
-        );
+      // ---- assignedTo (name search)
+      if ($field === 'assignedTo' && filled($value)) {
+        $pattern = $like($type, (string) $value);
+
+        $query->whereHas('assignees', function ($subQuery) use ($pattern) {
+          $subQuery->where(function ($q) use ($pattern) {
+            $q->where('firstname', 'like', $pattern)
+              ->orWhere('lastname', 'like', $pattern);
+          });
+        });
+        continue;
+      }
+
+      // ---- onlyAssignedToMe (boolean)
+      if ($field === 'onlyAssignedToMe') {
+        // Handle "true"/true/1
+        $bool = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        if ($bool) {
+          $userId = $request->user()?->id;
+          if ($userId) {
+            $query->whereHas('assignees', fn($q) => $q->where('users.id', '=', $userId));
+          }
+        }
+        continue;
+      }
+
+      // ---- dateRange (value: {from,to})
+      if ($field === 'dateRange' && is_array($value)) {
+        $tz = config('app.timezone'); // e.g. Europe/Brussels
+
+        $fromRaw = $value['from'] ?? null;
+        $toRaw   = $value['to'] ?? null;
+
+        // JS Date -> JSON becomes ISO UTC string with "Z"
+        // Parse as instant, convert to app tz, then clamp to local day bounds
+        $from = $fromRaw
+          ? CarbonImmutable::parse($fromRaw)   // respects "Z" as UTC
+          ->setTimezone($tz)
+          ->startOfDay()
+          : null;
+
+        $to = $toRaw
+          ? CarbonImmutable::parse($toRaw)
+          ->setTimezone($tz)
+          ->endOfDay()
+          : CarbonImmutable::parse($value['from'])->setTimezone($tz)->endOfDay();
+
+        // DB stored local time => compare local bounds directly (NO utc())
+        if ($from && $to) {
+          $query->whereBetween('tasks.start_date_time', [$from, $to]);
+        }
+
+        continue;
       }
     }
   }

@@ -17,7 +17,7 @@ import { updateTask } from '@/hooks'
 
 export const TaskActionButton = ({ task, user, handleTaskUpdate }) => {
   
-  if (!task.is_active) {
+  if (!task.is_active || !task.capabilities.can_execute) {
     return null
   }
 

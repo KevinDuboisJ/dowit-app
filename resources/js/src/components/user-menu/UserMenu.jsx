@@ -27,7 +27,7 @@ const UserMenu = ({user, fontSize, setFontSize}) => {
           />
         </div>
         <div className="ml-3 leading-tight">
-          <div className="text-sm text-white xl:text-inherit font-medium">
+          <div className="text-sm text-white font-medium">
             {user.firstname} {user.lastname}
           </div>
         </div>

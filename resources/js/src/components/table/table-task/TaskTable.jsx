@@ -1,16 +1,16 @@
-import React, {useState, useMemo} from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
   getGroupedRowModel,
   flexRender
 } from '@tanstack/react-table'
-import {cn} from '@/utils'
+import { cn } from '@/utils'
 import {
   MdOutlineKeyboardArrowDown,
   MdOutlineKeyboardArrowRight
 } from 'react-icons/md'
-import {useTaskTableColumns, AnnouncementFeed} from '@/components'
+import { useTaskTableColumns, AnnouncementFeed } from '@/components'
 import {
   Table,
   TableBody,
@@ -21,16 +21,12 @@ import {
   ScrollArea
 } from '@/base-components'
 
-export const TaskTable = ({
-  tasks,
-  setSheetState,
-  handleTaskUpdate,
-}) => {
+export const TaskTable = ({ data, setSheetState, handleTaskUpdate }) => {
   const [grouping, setGrouping] = useState(['assignedGroup'])
   const [expanded, setExpanded] = useState(true) // Controls expanded rows
+  const tasks = data.data || [] // Ensure tasks is an array even if data is undefined
   const columns = useTaskTableColumns({
-    handleTaskUpdate,
-
+    handleTaskUpdate
   })
 
   // This is a hack to ensure that the group headers are always shown
@@ -49,7 +45,7 @@ export const TaskTable = ({
     if (!hasAssignedGroupTrue) {
       result.unshift({
         id: '__dummy_true__',
-        capabilities: {isAssignedToCurrentUser: true},
+        capabilities: { isAssignedToCurrentUser: true },
         isDummy: true
       })
     }
@@ -57,10 +53,17 @@ export const TaskTable = ({
     if (!hasAssignedGroupFalse) {
       result.push({
         id: '__dummy_false__',
-        capabilities: {isAssignedToCurrentUser: false},
+        capabilities: { isAssignedToCurrentUser: false },
         isDummy: true
       })
     }
+
+    // Force group order: true first, false second
+    result.sort((a, b) => {
+      const av = a.capabilities?.isAssignedToCurrentUser ? 1 : 0
+      const bv = b.capabilities?.isAssignedToCurrentUser ? 1 : 0
+      return bv - av // desc => true first
+    })
 
     return result
   }, [tasks])
@@ -80,19 +83,21 @@ export const TaskTable = ({
   })
 
   return (
-    <div className="flex flex-col h-full min-h-0 intro-y ">
+    <div id="tasksView" className="flex flex-col h-full min-h-0 intro-y">
       <ScrollArea className="relative">
         <table className="table table-fixed w-full border-separate border-spacing-0 caption-bottom text-sm">
           <TableHeader className="!sticky top-0 z-10 bg-zinc-50">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map(header => {
-
                   return (
                     header.id !== 'assignedGroup' && (
                       <TableHead
                         key={header.id}
-                        style={{ width: header.getSize() !== 150 ? header.getSize() : '100%' }}
+                        style={{
+                          width:
+                            header.getSize() !== 150 ? header.getSize() : '100%'
+                        }}
                         className="bg-zinc-50 text-sm text-primary"
                       >
                         {header.isPlaceholder

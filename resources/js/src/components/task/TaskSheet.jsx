@@ -61,7 +61,7 @@ export const TaskSheet = React.memo(() => {
         </Button>
       </SheetTrigger>
 
-      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[768px] sm:max-w-screen-md">
+      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[720px] sm:max-w-screen-md">
         <SheetHeader className="text-left flex flex-col items-center bg-white p-3 space-y-3 border-b shrink-0">
           <div className="flex w-full py-2">
             {/* First Column */}
@@ -133,14 +133,12 @@ const CreateTaskForm = () => {
     return (
       z
         .object({
-          name: z.string().min(1, 'Naam is verplicht'),
+          name: z.string().min(1, 'Onderwerp is verplicht'),
           startDateTime: z.date({
             required_error: 'Gelieve een Startdatum te kiezen',
             invalid_type_error: 'Startdatum moet een geldige datum zijn'
           }),
-          description: z
-            .string()
-            .min(1, 'Gelieve een omschrijving in te vullen'),
+          description: z.string().optional(),
           taskType: z.string().min(1, 'Gelieve een taaktype te kiezen'),
           campus: z.string().min(1, 'Gelieve een campus te kiezen'),
           visit: z
@@ -299,7 +297,7 @@ const CreateTaskForm = () => {
               name="name"
               render={({ field }) => (
                 <FormItem className="basis-0 grow">
-                  <FormLabel>Naam</FormLabel>
+                  <FormLabel>Onderwerp</FormLabel>
                   <FormControl>
                     <Input
                       onChange={value => {
@@ -307,7 +305,7 @@ const CreateTaskForm = () => {
                       }}
                       className="bg-white"
                       type="text"
-                      placeholder="Naam"
+                      placeholder="Onderwerp"
                       value={field.value}
                     />
                   </FormControl>
@@ -361,9 +359,7 @@ const CreateTaskForm = () => {
                 <FormControl>
                   <RichTextEditor
                     className="text-sm h-32 bg-white"
-                    onUpdate={value => {
-                      field.onChange(value) // Updates form state when MultiSelect changes
-                    }}
+                    onUpdate={(v) =>field.onChange(v)}
                     value={field.value}
                   />
                 </FormControl>
