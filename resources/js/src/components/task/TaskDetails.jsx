@@ -20,7 +20,7 @@ import {
   Loader
 } from '@/base-components'
 
-import { getPriority, TaskActivity, TaskIcon, PriorityText } from '@/components'
+import { getPriority, TaskActivity, AppIcon, PriorityText } from '@/components'
 
 export const TaskDetails = ({ task: selectedTask }) => {
   const { user, settings, tasks } = usePage().props
@@ -76,7 +76,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
             className="rounded-xl"
             style={{ backgroundColor: tag.bg_color }}
           >
-            <TaskIcon iconName={tag.icon} />
+            <AppIcon src={tag.icon} className="w-3.5 h-3.5 mr-1"/>
             {tag.name}
           </Badge>
         ))}
@@ -190,7 +190,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
 
           {task.capabilities.can_update && (
             <div className="flex items-center justify-end gap-2 w-full">
-              <AskHelpButton task={task} disabled={task.needs_help} />
+              <AskHelpButton task={task} disabled={task.help_requested} />
             </div>
           )}
 
@@ -282,7 +282,7 @@ const AskHelpButton = ({ task, disabled }) => {
 
     router.patch(
       `/task/${task.id}/request-help`,
-      { needs_help: true },
+      { help_requested: true },
       {
         preserveScroll: true,
         preserveState: true,
@@ -300,7 +300,7 @@ const AskHelpButton = ({ task, disabled }) => {
         tasks: {
           ...prevProps.tasks,
           data: prevProps.tasks.data.map(row =>
-            row.id === task.id ? { ...row, needs_help: true } : row
+            row.id === task.id ? { ...row, help_requested: true } : row
           )
         }
       }),

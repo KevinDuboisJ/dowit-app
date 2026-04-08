@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Tooltip } from '@/base-components'
 import tooltipIcon from '@images/tooltip.svg'
 import background from '@images/login-bg2.png'
@@ -7,8 +7,8 @@ import UserIcon from '@/components/svg/UserIcon'
 import PasswordIcon from '@/components/svg/PasswordIcon'
 import Logo from '@images/logo.png'
 
-const Login = ({ users, errors }) => {
-  const { flash } = usePage().props
+const Login = ({ users }) => {
+  const { flash, errors } = usePage().props
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
@@ -48,16 +48,15 @@ const Login = ({ users, errors }) => {
                 Icon={UserIcon}
                 placeholder="Gebruikersnaam"
                 onChange={e => setUsername(e.target.value)}
-                errors={errors}
                 users={users}
               />
+
               <IconInput
                 value={password}
                 Icon={PasswordIcon}
                 type="password"
                 placeholder="Wachtwoord"
                 onChange={e => setPassword(e.target.value)}
-                errors={errors}
               />
               <button
                 className="text-sm font-light p-3 border rounded-md bg-[#3e6da9] text-white"
@@ -78,16 +77,14 @@ const Login = ({ users, errors }) => {
   )
 }
 
-const IconDataListInput = ({
-  name,
-  value,
-  onChange,
-  Icon,
-  errors,
-  placeholder
-}) => {
+const IconDataListInput = ({ value, onChange, Icon, placeholder }) => {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState([])
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   // Fetch users from the server when input has 2+ characters (debounced)
   useEffect(() => {
@@ -116,9 +113,10 @@ const IconDataListInput = ({
   return (
     <div className="relative">
       <div className="flex flex-row items-center h-9 w-full font-light border rounded-md bg-gray-50">
-        <Icon className="absolute left-2 z-10 w-3" errors={errors[name]} />
+        <Icon className="absolute left-2 z-10 w-3" />
 
         <input
+          ref={inputRef}
           className="h-full w-full h-6 p-2 ml-7 placeholder:text-sm rounded-md bg-gray-50
             rounded-tl-none rounded-bl-none border-0 border-l border-slate-200 focus:border-l focus:border-slate-200
             placeholder:text-gray-300"
@@ -149,24 +147,36 @@ const IconDataListInput = ({
           ))}
         </ul>
       )}
-
-      {errors[name] && <i className="text-sm text-red-600">{errors[name]}</i>}
     </div>
   )
 }
 
-const IconInput = ({
-  name,
-  value,
-  type,
-  placeholder,
-  onChange,
-  Icon,
-  errors
-}) => {
+const IconInput = ({ value, type, placeholder, onChange, Icon, ...props }) => {
   return (
     <div className="flex flex-row items-center relative h-9 w-full font-light border rounded-md bg-gray-50">
-      <Icon className="absolute left-2 z-10 w-3" errors={errors[name]} />
+      <Icon className="absolute left-2 z-10 w-3" />
+      {/* Hidden inputs to prevent the browser from showing the "save password" prompt */}
+      <input
+        name="disable-pwd-mgr-1"
+        type="password"
+        id="disable-pwd-mgr-1"
+        style={{ display: 'none' }}
+        defaultValue="disable-pwd-mgr-1"
+      />
+      <input
+        name="disable-pwd-mgr-2"
+        type="password"
+        id="disable-pwd-mgr-2"
+        style={{ display: 'none' }}
+        defaultValue="disable-pwd-mgr-2"
+      />
+      <input
+        name="disable-pwd-mgr-3"
+        type="password"
+        id="disable-pwd-mgr-3"
+        style={{ display: 'none' }}
+        defaultValue="disable-pwd-mgr-3"
+      />
       <input
         className="h-full w-full h-6 p-2 ml-7 placeholder:text-sm rounded-md bg-gray-50
             rounded-tl-none rounded-bl-none border-0 border-l border-slate-200 focus:border-l focus:border-slate-200
@@ -175,9 +185,8 @@ const IconInput = ({
         onChange={onChange}
         type={type}
         placeholder={placeholder}
+        {...props}
       />
-
-      {errors[name] && <i className="text-sm text-red-600">{errors[name]}</i>}
     </div>
   )
 }

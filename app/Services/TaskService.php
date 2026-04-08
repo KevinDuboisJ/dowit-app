@@ -11,6 +11,8 @@ use Illuminate\Support\Arr;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Enums\TaskStatusEnum;
+use App\Models\Tag;
+use App\Models\TaskStatus;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -21,7 +23,6 @@ class TaskService
   {
     try {
 
-      $userId =  Auth::id() ?? config('app.system_user_id');
       $usesPatientlist = isset($data['visit']);
 
       DB::connection('mysql')->beginTransaction();
@@ -36,18 +37,27 @@ class TaskService
         $taskPayload['visit_id'] = $data['visit']['id'];
       }
 
-      // Create task
-      $task = Task::create($taskPayload);
+      // Force identical timestamps using now() to identify the task creation comment
+      $now = now();
+
+      $task = Task::create([
+        ...$taskPayload,
+        'created_at' => $now,
+        'updated_at' => $now,
+      ]);
 
       //Sync side stuff (tags, assignees, teams)
       $task->syncTags($data['tags']);
       $task->syncAssignees($data['assignees']);
       $task->syncTeams($data['teamsMatchingAssignment']);
 
+      $userId =  Auth::id() ?? config('app.system_user_id');
+
       // Task created comment
       $task->comments()->create([
         'created_by' => $userId,
-        'content' => 'Taak aangemaakt',
+        'created_at' => $now,
+        'updated_at' => $now,
       ]);
 
       // commit
@@ -85,20 +95,24 @@ class TaskService
       $task->fill(Arr::only($data, [
         'status_id',
         'priority',
-        'needs_help',
+        'help_requested',
         'updated_at',
       ]));
 
       $task->comments()->create([
         'status_id' => $task->isDirty('status_id') ? $task->status_id : null,
-        'needs_help' => $task->isDirty('needs_help') ? $task->needs_help : null,
+        'help_requested' => $task->isDirty('help_requested') ? $task->help_requested : null,
         'content' => $data['comment'] ?? '',
         'metadata' => $this->trackTaskMetaDataChanges($task, $data),
       ]);
 
-      // Only sync assignees if the client actually sent them
+      // Only sync if the client actually sent them
       if (array_key_exists('assignees', $data)) {
         $task->syncAssignees($data['assignees']);
+      }
+
+      if (array_key_exists('tags', $data)) {
+        $task->syncTags($data['tags']);
       }
 
       $this->handleAutoStatusReset($task, $data);
@@ -125,68 +139,143 @@ class TaskService
       $task->comments()->create([
         'created_by' => config('app.system_user_id'),
         'content' => 'Status werd automatisch omgezet naar Toegevoegd',
+        'status_id' => TaskStatusEnum::Added->value,
       ]);
     }
   }
 
   public function trackTaskMetaDataChanges(Task $task, array $data): ?array
   {
-    $changed = [];
-
-    // Current assignees from DB
-    $currentAssignees = $task->assignees()->pluck('users.id')->all();
+    $changes = [];
 
     // Status
     if ($task->isDirty('status_id')) {
-      $changed['status'] = $task->status->name;
+      $oldStatus = TaskStatusEnum::tryFrom((int) $task->getOriginal('status_id'));
+      $newStatus = TaskStatusEnum::tryFrom((int) $task->status_id);
+
+      $changes['status'] = [
+        'from' => $oldStatus
+          ? [
+            'id' => $oldStatus->value,
+            'value' => $oldStatus->name,
+          ]
+          : null,
+        'to' => $newStatus
+          ? [
+            'id' => $newStatus->value,
+            'value' => $newStatus->name,
+          ]
+          : null,
+      ];
     }
 
-    // Priority (guard against missing key for partial updates)
+    // Priority
     if ($task->isDirty('priority') && array_key_exists('priority', $data)) {
-      $priorityEnum = TaskPriorityEnum::tryFrom($data['priority']);
-      $changed['priority'] = $priorityEnum?->name ?? $data['priority'];
+      $oldPriority = $task->getOriginal('priority');
+      $newPriority = $task->priority;
+
+      $changes['priority'] = [
+        'from' => $oldPriority
+          ? [
+            'id' => $oldPriority->value,
+            'value' => $oldPriority->name
+          ]
+          : null,
+        'to' => $newPriority
+          ? [
+            'id' => $newPriority->value,
+            'value' => $newPriority->name,
+          ]
+          : null,
+      ];
     }
 
     // Needs help
-    if ($task->isDirty('needs_help')) {
-      $changed['needs_help'] = $task->needs_help;
+    if ($task->isDirty('help_requested')) {
+      $changes['help_requested'] = [
+        'from' => [
+          'value' => (bool) $task->getOriginal('help_requested'),
+        ],
+        'to' => [
+          'value' => (bool) $task->help_requested,
+        ],
+      ];
     }
 
-    // Assignees (only if the client actually sent them)
+    // Assignees
     if (array_key_exists('assignees', $data)) {
-      $newAssignees = $data['assignees'] ?? [];
+      $currentAssignees = $task->assignees()
+        ->pluck('users.id')
+        ->map(fn($id) => (int) $id)
+        ->all();
 
-      $assigned   = array_values(array_diff($newAssignees, $currentAssignees));
-      $unassigned = array_values(array_diff($currentAssignees, $newAssignees));
+      $newAssignees = collect($data['assignees'] ?? [])
+        ->map(fn($id) => (int) $id)
+        ->all();
 
-      if (!empty($assigned) || !empty($unassigned)) {
+      $added = array_values(array_diff($newAssignees, $currentAssignees));
+      $removed = array_values(array_diff($currentAssignees, $newAssignees));
 
-        $allChangedIds = array_unique([...$assigned, ...$unassigned]);
+      if (!empty($added) || !empty($removed)) {
+        $allChangedIds = array_values(array_unique([...$added, ...$removed]));
 
-        // One query for all changed users
-        $namesById = User::whereIn('id', $allChangedIds)
-          ->pluck(DB::raw("CONCAT(firstname, ' ', lastname)"), 'id');
+        $usersById = User::whereIn('id', $allChangedIds)
+          ->get()
+          ->keyBy('id');
 
-        if (!empty($assigned)) {
-          $changed['assignees'] = array_values(
-            $namesById->only($assigned)->all()
-          );
-        }
+        $mapUser = fn(int $id) => [
+          'id' => $id,
+          'value' => trim(
+            (($usersById[$id]->firstname ?? '') . ' ' . ($usersById[$id]->lastname ?? ''))
+          ) ?: null,
+        ];
 
-        if (!empty($unassigned)) {
-          $changed['unassignees'] = array_values(
-            $namesById->only($unassigned)->all()
-          );
-        }
+        $changes['assignees'] = [
+          'added' => array_map($mapUser, $added),
+          'removed' => array_map($mapUser, $removed),
+        ];
       }
     }
 
-    if (empty($changed)) {
+    // Tags
+    if (array_key_exists('tags', $data)) {
+      $currentTags = $task->tags()
+        ->pluck('tags.id')
+        ->map(fn($id) => (int) $id)
+        ->all();
+
+      $newTags = collect($data['tags'] ?? [])
+        ->map(fn($id) => (int) $id)
+        ->all();
+
+      $added = array_values(array_diff($newTags, $currentTags));
+      $removed = array_values(array_diff($currentTags, $newTags));
+
+      if (!empty($added) || !empty($removed)) {
+        $allChangedIds = array_values(array_unique([...$added, ...$removed]));
+
+        $tagsById = Tag::whereIn('id', $allChangedIds)
+          ->get()
+          ->keyBy('id');
+
+        $mapTag = fn(int $id) => [
+          'id' => $id,
+          'value' => $tagsById[$id]->name ?? null,
+        ];
+
+        $changes['tags'] = [
+          'added' => array_map($mapTag, $added),
+          'removed' => array_map($mapTag, $removed),
+        ];
+      }
+    }
+
+    if (empty($changes)) {
       return null;
     }
 
     return [
-      'changed_keys' => $changed,
+      'changes' => $changes,
     ];
   }
 
@@ -198,7 +287,7 @@ class TaskService
       'visit' => fn($q) => $q->with(['patient', 'bed.room']),
       'tags',
       'status',
-      'taskType' => fn($q) => $q->with(['assets']),
+      'taskType' => fn($q) => $q->with(['assets', 'teams', 'requestingTeams']),
       'space',
       'spaceTo',
       'assignees',
@@ -208,7 +297,7 @@ class TaskService
     $filters = $request->input('filters', []);
     $sorters = $request->input('sorters', []);
     $hasFilters = !empty($filters);
-    $perPage = 50;
+    $perPage = min((int) $request->input('perPage', 100), 200);
 
     $query = Task::query()
       ->with($relationships)
@@ -238,12 +327,15 @@ class TaskService
           $query->leftJoin('task_types', 'tasks.task_type_id', '=', 'task_types.id')
             ->orderBy('task_types.name', $dir);
         } elseif ($field) {
-          $allowed = ['id', 'start_date_time', 'status_id', 'task_type_id', 'needs_help', 'created_at', 'updated_at'];
+          $allowed = ['id', 'start_date_time', 'status_id', 'task_type_id', 'help_requested', 'created_at', 'updated_at'];
           if (in_array($field, $allowed, true)) {
             $query->orderBy("tasks.$field", $dir);
           }
         }
       }
+    } elseif ($hasFilters) {
+      // Default ordering when filters are present
+      $query->orderByDesc('tasks.start_date_time');
     }
 
     // Your existing default ordering
@@ -252,7 +344,7 @@ class TaskService
         'assignees as assigned_to_me' => fn($q) => $q->whereKey(Auth::id()),
       ])
       ->orderByDesc('assigned_to_me') // true (1) first, false (0) af
-      ->orderByDesc(DB::raw('COALESCE(tasks.needs_help, 0)'))
+      ->orderByDesc(DB::raw('COALESCE(tasks.help_requested, 0)'))
       ->orderByDesc(DB::raw('tasks.task_type_id = 5'))
       ->orderBy('tasks.status_id')
       ->orderByDesc('tasks.start_date_time');
@@ -296,6 +388,32 @@ class TaskService
 
       if ($field === null) continue;
 
+      // ---- keyword (task name or description)
+      if ($field === 'keyword' && filled($value)) {
+        $pattern = $like($type, (string) $value);
+
+        $query->where(function ($subQuery) use ($pattern) {
+          $subQuery
+            ->where('tasks.name', 'like', $pattern)
+            ->orWhere('tasks.description', 'like', $pattern);
+        });
+
+        continue;
+      }
+
+      // ---- assignedTo (name search)
+      if ($field === 'assignedTo' && filled($value)) {
+        $pattern = $like($type, (string) $value);
+
+        $query->whereHas('assignees', function ($subQuery) use ($pattern) {
+          $subQuery->where(function ($q) use ($pattern) {
+            $q->where('firstname', 'like', $pattern)
+              ->orWhere('lastname', 'like', $pattern);
+          });
+        });
+        continue;
+      }
+
       // status_id (accepts both ID and name)
       if ($field === 'status_id' && filled($value)) {
         $hasFilterByStatus = true;
@@ -312,19 +430,6 @@ class TaskService
       if ($field === 'team_id' && filled($value)) {
         $query->whereHas('teams', function ($teamQuery) use ($value) {
           $teamQuery->where('teams.id', '=', $value);
-        });
-        continue;
-      }
-
-      // ---- assignedTo (name search)
-      if ($field === 'assignedTo' && filled($value)) {
-        $pattern = $like($type, (string) $value);
-
-        $query->whereHas('assignees', function ($subQuery) use ($pattern) {
-          $subQuery->where(function ($q) use ($pattern) {
-            $q->where('firstname', 'like', $pattern)
-              ->orWhere('lastname', 'like', $pattern);
-          });
         });
         continue;
       }

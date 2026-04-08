@@ -61,8 +61,6 @@ module.exports = {
           gray: colors.gray,
           slate: colors.slate
         }),
-        // primary: withOpacityValue('--color-primary'),
-        //secondary: withOpacityValue('--color-secondary'),
         success: withOpacityValue('--color-success'),
         info: withOpacityValue('--color-info'),
         warning: withOpacityValue('--color-warning'),
@@ -127,17 +125,6 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
         },
-        maxWidth: {
-          '1/4': '25%',
-          '1/2': '50%',
-          '3/4': '75%'
-        },
-        strokeWidth: {
-          0.5: 0.5,
-          1.5: 1.5,
-          2.5: 2.5
-        },
-
         app: {
           background: {
             DEFAULT: withOpacityValue('--app-background'),
@@ -145,6 +132,18 @@ module.exports = {
           }
         }
       },
+
+      maxWidth: {
+        '1/4': '25%',
+        '1/2': '50%',
+        '3/4': '75%'
+      },
+      strokeWidth: {
+        0.5: 0.5,
+        1.5: 1.5,
+        2.5: 2.5
+      },
+
       dropShadow: {
         md2: '0.1px 0.1px 2px rgb(0 0 0 / 25%);'
       },
@@ -166,18 +165,18 @@ module.exports = {
       },
       keyframes: {
         'accordion-down': {
-          from: {height: '0'},
-          to: {height: 'var(--radix-accordion-content-height)'}
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' }
         },
         'accordion-up': {
-          from: {height: 'var(--radix-accordion-content-height)'},
-          to: {height: '0'}
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' }
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'spin': 'spin 0.7s linear infinite',
+        spin: 'spin 0.7s linear infinite'
       }
     }
   },

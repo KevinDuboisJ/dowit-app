@@ -157,6 +157,18 @@ const FilterDrawer = ({ open, onClose, onApply, onReset, children }) => {
         }}
         className="absolute top-0 left-0 h-full w-[420px] bg-white shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            const tag = e.target.tagName
+            const isTextarea = tag === 'TEXTAREA'
+            const isButton = tag === 'BUTTON'
+
+            if (!isTextarea && !isButton) {
+              e.preventDefault()
+              onApply()
+            }
+          }
+        }}
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -211,7 +223,7 @@ export const FilterBar = ({ filters = {} }) => {
   const [assignedTo, setAssignedTo] = useState(
     filtersRef.current.assignedTo?.value || ''
   )
-  const [statusId, setStatusId] = useState(
+  const [statusName, setStatusName] = useState(
     filtersRef.current.status_id?.value || ''
   )
   const [teamId, setTeamId] = useState(filtersRef.current.team_id?.value || '')
@@ -230,8 +242,8 @@ export const FilterBar = ({ filters = {} }) => {
   }
 
   const selectedStatus = useMemo(
-    () => statuses?.find(s => s.name === statusId),
-    [statuses, statusId]
+    () => statuses?.find(s => s.name === statusName),
+    [statuses, statusName]
   )
 
   const selectedTeam = useMemo(
@@ -243,23 +255,22 @@ export const FilterBar = ({ filters = {} }) => {
     const hasDate = !!(dateRange?.from || dateRange?.to)
     return [
       assignedTo,
-      statusId,
+      statusName,
       teamId,
       hasDate,
       keyword,
       onlyAssignedToMe
     ].filter(Boolean).length
-  }, [assignedTo, statusId, teamId, dateRange, keyword, onlyAssignedToMe])
+  }, [assignedTo, statusName, teamId, dateRange, keyword, onlyAssignedToMe])
 
   const handleApply = () => {
     sync('assignedTo', assignedTo)
-    sync('status_id', statusId)
+    sync('status_id', statusName)
     sync('team_id', teamId)
     sync('dateRange', dateRange)
     sync('keyword', keyword)
     sync('onlyAssignedToMe', onlyAssignedToMe)
 
-    console.log('Applying filters:', filters.get().current)
     filters.apply()
     setDrawerOpen(false)
   }
@@ -271,7 +282,7 @@ export const FilterBar = ({ filters = {} }) => {
 
   const handleResetAll = () => {
     setAssignedTo('')
-    setStatusId('')
+    setStatusName('')
     setTeamId('')
     setDateRange(null)
     setKeyword('')
@@ -344,7 +355,7 @@ export const FilterBar = ({ filters = {} }) => {
                 {__(selectedStatus.name)}
                 <button
                   onClick={() => {
-                    setStatusId('')
+                    setStatusName('')
                     handleRemoveApply('status_id')
                   }}
                   className="hover:text-slate-900 ml-0.5"
@@ -446,6 +457,28 @@ export const FilterBar = ({ filters = {} }) => {
           </div>
         </FilterSection>
 
+        {/* ── Zoek op taak ── */}
+        <FilterSection
+          label="Zoeken"
+          onReset={() => {
+            setKeyword('')
+          }}
+        >
+          <div className="relative">
+            <Heroicon
+              icon="MagnifyingGlass"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              placeholder="Zoek op taaknaam of beschrijving…"
+              className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-teal-400"
+            />
+          </div>
+        </FilterSection>
+
         {/* ── Toegewezen ── */}
         <FilterSection
           label="Toegewezen"
@@ -531,7 +564,7 @@ export const FilterBar = ({ filters = {} }) => {
         </FilterSection>
 
         {/* ── Status ── */}
-        <FilterSection label="Status" onReset={() => setStatusId('')}>
+        <FilterSection label="Status" onReset={() => setStatusName('')}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -557,13 +590,13 @@ export const FilterBar = ({ filters = {} }) => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent className="w-[320px]">
-              <DropdownMenuItem onSelect={() => setStatusId('')}>
+              <DropdownMenuItem onSelect={() => setStatusName('')}>
                 Alle statussen
               </DropdownMenuItem>
               {statuses?.map(s => (
                 <DropdownMenuItem
-                  key={s.id}
-                  onSelect={() => setStatusId(s.name)}
+                  key={s.name}
+                  onSelect={() => setStatusName(s.name)}
                 >
                   {__(s.name)}
                 </DropdownMenuItem>

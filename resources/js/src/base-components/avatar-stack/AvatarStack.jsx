@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React from 'react'
 import { cn } from '@/utils'
 import {
   Avatar,
@@ -9,7 +9,7 @@ import {
   Tooltip
 } from '@/base-components'
 
-export const AvatarStack = ({ avatars, maxAvatars = 4, className }) => {
+export const AvatarStack = React.memo(({ avatars, maxAvatars = 4, className }) => {
   avatars = avatars || [] // Ensure it's always an array
   avatars.slice(0, maxAvatars)
   const remainingAvatarsCount = avatars.length - maxAvatars
@@ -47,7 +47,7 @@ export const AvatarStack = ({ avatars, maxAvatars = 4, className }) => {
       )}
     </div>
   )
-}
+})
 
 export const AvatarStackRemovable = ({
   avatars = [],

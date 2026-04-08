@@ -145,7 +145,7 @@ class PatientService
           $allowedDepartments = ['2214', '3112', '2112', '3111'];
           $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500'], true);
 
-          if (in_array($bedVisit->visit->department->number, $allowedDepartments, true) && !$skipThisBed) {
+          if (in_array($bedVisit->bed->room->department->number, $allowedDepartments, true) && !$skipThisBed) {
 
             $data = [
               'task' => [

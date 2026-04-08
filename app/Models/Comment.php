@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CommentEventEnum;
 use App\Enums\TaskStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +39,55 @@ class Comment extends Model
             'metadata' => 'array',
         ];
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($comment) {
+
+            $task = $comment->task;
+            // $changes = $comment->metadata->changes;
+            $addedAssignees = data_get($comment, 'metadata.changes.assignees.added', []);
+            $isOnlySelfAssigned = count($addedAssignees) === 1 && data_get($addedAssignees, '0.id') === $comment->created_by;
+
+            if ($comment->start_date) {
+                return $comment->event = CommentEventEnum::Announcement;
+            }
+
+            if ($comment->help_requested) {
+                return $comment->event = CommentEventEnum::TaskHelpRequested;
+            }
+
+            if ($comment->help_requested === false) {
+                return $comment->event = CommentEventEnum::TaskHelpRequested;
+            }
+
+            if (isset($comment->help_requested) && !$comment->help_requested) {
+                return $comment->event = CommentEventEnum::TaskHelpGiven;
+            }
+
+            if ($comment->status_id === TaskStatusEnum::InProgress->value && $isOnlySelfAssigned) {
+                return $comment->event = CommentEventEnum::TaskStarted;
+            }
+
+            if ($comment->status_id === TaskStatusEnum::Rejected->value) {
+                return $comment->event = CommentEventEnum::TaskRejected;
+            }
+
+            if ($comment->created_at?->equalTo($task->created_at)) {
+                return $comment->event = CommentEventEnum::TaskCreated;
+            }
+
+            if ($comment->status_id === TaskStatusEnum::Completed->value) {
+                return $comment->event = CommentEventEnum::TaskCompleted;
+            }
+
+            return $comment->event = CommentEventEnum::TaskUpdated;
+        });
+    }
+
+
 
     public function scopeByTeams(Builder $query): Builder
     {

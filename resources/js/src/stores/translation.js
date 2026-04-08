@@ -3,7 +3,7 @@ const NL = {
   scheduled: 'Gepland',
   replaced: 'Vervangen',
   inprogress: 'In verwerking',
-  waitingforsomeone: 'Wacht op iemand',
+  waiting: 'In afwachting',
   completed: 'Afgehandeld',
   skipped: 'Overgeslagen',
   rejected: 'Afgewezen',
@@ -11,12 +11,16 @@ const NL = {
   medium: 'Gemiddeld',
   high: 'Hoog',
   status: 'Status',
-  needs_help: 'Collega nodig',
+  help_requested: 'Collega nodig',
   priority: 'Prioriteit',
   assignees: 'Toegewezen personen',
   unassignees: 'Niet meer toegewezen personen',
 }
 
 export function __(word) {
-  return NL[String(word || '').toLowerCase()] ?? 'onbekend'
+  if (!word || String(word).trim() === '') {
+    return 'onbekend'
+  }
+
+  return NL[String(word).toLowerCase()] ?? String(word)
 }

@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\DeviceUser;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -29,7 +30,7 @@ class LoginController extends Controller
                 // Only apply filtering when we actually have 2+ characters
                 if ($search && strlen($search) >= 2) {
                     $query->where(function ($q) use ($search) {
-                            $q->where('firstname', 'like', $search . '%')
+                        $q->where('firstname', 'like', $search . '%')
                             ->orWhere('lastname', 'like', $search . '%');
                     });
                 }
@@ -46,9 +47,13 @@ class LoginController extends Controller
             $validated = $authenticator->validate($request);
             $authenticator->authenticate($validated['username'], $validated['password']);
         } catch (ModelNotFoundException $e) {
-            return Inertia::render('Login', ['errors' => ['wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker']]);
+            throw ValidationException::withMessages([
+                'wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker',
+            ]);
         } catch (Exception $e) {
-            return Inertia::render('Login', ['errors' => ['wrongCredentials' => $e->getMessage()]]);
+            throw ValidationException::withMessages([
+                'wrongCredentials' => $e->getMessage(),
+            ]);
         }
 
         $this->registerDeviceUse(Auth::user());

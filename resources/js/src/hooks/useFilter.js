@@ -67,11 +67,19 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
     return Object.values(filtersRef.current).some(f => isActiveValue(f?.value))
   }, [])
 
-  const apply = (page = 1) => {
+  const getPerPageFromUrl = () => {
+    const params = new URLSearchParams(window.location.search)
+    const perPage = params.get('perPage')
+    return perPage ? Number(perPage) : undefined
+  }
+
+  const apply = ({ page, perPage } = {}) => {
+    const resolvedPerPage = perPage ?? getPerPageFromUrl()
+
     setLoading(true)
     router.get(
       '/',
-      { filters: getActiveFilters(), page },
+      { filters: getActiveFilters(), page, perPage: resolvedPerPage },
       {
         only: ['tasks'],
         queryStringArrayFormat: 'indices',
@@ -94,7 +102,7 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
       active: getActiveFilters,
       hasActive: hasActiveFilters,
       apply: apply,
-      loading: loading,
+      loading: loading
     }),
     [
       getFilters,

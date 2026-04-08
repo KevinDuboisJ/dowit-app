@@ -1,5 +1,5 @@
-import {cn} from '@/utils'
-import {router, usePage} from '@inertiajs/react'
+import { cn } from '@/utils'
+import { router, usePage } from '@inertiajs/react'
 import {
   RichText,
   Table,
@@ -9,12 +9,12 @@ import {
   Heroicon
 } from '@/base-components'
 
-export const AnnouncementFeed = ({className}) => {
-  const {announcements} = usePage().props
+export const AnnouncementFeed = ({ className }) => {
+  const { announcements } = usePage().props
   const markAsRead = announcementId => {
     router.post(
       `/announcements/${announcementId}/mark-as-read`,
-      {replace: true},
+      { replace: true },
       {
         only: ['announcements'],
         onError: response => {

@@ -2,6 +2,18 @@ import { format, parseISO, isToday } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { __ } from '@/stores'
 import { RichText, Heroicon } from '@/base-components'
+import { LucideHandshake } from 'lucide-react'
+
+export const CommentEventEnum = Object.freeze({
+  TaskCreated: 'task_created',
+  TaskStarted: 'task_started',
+  TaskUpdated: 'task_updated',
+  TaskCompleted: 'task_completed',
+  TaskRejected: 'task_rejected',
+  TaskHelpRequested: 'task_help_requested',
+  TaskHelpGiven: 'task_help_given',
+  Announcement: 'announcement'
+})
 
 export const TaskActivity = ({ comments }) => {
   const lastIndex = comments.length - 1
@@ -27,17 +39,7 @@ export const TaskActivity = ({ comments }) => {
             const isLastItem = index === lastIndex
             const activity = {
               ...item,
-              isLastItem: isLastItem,
-              metadata:
-                !!item?.metadata?.changed_keys &&
-                Object.entries(item.metadata.changed_keys).filter(
-                  ([key, value]) => {
-                    // if (['assignees', 'unassignees'].includes(key)) return false
-                    if (key === 'needs_help') return value === false
-                    return true
-                  }
-                ),
-              type: getType(item, isLastItem)
+              isLastItem: isLastItem
             }
 
             return (
@@ -55,24 +57,33 @@ export const TaskActivity = ({ comments }) => {
 }
 
 /* ---------------- helpers ---------------- */
-const getType = (item, isLastItem) => {
-  if ((isLastItem && !item.metadata?.changed_keys) || item.content) return 'content' // first item only
+const RenderBox = ({ activity }) => {
 
-  if (
-    Object.keys(item.metadata?.changed_keys ?? {}).length === 2 &&
-    'assignees' in item.metadata.changed_keys &&
-    'needs_help' in item.metadata.changed_keys &&
-    item.metadata.changed_keys.needs_help === false
-  )
-    return 'helping'
+  if (activity.event === CommentEventEnum.TaskCreated) {
+    return <TaskCreatedBox activity={activity} />
+  }
 
-  if (item?.needs_help) return 'help'
+  if (activity.event === CommentEventEnum.TaskStarted) {
+    return <TaskStartedBox activity={activity} />
+  }
 
-  if (item?.is_completed) return 'done'
+  if (activity.event === CommentEventEnum.TaskHelpRequested) {
+    return <TaskHelpRequestedBox activity={activity} />
+  }
 
-  if (item.metadata?.changed_keys) return 'update'
+  if (activity.event === CommentEventEnum.TaskHelpGiven) {
+    return <TaskHelpGivenBox activity={activity} />
+  }
 
-  return 'generic'
+  if (activity.event === CommentEventEnum.TaskCompleted) {
+    return <TaskCompletedBox activity={activity} />
+  }
+
+  if (activity.event === CommentEventEnum.TaskRejected) {
+    return <TaskRejectedBox activity={activity} />
+  }
+
+  return <TaskUpdatedBox activity={activity} />
 }
 
 const formatDate = iso => {
@@ -98,43 +109,59 @@ const TimelineRow = ({ activity, index }) => {
       className="relative mb-6 pl-8 fadeInUp"
       style={{ animationDelay: `${index * 0.18}s` }}
     >
-      <TimelineIcon type={activity.type} index={index} />
+      <TimelineIcon event={activity.event} index={index} />
       <div className="fadeInUp" style={{ animationDelay: `${index * 0.18}s` }}>
-        {renderByType({ activity })}
+        <RenderBox activity={activity} />
       </div>
     </div>
   )
 }
 
-const TimelineIcon = ({ type, index }) => {
+const TimelineIcon = ({ event, index }) => {
   const showPing = index === 0
 
   let circle = (
-    <div className="absolute z-10 -left-[8.5px] top-0 bg-gray-400 w-4 h-4 rounded-full flex items-center justify-center" />
+    <div className="absolute z-10 -left-[8px] top-0 bg-gray-400 w-4 h-4 rounded-full flex items-center justify-center" />
   )
 
-  if (type === 'Helping') {
-    circle = (
-      <div className="absolute z-10 -left-[8.5px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-[#9CA3AF]">
-        <Heroicon icon="HandRaised" variant="solid" />
-      </div>
-    )
+  if (!showPing) {
+    if (event === CommentEventEnum.TaskCreated) {
+      circle = (
+        <div className="absolute z-10 -left-[8px] top-0 bg-gray-400 w-4 h-4 rounded-full flex items-center justify-center" />
+      )
+    }
+
+    if (event === CommentEventEnum.TaskStarted) {
+      circle = (
+        <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
+          <Heroicon icon="Play" variant="solid" className="w-4 h-4" />
+        </div>
+      )
+    }
+
+    if (event === CommentEventEnum.TaskHelpRequested) {
+      circle = (
+        <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
+          <Heroicon icon="HandRaised" variant="solid" className="w-4 h-4" />
+        </div>
+      )
+    }
+
+    if (event === CommentEventEnum.TaskHelpGiven) {
+      circle = (
+        <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
+          <Heroicon icon="Users" variant="solid" className="w-4 h-4" />
+        </div>
+      )
+    }
   }
 
-  if (type === 'help') {
+  if (event === CommentEventEnum.TaskCompleted) {
     circle = (
-      <div className="absolute z-10 -left-[8.5px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-[#9CA3AF]">
-        <Heroicon icon="HandRaised" variant="solid" />
-      </div>
-    )
-  }
-
-  if (type === 'done') {
-    circle = (
-      <div className="absolute z-10 -left-[8.5px] top-0 bg-green-500 w-5 h-5 rounded-full flex items-center justify-center">
+      <div className="absolute z-10 p-1 -left-[12px] -top-0.5 bg-green-500 rounded-full flex items-center justify-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="w-3 h-3 text-white"
+          className="w-4 h-4 text-white"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -150,6 +177,14 @@ const TimelineIcon = ({ type, index }) => {
     )
   }
 
+  if (event === CommentEventEnum.TaskRejected) {
+    circle = (
+      <div className="absolute z-10 p-1 -left-[12px] -top-0.5 bg-red-500 rounded-full flex items-center justify-center">
+        <Heroicon icon="XMark" variant="solid" className="w-4 h-4 text-white" />
+      </div>
+    )
+  }
+
   return (
     <div>
       {showPing && (
@@ -160,94 +195,134 @@ const TimelineIcon = ({ type, index }) => {
   )
 }
 
-const renderByType = ({ activity }) => {
-  switch (activity.type) {
-    case 'content':
-      return <ContentBox activity={activity} />
-    case 'update':
-    case 'help':
-    case 'done':
-    case 'generic':
-    default:
-      return <UpdateBox activity={activity} type={activity.type} />
-  }
-}
-
 /* ---------------- cards ---------------- */
 
-const ContentBox = ({ activity }) => {
+const ActivityDetailsCard = ({ activity, changes = [] }) => {
+  const hasContent = !!activity.content
+  const hasChanges = changes.length > 0
+
+  if (!hasContent && !hasChanges) {
+    return null
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {hasContent && (
+        <div
+          className={
+            hasChanges
+              ? 'border-b border-slate-100 bg-slate-50/70 px-4 py-3'
+              : 'bg-slate-50/70 px-4 py-3'
+          }
+        >
+          <RichText
+            text={activity.content}
+            className="text-sm text-slate-700"
+          />
+        </div>
+      )}
+
+      {hasChanges && (
+        <div className="space-y-2 p-3">
+          {changes.map(change => (
+            <MetadataChangeRow
+              key={`${activity.id}-${change.key}`}
+              change={change}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const TaskStartedBox = ({ activity }) => {
   const name = fullName(activity.creator)
   return (
     <div className="space-y-1">
-      <div className="flex flex-col border rounded-lg px-4 py-3 bg-gray-100">
-        <RichText text={activity.content} className="text-sm text-gray-600" />
-      </div>
+      <p className="text-sm text-slate-600">Gestart</p>
       <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
     </div>
   )
 }
 
-const UpdateBox = ({ activity, type }) => {
+const TaskCreatedBox = ({ activity }) => {
   const name = fullName(activity.creator)
-  const metadata = activity.metadata
-  const labels = {
-    help: 'Collega nodig',
-    helping: 'Hulp toegezegd',
-    done: 'Afgerond'
-  }
   return (
-    <div className="flex flex-col space-y-1">
-      <p
-        className={`text-sm ${
-          type === 'help' ? 'text-slate-600' : 'text-slate-600'
-        }`}
-      >
-        {labels[type] ?? 'Bewerking'}
-      </p>
+    <div className="space-y-1">
+      <p className="text-sm text-slate-600">Taak aangemaakt</p>
+      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+    </div>
+  )
+}
 
-      {type !== 'helping' && metadata.length > 0 && (
-        <div className="flex flex-col border rounded-lg px-4 py-3 bg-gray-100 [&:has(>div:first-child>*)]:gap-1">
-          <div>
-            {activity.content && (
-              <RichText text={activity.content} className="text-sm" />
-            )}
+const TaskRejectedBox = ({ activity }) => {
+  const name = fullName(activity.creator)
+  const changes = normalizeMetadataChanges(activity.metadata).filter(
+    change => change.key !== 'status'
+  )
 
-            {metadata.map(([key, value]) => {
-              if (key === 'assignees' && Array.isArray(value)) {
-                return (
-                  <MetaUsers
-                    key={key}
-                    id={activity.id}
-                    title="Toegewezen aan:"
-                    users={value}
-                  />
-                )
-              }
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-slate-600">Afgewezen</p>
+      <ActivityDetailsCard activity={activity} changes={changes} />
+      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+    </div>
+  )
+}
 
-              if (key === 'unassignees' && Array.isArray(value)) {
-                return (
-                  <MetaUsers
-                    key={key}
-                    id={activity.id}
-                    title="Niet meer toegewezen aan:"
-                    users={value}
-                  />
-                )
-              }
+const TaskCompletedBox = ({ activity }) => {
+  const name = fullName(activity.creator)
+  const changes = normalizeMetadataChanges(activity.metadata).filter(
+    change => change.key !== 'status'
+  )
 
-              // ELSE (everything that is NOT assignees / unassignees)
-              return (
-                <div className="flex" key={key}>
-                  <p className="text-sm capitalize mr-1">{__(key)}:</p>
-                  <p className="text-sm text-gray-600">
-                    {key === 'needs_help' ? 'Nee' : __(String(value))}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-slate-600">Afgerond</p>
+      <ActivityDetailsCard activity={activity} changes={changes} />
+      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+    </div>
+  )
+}
+
+const TaskHelpRequestedBox = ({ activity }) => {
+  const name = fullName(activity.creator)
+  const changes = normalizeMetadataChanges(activity.metadata).filter(
+    change => change.key !== 'help_requested'
+  )
+
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-slate-600">Collega nodig</p>
+      <ActivityDetailsCard activity={activity} changes={changes} />
+      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+    </div>
+  )
+}
+
+const TaskHelpGivenBox = ({ activity }) => {
+  const name = fullName(activity.creator)
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-slate-600">Hulp toegezegd</p>
+      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+    </div>
+  )
+}
+
+const TaskUpdatedBox = ({ activity }) => {
+  const name = fullName(activity.creator)
+  const changes = normalizeMetadataChanges(activity.metadata)
+
+  if (!activity.content && changes.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <p className="text-sm text-slate-600">Bewerking</p>
+      <ActivityDetailsCard activity={activity} changes={changes} />
       <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
     </div>
   )
@@ -274,6 +349,210 @@ const MetaUsers = ({ id, title, users }) => (
       </p>
     ))}
   </div>
+)
+
+const getPersonLabel = item => {
+  if (!item) return ''
+  if (typeof item === 'string') return item
+  return item.value || item.name || ''
+}
+
+const toArray = value => {
+  if (!value) return []
+  if (Array.isArray(value)) return value.map(getPersonLabel).filter(Boolean)
+  return [getPersonLabel(value)].filter(Boolean)
+}
+
+const hasRealValue = value => {
+  if (Array.isArray(value)) return value.length > 0
+  return value !== null && value !== undefined && value !== ''
+}
+
+const extractDisplayValue = value => {
+  if (value === null || value === undefined) return null
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Ja' : 'Nee'
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(extractDisplayValue).filter(Boolean)
+  }
+
+  if (typeof value === 'object') {
+    if ('value' in value && value.value !== null && value.value !== undefined) {
+      return __(extractDisplayValue(value.value))
+    }
+
+    if ('name' in value && value.name !== null && value.name !== undefined) {
+      return __(extractDisplayValue(value.name))
+    }
+
+    if ('firstname' in value || 'lastname' in value) {
+      return `${value.firstname ?? ''} ${value.lastname ?? ''}`.trim()
+    }
+  }
+
+  return null
+}
+
+const normalizeMetadataChanges = metadata => {
+  const changes = metadata?.changes
+  if (!changes || typeof changes !== 'object') return []
+
+  const rows = []
+
+  Object.entries(changes).forEach(([key, value]) => {
+    if (key === 'help_requested') {
+      const currentValue = extractDisplayValue(value?.to)
+
+      if (!hasRealValue(currentValue)) return
+
+      rows.push({
+        key,
+        label: __('help_requested'),
+        type: 'pill',
+        value: currentValue
+      })
+      return
+    }
+
+    if (key === 'assignees') {
+      const added = toArray(value?.added)
+      const removed = toArray(value?.removed)
+
+      if (added.length > 0) {
+        rows.push({
+          key: `${key}-added`,
+          label: 'Toegewezen aan',
+          type: 'tags',
+          value: added,
+          tone: 'success'
+        })
+      }
+
+      if (removed.length > 0) {
+        rows.push({
+          key: `${key}-removed`,
+          label: 'Niet meer toegewezen',
+          type: 'tags',
+          value: removed,
+          tone: 'danger'
+        })
+      }
+
+      return
+    }
+
+    if (key === 'tags') {
+      const added = toArray(value?.added)
+      const removed = toArray(value?.removed)
+
+      if (added.length > 0) {
+        rows.push({
+          key: `${key}-added`,
+          label: 'Tags toegevoegd',
+          type: 'tags',
+          value: added,
+          tone: 'success'
+        })
+      }
+
+      if (removed.length > 0) {
+        rows.push({
+          key: `${key}-removed`,
+          label: 'Tags verwijderd',
+          type: 'tags',
+          value: removed,
+          tone: 'danger'
+        })
+      }
+
+      return
+    }
+
+    if (
+      value &&
+      typeof value === 'object' &&
+      ('from' in value || 'to' in value)
+    ) {
+      const currentValue = extractDisplayValue(value?.to)
+
+      if (!hasRealValue(currentValue)) return
+
+      rows.push({
+        key,
+        label: __(key),
+        type: Array.isArray(currentValue) ? 'tags' : 'pill',
+        value: currentValue
+      })
+      return
+    }
+
+    const parsedValue = extractDisplayValue(value)
+
+    if (!hasRealValue(parsedValue)) return
+
+    rows.push({
+      key,
+      label: __(key),
+      type: Array.isArray(parsedValue) ? 'tags' : 'pill',
+      value: parsedValue
+    })
+  })
+
+  return rows
+}
+
+const MetadataChangeRow = ({ change }) => {
+  const isDanger = change.tone === 'danger'
+
+  return (
+    <div className="group flex items-center justify-between gap-3 rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-white px-3.5 py-3 transition-all duration-200">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          {change.label}
+        </p>
+      </div>
+
+      <div className="flex min-w-0 flex-1 justify-end">
+        {change.type === 'tags' ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {change.value.map((item, index) => (
+              <span
+                key={`${change.key}-${index}`}
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                  isDanger
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                }`}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <CurrentValuePill value={change.value} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+const renderValue = value => {
+  if (Array.isArray(value)) return value.join(', ')
+  if (value === null || value === undefined || value === '') return '—'
+  return String(value)
+}
+
+const CurrentValuePill = ({ value }) => (
+  <span className="inline-flex max-w-full items-center rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+    <span className="truncate">{renderValue(value)}</span>
+  </span>
 )
 
 export default TaskActivity

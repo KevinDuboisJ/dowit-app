@@ -172,13 +172,7 @@ class TaskPlannerService
     $taskPlanner->updateNextRunDate();
     return TaskPlannerEvaluationResultEnum::Rescheduled;
   }
-  //  public function toMail($notifiable)
-  //   {
-  //       return (new MailMessage)
-  //                   ->subject('Herziening van Ultimo-ruimte nodig')
-  //                   ->line("De ruimte $this->spaceName moet worden herzien vanwege ontbrekende gegevens.")
-  //                   ->action('Ultimo', url('https://ultimoweb.monica.be'));
-  //   }
+  
   public function applyExecutionRules(TaskPlanner $taskPlanner): TaskPlannerEvaluationResultEnum
   {
     if ($taskPlanner->visit_id && $taskPlanner->visit?->bed_id === null && $taskPlanner->visit?->discharged_at === null) {
@@ -225,7 +219,8 @@ class TaskPlannerService
         if ($latestTask) {
           $latestTask->status_id = TaskStatusEnum::Replaced->value;
           $latestTask->comments()->create([
-            'content' => 'Status werd automatisch omgezet naar Toegevoegd',
+            'content' => 'Status werd automatisch omgezet naar Vervangen',
+            'status_id' => TaskStatusEnum::Replaced->value,
           ]);
           $latestTask->save();
         }

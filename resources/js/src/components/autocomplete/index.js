@@ -1,1 +1,1 @@
-export * from './patient-autocomplete'
+export * from './PatientAutocomplete'

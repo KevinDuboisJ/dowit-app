@@ -14,7 +14,7 @@ enum TaskStatusEnum: int implements HasLabel
     case Replaced = 2;
     case Scheduled = 3;
     case InProgress = 4;
-    case WaitingForSomeone = 5;
+    case Waiting = 5;
     case Completed = 6;
     case Rejected = 7;
     case FollowUpViaEmail = 8;
@@ -26,7 +26,7 @@ enum TaskStatusEnum: int implements HasLabel
     private const ACTIVE_STATUSES = [
         self::Added->value,
         self::InProgress->value,
-        self::WaitingForSomeone->value,
+        self::Waiting->value,
     ];
 
     public static function activeStatuses(): array
@@ -40,15 +40,20 @@ enum TaskStatusEnum: int implements HasLabel
 
     public function getLabel(): ?string
     {
-        return match ($this) {
-            self::Added => 'Toegevoegd',
-            self::Replaced => 'Vervangen',
-            self::Scheduled => 'Gepland',
-            self::InProgress => 'In verwerking',
-            self::WaitingForSomeone => 'Wacht op iemand',
-            self::Completed => 'Afgehandeld',
-            self::Skipped => 'Overgeslagen',
-        };
+         return match ($this) {
+        self::Added => 'Toegevoegd',
+        self::Replaced => 'Vervangen',
+        self::Scheduled => 'Gepland',
+        self::InProgress => 'In verwerking',
+        self::Waiting => 'In afwachting',
+        self::Completed => 'Afgehandeld',
+        self::Rejected => 'Afgewezen',
+        self::FollowUpViaEmail => 'Opvolging via e-mail',
+        self::WaitingForDelivery => 'Wachten op levering',
+        self::Postponed => 'Uitgesteld',
+        self::Paused => 'Gepauzeerd',
+        self::Skipped => 'Overgeslagen',
+    };
     }
 
     public static function fromStartDateTime(Carbon $startDateTime): self

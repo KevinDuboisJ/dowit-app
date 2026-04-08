@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'user' => Auth::check() ? Auth::user()->loadMissing('teams:id,name') : null,
             'flash' => [
-                'message' => fn() => $request->session()->get('message')
+                'message' => fn() => $request->session()->get('message'),
             ],
         ]);
     }

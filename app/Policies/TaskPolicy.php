@@ -35,19 +35,26 @@ class TaskPolicy
     {
         $teamIds = $user->getTeamIds();
 
-        if ($task?->taskType?->requestingTeams()
-            ->whereIn('teams.id', $teamIds)
-            ->exists()
-        ) {
-            return false;
-        }
+        $isUnassigned = $task->assignees->isEmpty();
+        $isAssignee = $task->assignees->contains('id', $user->id);
+        $isAdmin = $user->isAdmin();
 
-        return $task->assignees->isEmpty() || $task->assignees->contains($user) || $user->isAdmin();
+        $isRequestingTeam = $task->taskType?->requestingTeams
+            ?->pluck('id')
+            ->intersect($teamIds)
+            ->isNotEmpty() ?? false;
+
+        return $isUnassigned || $isAssignee || $isAdmin || $isRequestingTeam;
     }
 
     public function execute(User $user, Task $task): bool
     {
-        return $task->taskType?->teams()->exists();
+        $teamIds = $user->getTeamIds();
+
+        return $task->taskType?->teams
+            ?->pluck('id')
+            ->intersect($teamIds)
+            ->isNotEmpty() ?? false;
     }
 
     public function reject(User $user): bool

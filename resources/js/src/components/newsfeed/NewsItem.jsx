@@ -2,7 +2,6 @@ import { format, parseISO, isToday } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { cn } from '@/utils'
 import {
-  Badge,
   Avatar,
   AvatarImage,
   AvatarFallback,
@@ -10,51 +9,63 @@ import {
 } from '@/base-components'
 import { __ } from '@/stores'
 
+export const CommentEventEnum = Object.freeze({
+  TaskCreated: 'task_created',
+  TaskStarted: 'task_started',
+  TaskUpdated: 'task_updated',
+  TaskCompleted: 'task_completed',
+  TaskHelpRequested: 'task_help_requested',
+  TaskHelpGiven: 'task_help_given',
+  Announcement: 'announcement'
+})
+
 export const NewsItem = ({ newsItem }) => {
   const createdAt = formatDate(newsItem.created_at)
-  const meta = newsItem.metadata?.changed_keys ?? {}
+  const meta = newsItem.metadata?.changes ?? {}
+
+  const creatorName = [newsItem.creator?.firstname, newsItem.creator?.lastname]
+    .filter(Boolean)
+    .join(' ')
+
+  const eventLabel = getEventLabel(newsItem.event)
+  const metadataRows = renderMetadataChanges(meta, newsItem.event)
+  const hasContent = !!newsItem.content?.length
+  const hasMetadata = metadataRows.length > 0
 
   return (
     <div className="flex flex-col px-2">
-      <div className="relative right-2 text-sm text-slate-800 font-semibold pb-2">
-        {' '}
-        {`${newsItem.creator?.firstname} ${newsItem.creator?.lastname}`}
+      <div className="relative right-2 pb-2 text-sm font-semibold text-slate-800">
+        {creatorName || 'Onbekende gebruiker'}
       </div>
+
       <div className="flex items-start gap-3">
-        {/* Avatar OUTSIDE the card */}
-        <Avatar className="rounded mr-2">
+        <Avatar className="mr-2 rounded">
           <AvatarImage
             src={newsItem.creator?.image_path}
             alt={newsItem.creator?.firstname}
           />
           <AvatarFallback>
-            {newsItem.creator?.firstname.charAt(0)}
+            {newsItem.creator?.firstname?.charAt(0) ?? '?'}
           </AvatarFallback>
         </Avatar>
 
         <div
           className={cn(
-            'relative w-full p-3 py-2 text-sm text-muted-foreground border rounded border-slate-100 bg-slate-50',
-            'transition-all duration-150',
-
-            // ARROW
-            'before:content-[""] before:absolute before:left-[-9px] before:top-[8px]',
-            'before:border-y-[7px] before:border-y-transparent',
-            'before:border-r-[9px] before:border-r-slate-100'
+            'relative w-full rounded border border-slate-100 bg-slate-50 p-3 py-2 text-sm text-muted-foreground transition-all duration-150',
+            'before:absolute before:left-[-9px] before:top-[8px] before:content-[""]',
+            'before:border-y-[7px] before:border-y-transparent before:border-r-[9px] before:border-r-slate-100'
           )}
         >
           <div className="flex min-w-0 flex-col">
-            {/* TOP LINE: left content + task name + date to the right */}
-            <div className="flex items-baseline w-full gap-x-2">
+            <div className="flex w-full items-baseline gap-x-2">
               {newsItem?.task_id && newsItem.task?.name && (
                 <span className="font-semibold text-slate-700">
                   {newsItem.task.name}
                 </span>
               )}
 
-              {/* Mededeling */}
               {!newsItem?.task_id && (
-                <span className="text-xs rounded-full uppercase tracking-wide text-amber-700 shadow-xs">
+                <span className="text-xs uppercase tracking-wide text-amber-700 shadow-xs">
                   Mededeling
                 </span>
               )}
@@ -64,48 +75,160 @@ export const NewsItem = ({ newsItem }) => {
               </div>
             </div>
 
-            {/* BODY */}
-            <div className="flex flex-col">
-              {/* Content */}
-              {newsItem.content?.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {eventLabel && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-gray-700">{eventLabel}</span>
+                </div>
+              )}
+
+              {hasContent && (
                 <RichText
                   text={newsItem.content}
-                  className="prose prose-sm max-w-none text-muted-foreground pb-2"
+                  className={cn(
+                    'prose prose-sm max-w-none text-muted-foreground',
+                    hasMetadata ? 'pb-2' : ''
+                  )}
                 />
               )}
 
-              {/* Collega nodig */}
-              {newsItem?.task_id && meta.needs_help && (
-                <span className="text-xs rounded-full uppercase tracking-wide text-amber-700 shadow-xs">
-                  Collega nodig
-                </span>
-              )}
-
-              {/* Status */}
-              {Object.entries(meta)
-                .filter(([key, value]) => key !== 'needs_help') // ⬅️ OMITIR
-                .map(([key, value]) => (
-                  <div key={key} className="flex flex-wrap items-center gap-1">
-                    {key === 'assignees' ? (
-                      <span className="text-gray-700">Toegewezen aan</span>
-                    ) : (
-                      <span className="text-gray-700">
-                        {__(key.charAt(0).toUpperCase() + key.slice(1))}{' '}
-                        gewijzigd naar
-                      </span>
-                    )}
-
-                    <span className="text-green-600">
-                      {typeof value === 'string'
-                        ? __(value)
-                        : value?.toString()}
-                    </span>
-                  </div>
-                ))}
+              {hasMetadata && <div className="flex flex-col gap-1">{metadataRows}</div>}
             </div>
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+const getEventLabel = event => {
+  switch (event) {
+    case CommentEventEnum.TaskCreated:
+      return 'Taak aangemaakt'
+    case CommentEventEnum.TaskStarted:
+      return 'Taak gestart'
+    case CommentEventEnum.TaskCompleted:
+      return 'Taak afgerond'
+    case CommentEventEnum.TaskHelpRequested:
+      return 'Collega nodig'
+    case CommentEventEnum.TaskHelpGiven:
+      return 'Hulp toegezegd'
+    default:
+      return null
+  }
+}
+
+const renderMetadataChanges = (meta, event) => {
+  const rows = []
+
+  const shouldHideHelpRequested =
+    event === CommentEventEnum.TaskHelpRequested && meta.help_requested?.to?.value === true
+
+  const statusToValue = meta.status?.to?.value
+  const shouldHideStatus =
+    (event === CommentEventEnum.TaskStarted && statusToValue === 'InProgress') ||
+    (event === CommentEventEnum.TaskCompleted && statusToValue === 'Completed')
+
+  if (!shouldHideHelpRequested && meta.help_requested?.to?.value === true) {
+    rows.push(
+      <span
+        key="help_requested"
+        className="text-xs uppercase tracking-wide text-amber-700 shadow-xs"
+      >
+        Collega nodig
+      </span>
+    )
+  }
+
+  if (!shouldHideStatus && statusToValue) {
+    rows.push(
+      <MetadataTextRow
+        key="status"
+        label={`${__('Status')} gewijzigd naar`}
+        value={__(statusToValue)}
+        tone="success"
+      />
+    )
+  }
+
+  if (meta.priority?.value) {
+    rows.push(
+      <MetadataTextRow
+        key="priority"
+        label={`${__('Priority')} gewijzigd naar`}
+        value={__(meta.priority.value)}
+        tone="success"
+      />
+    )
+  }
+
+  if (meta.assignees) {
+    const added = meta.assignees.added ?? []
+    const removed = meta.assignees.removed ?? []
+
+    if (added.length > 0) {
+      rows.push(
+        <MetadataTextRow
+          key="assignees-added"
+          label="Toegewezen aan"
+          value={added.map(item => item?.value).filter(Boolean).join(', ')}
+          tone="success"
+        />
+      )
+    }
+
+    if (removed.length > 0) {
+      rows.push(
+        <MetadataTextRow
+          key="assignees-removed"
+          label="Niet meer toegewezen aan"
+          value={removed.map(item => item?.value).filter(Boolean).join(', ')}
+          tone="danger"
+        />
+      )
+    }
+  }
+
+  if (meta.tags) {
+    const added = meta.tags.added ?? []
+    const removed = meta.tags.removed ?? []
+
+    if (added.length > 0) {
+      rows.push(
+        <MetadataTextRow
+          key="tags-added"
+          label="Tags toegevoegd"
+          value={added.map(item => item?.value).filter(Boolean).join(', ')}
+          tone="success"
+        />
+      )
+    }
+
+    if (removed.length > 0) {
+      rows.push(
+        <MetadataTextRow
+          key="tags-removed"
+          label="Tags verwijderd"
+          value={removed.map(item => item?.value).filter(Boolean).join(', ')}
+          tone="danger"
+        />
+      )
+    }
+  }
+
+  return rows
+}
+
+const MetadataTextRow = ({ label, value, tone = 'success' }) => {
+  const valueClass =
+    tone === 'danger' ? 'text-red-600' : tone === 'warning' ? 'text-amber-600' : 'text-green-600'
+
+  if (!value) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="text-gray-700">{label}</span>
+      <span className={valueClass}>{value}</span>
     </div>
   )
 }

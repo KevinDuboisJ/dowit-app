@@ -17,14 +17,11 @@ class NewsfeedController extends Controller
   {
     $filters = (array) $request->input('filters', []);
 
-    // $createdByFilter = Helper::getFilterByValue($filters, 'created_by');
-    // $teamFilter      = Helper::getFilterByValue($filters, 'team_id');
-    // $statusFilter    = Helper::getFilterByValue($filters, 'status_id');
-
     // Main team based filtering is handled via the HasTeams trait
     $newsfeed = Comment::query()
       ->with([
         'creator' => fn($q) => $q->withoutGlobalScopes(),
+        'task.taskType' => fn($q) => $q->with(['assets', 'teams', 'requestingTeams']),
         'task.assignees',
         'status:id,name',
       ])

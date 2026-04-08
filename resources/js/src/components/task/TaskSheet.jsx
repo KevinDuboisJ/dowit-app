@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/utils'
@@ -9,7 +9,6 @@ import { __ } from '@/stores'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
-import { useInertiaFetchList, useAxiosFetchByInput } from '@/hooks'
 import axios from 'axios'
 
 import {
@@ -46,91 +45,24 @@ import {
 
 import { PatientAutocomplete } from '@/components'
 
-export const TaskSheet = React.memo(() => {
+export const TaskSheet = () => {
+  const { task_types, campuses, tags } = usePage().props
   const [sheetState, setSheetState] = useState(false)
-
-  const handleSheetClose = () => {
-    setSheetState(prevState => !prevState)
-  }
-
-  return (
-    <Sheet open={sheetState} onOpenChange={handleSheetClose}>
-      <SheetTrigger asChild>
-        <Button type="submit" className="w-full xl:w-auto" size={'sm'}>
-          <Heroicon icon="PencilSquare" /> Taak
-        </Button>
-      </SheetTrigger>
-
-      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[720px] sm:max-w-screen-md">
-        <SheetHeader className="text-left flex flex-col items-center bg-white p-3 space-y-3 border-b shrink-0">
-          <div className="flex w-full py-2">
-            {/* First Column */}
-            <div className="flex flex-wrap self-start">
-              {/* Custom Close Button */}
-              <button
-                onClick={handleSheetClose}
-                className="h-6 focus:outline-none focus:ring-0 focus-visible-ring-0"
-              >
-                <Heroicon icon="ChevronLeft" className="w-5 stroke-[2.6px]" />
-              </button>
-            </div>
-            <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
-              <SheetTitle>Taak aanmaken</SheetTitle>
-              <SheetDescription className="mt-0">
-                Maak een nieuwe taak aan met de benodigde details
-              </SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
-
-        <ScrollArea>
-          <CreateTaskForm />
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  )
-})
-
-const CreateTaskForm = () => {
   const [loading, setLoading] = useState(false)
 
-  const {
-    list: { campuses, task_types, tags: tagsEager }
-  } = useInertiaFetchList({
-    only: ['campuses', 'task_types', 'tags'],
-    eager: true
-  })
+   useEffect(() => {
+    router.reload({
+      only: ['task_types', 'campuses']
+    })
+  }, [])
 
-  const { list: spaces, fetchList: fetchSpaces } = useAxiosFetchByInput({
-    url: '/spaces/search',
-    queryKey: 'userInput'
-  })
+  const handleSheetOpenChange = open => {
+    setSheetState(open)
+    form.reset()
+  }
 
-  const { list: users, fetchList: fetchUsers } = useAxiosFetchByInput({
-    url: '/users/search',
-    queryKey: 'userInput'
-  })
-
-  const { list: tagsList, fetchList: fetchTags } = useAxiosFetchByInput({
-    url: '/tags/search',
-    queryKey: 'userInput'
-  })
-
-  const { list: assets, fetchList: fetchAssets } = useAxiosFetchByInput({
-    url: '/assets',
-    method: 'get',
-    queryKey: 'search'
-  })
-
-  const tags = [
-    ...(tagsEager ?? []),
-    ...(tagsList ?? []).filter(
-      tag => !(tagsEager ?? []).some(existing => existing.id === tag.id)
-    )
-  ]
-
-  const FormSchema = React.useMemo(() => {
-    return (
+  const FormSchema = React.useMemo(
+    () =>
       z
         .object({
           name: z.string().min(1, 'Onderwerp is verplicht'),
@@ -214,9 +146,9 @@ const CreateTaskForm = () => {
             path: ['visit'],
             message: 'Gelieve een patiënt te kiezen'
           }
-        )
-    )
-  }, [task_types])
+        ),
+    [task_types]
+  )
 
   const form = useForm({
     resolver: zodResolver(FormSchema),
@@ -286,311 +218,303 @@ const CreateTaskForm = () => {
   }
 
   return (
-    <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
-          <div className="flex flex-wrap w-full gap-4 ">
-            {' '}
-            {/* Container with flex styling */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="basis-0 grow">
-                  <FormLabel>Onderwerp</FormLabel>
-                  <FormControl>
-                    <Input
-                      onChange={value => {
-                        field.onChange(value) // Updates form state when MultiSelect changes
-                      }}
-                      className="bg-white"
-                      type="text"
-                      placeholder="Onderwerp"
-                      value={field.value}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="startDateTime"
-              render={({ field }) => (
-                <FormItem className="basis-0 grow">
-                  <FormLabel>Startdatum</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'flex w-full h-8 rounded pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, 'PPP p', { locale: nlBE })
-                          ) : (
-                            <span>Startdatum</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <DateTimePicker
-                        selected={field.value}
-                        onSelect={field.onChange}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Omschrijving</FormLabel>
-                <FormControl>
-                  <RichTextEditor
-                    className="text-sm h-32 bg-white"
-                    onUpdate={(v) =>field.onChange(v)}
-                    value={field.value}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <Sheet open={sheetState} onOpenChange={handleSheetOpenChange}>
+      <SheetTrigger asChild>
+        <Button type="submit" className="w-full xl:w-auto" size={'sm'}>
+          <Heroicon icon="PencilSquare" /> Taak
+        </Button>
+      </SheetTrigger>
 
-          <div className="flex flex-wrap w-full gap-4">
-            {' '}
-            {/* Container with flex styling */}
-            <FormField
-              control={form.control}
-              name="taskType"
-              render={({ field }) => {
-                return (
-                  <FormItem className="grow">
-                    <FormLabel>Taaktype</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                    >
+      <SheetContent className="flex flex-col p-0 h-full bg-app-background-secondary w-full md:w-[720px] sm:max-w-screen-md">
+        <SheetHeader className="text-left flex flex-col items-center bg-white p-3 space-y-3 border-b shrink-0">
+          <div className="flex w-full py-2">
+            {/* First Column */}
+            <div className="flex flex-wrap self-start">
+              {/* Custom Close Button */}
+              <button
+                onClick={() => handleSheetOpenChange(false)}
+                className="h-6 focus:outline-none focus:ring-0 focus-visible-ring-0"
+              >
+                <Heroicon icon="ChevronLeft" className="w-5 stroke-[2.6px]" />
+              </button>
+            </div>
+            <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
+              <SheetTitle>Taak aanmaken</SheetTitle>
+              <SheetDescription className="mt-0">
+                Maak een nieuwe taak aan met de benodigde details
+              </SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="p-4 space-y-4"
+            >
+              <div className="flex flex-wrap w-full gap-4 ">
+                {/* Container with flex styling */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="basis-0 grow">
+                      <FormLabel>Onderwerp</FormLabel>
                       <FormControl>
-                        <SelectTrigger
-                          value={field.value}
-                          onClear={() => {
-                            field.onChange('')
+                        <Input
+                          onChange={value => {
+                            field.onChange(value) // Updates form state when MultiSelect changes
                           }}
-                          className="text-sm text-slate-500 bg-white"
-                        >
-                          <SelectValue placeholder="Selecteer taaktype" />
-                        </SelectTrigger>
+                          className="bg-white"
+                          type="text"
+                          placeholder="Onderwerp"
+                          value={field.value}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectContent>
-                          {task_types &&
-                            Object.values(task_types).map(item => (
-                              <SelectItem key={item.value} value={String(item.value)}>
-                                {item.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )
-              }}
-            />
-            <FormField
-              control={form.control}
-              name="campus"
-              render={({ field }) => (
-                <FormItem className="grow">
-                  <FormLabel>Campus</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger
-                        value={field.value}
-                        onClear={() => {
-                          field.onChange('')
-                        }}
-                        className="text-sm text-slate-500 bg-white"
-                      >
-                        <SelectValue placeholder="Selecteer campus" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <CreateSelectOptions rows={campuses} />
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="tags"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tags</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={tags}
-                    onValueChange={selected => {
-                      field.onChange(selected) // Updates form state when MultiSelect changes
-                    }}
-                    selectedValues={field.value} // Uses form's field value as the selected value
-                    placeholder="Kies tags"
-                    animation={0}
-                    handleInputOnChange={fetchTags}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* <FormField
-            control={form.control}
-            name='assets'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bestanden</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={assets}
-                    onValueChange={(selected) => {
-                      field.onChange(selected); // Updates form state when MultiSelect changes
-                    }}
-                    selectedValues={field.value} // Uses form's field value as the selected value
-                    placeholder='Kies bestanden'
-                    animation={0}
-                    handleInputOnChange={fetchAssets}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          /> */}
-
-          {/* Conditionally Rendered PatientVisit Field */}
-          {taskType && task_types[taskType]?.isPatientTransport && (
-            <FormField
-              control={form.control}
-              name="visit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patiënt</FormLabel>
-                  <FormControl>
-                    <PatientAutocomplete onValueChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
-          <div className="flex flex-wrap w-full gap-4">
-            {' '}
-            {/* Container with flex styling */}
-            <FormField
-              control={form.control}
-              name="space"
-              render={({ field }) => (
-                <FormItem className="grow">
-                  <FormLabel>Locatie</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={spaces}
-                      onValueChange={selected => {
-                        field.onChange(selected) // Updates form state when MultiSelect changes
-                      }}
-                      selectedValues={field.value} // Uses form's field value as the selected value
-                      placeholder="Kies een locatie"
-                      animation={0}
-                      maxSelection={1}
-                      handleInputOnChange={fetchSpaces}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Conditionally rendered spaceTo field */}
-            {taskType && task_types[taskType]?.isPatientTransport && (
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="startDateTime"
+                  render={({ field }) => (
+                    <FormItem className="basis-0 grow">
+                      <FormLabel>Startdatum</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'flex w-full h-8 rounded px-4 py-5 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP p', { locale: nlBE })
+                              ) : (
+                                <span>Startdatum</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <DateTimePicker
+                            selected={field.value}
+                            onSelect={field.onChange}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
-                name="spaceTo"
+                name="description"
                 render={({ field }) => (
-                  <FormItem className="grow">
-                    <FormLabel>Bestemmingslocatie</FormLabel>
+                  <FormItem>
+                    <FormLabel>Omschrijving</FormLabel>
                     <FormControl>
-                      <MultiSelect
-                        options={spaces}
-                        onValueChange={selected => {
-                          field.onChange(selected) // Updates form state when MultiSelect changes
-                        }}
-                        selectedValues={field.value} // Uses form's field value as the selected value
-                        placeholder="Kies een locatie"
-                        animation={0}
-                        maxSelection={1}
-                        handleInputOnChange={fetchSpaces}
+                      <RichTextEditor
+                        className="text-sm h-32 bg-white"
+                        onUpdate={v => field.onChange(v)}
+                        value={field.value}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
-          </div>
-          <FormField
-            control={form.control}
-            name="assignees"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Toewezen</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={users}
-                    onValueChange={selected => {
-                      field.onChange(selected) // Updates form state when MultiSelect changes
-                    }}
-                    selectedValues={field.value} // Uses form's field value as the selected value
-                    placeholder="Kies een medewerker"
-                    animation={0}
-                    maxSelection={1}
-                    handleInputOnChange={fetchUsers}
+
+              <div className="flex flex-wrap w-full gap-4">
+                {/* Container with flex styling */}
+                <FormField
+                  control={form.control}
+                  name="taskType"
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="grow">
+                        <FormLabel>Taaktype</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              value={field.value}
+                              onClear={() => {
+                                field.onChange('')
+                              }}
+                              className="text-sm text-slate-500 bg-white"
+                            >
+                              <SelectValue placeholder="Selecteer taaktype" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {task_types &&
+                              Object.values(task_types).map(item => (
+                                <SelectItem
+                                  key={item.value}
+                                  value={String(item.value)}
+                                >
+                                  {item.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name="campus"
+                  render={({ field }) => (
+                    <FormItem className="grow">
+                      <FormLabel>Campus</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger
+                            value={field.value}
+                            onClear={() => {
+                              field.onChange('')
+                            }}
+                            className="text-sm text-slate-500 bg-white"
+                          >
+                            <SelectValue placeholder="Selecteer campus" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <CreateSelectOptions rows={campuses} />
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        staticOptions={tags}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Tags toevoegen"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Conditionally Rendered PatientVisit Field */}
+              {taskType && task_types[taskType]?.isPatientTransport && (
+                <FormField
+                  control={form.control}
+                  name="visit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Patiënt</FormLabel>
+                      <FormControl>
+                        <PatientAutocomplete onValueChange={field.onChange} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="flex flex-wrap w-full gap-4">
+                {/* Container with flex styling */}
+                <FormField
+                  control={form.control}
+                  name="space"
+                  render={({ field }) => (
+                    <FormItem className="grow">
+                      <FormLabel>Locatie</FormLabel>
+                      <FormControl>
+                        <MultiSelect
+                          onChange={field.onChange}
+                          value={field.value}
+                          placeholder="Kies een locatie"
+                          maxSelection={1}
+                          fetchOptions={fetchSpaces}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* Conditionally rendered spaceTo field */}
+                {taskType && task_types[taskType]?.isPatientTransport && (
+                  <FormField
+                    control={form.control}
+                    name="spaceTo"
+                    render={({ field }) => (
+                      <FormItem className="grow">
+                        <FormLabel>Bestemmingslocatie</FormLabel>
+                        <FormControl>
+                          <MultiSelect
+                            onChange={field.onChange}
+                            value={field.value}
+                            placeholder="Kies een locatie"
+                            maxSelection={1}
+                            fetchOptions={fetchSpaces}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <TeamsMatchingAssignmentRules
-            control={form.control}
-            setValue={form.setValue}
-          />
-          <div className="text-right justify-items-end">
-            {loading ? <Loader /> : <Button type="submit">Aanmaken</Button>}
-          </div>
-        </form>
-      </Form>
-    </>
+                )}
+              </div>
+              <FormField
+                control={form.control}
+                name="assignees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Toewezen</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        value={field.value}
+                        placeholder="Wijs persoon toe"
+                        maxSelection={5}
+                        fetchOptions={fetchUsers}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <TeamsMatchingAssignmentRules
+                control={form.control}
+                setValue={form.setValue}
+              />
+              <div className="text-right justify-items-end">
+                {loading ? <Loader /> : <Button type="submit">Aanmaken</Button>}
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -608,27 +532,23 @@ const CreateSelectOptions = ({ rows }) =>
   )
 
 const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
+  const { teamsMatchingAssignmentRules = [] } = usePage().props
   const [taskType, campus, space, spaceTo, tags] = useWatch({
     control,
     name: ['taskType', 'campus', 'space', 'spaceTo', 'tags']
   })
-  
-  const {
-    list: teamsMatchingAssignmentRules = [],
-    fetchList: fetchTeamsMatchingAssignmentRules
-  } = useInertiaFetchList({
-    only: ['teamsMatchingAssignmentRules'],
-    payload: {
-      taskType: taskType,
-      campus: campus,
-      space: space,
-      spaceTo: spaceTo,
-      tags: tags
-    }
-  })
 
   useEffect(() => {
-    fetchTeamsMatchingAssignmentRules()
+    router.reload({
+      data: {
+        taskType: taskType,
+        campus: campus,
+        space: space,
+        spaceTo: spaceTo,
+        tags: tags
+      },
+      only: ['teamsMatchingAssignmentRules']
+    })
   }, [taskType, campus, tags])
 
   useEffect(() => {
@@ -672,3 +592,9 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
     </div>
   )
 }
+
+const fetchSpaces = query =>
+  axios.post('/spaces/search', { userInput: query }).then(res => res.data)
+
+const fetchUsers = query =>
+  axios.post('/users/search', { userInput: query }).then(res => res.data)

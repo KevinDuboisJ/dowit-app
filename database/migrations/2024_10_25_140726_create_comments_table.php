@@ -12,9 +12,10 @@ return new class extends Migration
         Schema::create('comments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('created_by');
+            $table->enum('event', [ 'task_created','task_started','task_updated','task_rejected','task_completed','task_help_requested','task_help_given','announcement' ]);
             $table->foreignId('task_id')->nullable()->constrained('tasks')->onDelete('cascade');
             $table->foreignId('status_id')->nullable();
-            $table->boolean('needs_help')->nullable();
+            $table->boolean('help_requested')->nullable();
             $table->longText('content')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();

@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import axios from 'axios'
 import { usePage, router } from '@inertiajs/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { __ } from '@/stores'
-import { useAxiosFetchByInput, updateTask } from '@/hooks'
+import { updateTask } from '@/hooks'
 import {
   Button,
   Form,
@@ -27,55 +28,17 @@ import {
   Loader
 } from '@/base-components'
 
-const FormSchema = z.object({
-  assignees: z
-    .array(
-      z.object({
-        id: z.number()
-      })
-    )
-    .optional(),
-
-  usersToAssign: z
-    .array(
-      z.object({
-        label: z.string(),
-        value: z.number()
-      })
-    )
-    .optional(),
-
-  status: z.string({
-    required_error: 'Status is leeg'
-  }),
-
-  priority: z
-    .string({
-      required_error: 'Prioriteit is leeg'
-    })
-    .nullable(),
-
-  needs_help: z.boolean().optional(),
-
-  updated_at: z.coerce.date(),
-
-  comment: z.string().optional()
-})
-
 export function TaskForm({ task, setActiveTab }) {
-  const { priorities, task_statuses } = usePage().props
+  const { priorities, statuses, tags } = usePage().props
   const [loading, setLoading] = useState(false)
-  const { list, fetchList } = useAxiosFetchByInput({
-    url: '/users/search',
-    queryKey: 'userInput'
-  })
 
   const defaultValues = {
     usersToAssign: [],
     assignees: task?.assignees || [],
+    tags: task?.tags?.map(tag => ({ label: tag.name, value: tag.id })) || [],
     status: task.status.name,
     priority: task.priority,
-    needs_help: task.needs_help,
+    help_requested: task.help_requested,
     updated_at: task.updated_at,
     comment: ''
   }
@@ -86,6 +49,29 @@ export function TaskForm({ task, setActiveTab }) {
   })
 
   function onSubmit(data: z.infer<typeof FormSchema>) {
+    const cleanedComment =
+      data.comment?.replace(/<(\w+)(\s[^>]*)?>\s*<\/\1>/g, '').trim() || ''
+
+    const hasChanges =
+      JSON.stringify(data.assignees ?? []) !==
+        JSON.stringify(defaultValues.assignees ?? []) ||
+      JSON.stringify(data.usersToAssign ?? []) !==
+        JSON.stringify(defaultValues.usersToAssign ?? []) ||
+      JSON.stringify(data.tags ?? []) !==
+        JSON.stringify(defaultValues.tags ?? []) ||
+      data.status !== defaultValues.status ||
+      data.priority !== defaultValues.priority ||
+      data.help_requested !== defaultValues.help_requested ||
+      cleanedComment !== ''
+
+    if (!hasChanges) {
+      form.setError('comment', {
+        type: 'manual',
+        message: 'Pas minstens één veld aan'
+      })
+      return
+    }
+
     const payload = {
       ...data,
       comment: data?.comment.replace(/<(\w+)(\s[^>]*)?>\s*<\/\1>/g, ''), // Remove empty HTML tags, Richt text editor adds <p> when empty
@@ -94,7 +80,8 @@ export function TaskForm({ task, setActiveTab }) {
           ...data.assignees.map(u => u.id),
           ...data.usersToAssign.map(u => u.value)
         ])
-      )
+      ),
+      tags: data.tags.map(i => i.value) || []
     }
 
     delete payload.usersToAssign
@@ -132,16 +119,11 @@ export function TaskForm({ task, setActiveTab }) {
                     <FormControl>
                       {/* MultiSelect shows selected users based on IDs */}
                       <MultiSelect
-                        options={list} // [{label, value}] -> value must be userId
-                        selectedValues={field.value}
+                        defaultValue={field.value}
                         placeholder="Wijs persoon toe"
-                        variant="inverted"
-                        animation={2}
-                        maxCount={3}
-                        handleInputOnChange={fetchList}
-                        onValueChange={selected => {
-                          field.onChange(selected) // Updates form state when MultiSelect changes
-                        }}
+                        maxSelection={5}
+                        fetchOptions={fetchUsers}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -170,7 +152,7 @@ export function TaskForm({ task, setActiveTab }) {
               )}
             />
 
-            <Separator className="m-0 p-0" />
+            {task?.assignees.length > 0 && <Separator className="m-0 p-0" />}
 
             <FormField
               control={form.control}
@@ -185,11 +167,11 @@ export function TaskForm({ task, setActiveTab }) {
                   >
                     <SegmentHeader>Status wijzigen</SegmentHeader>
                     <SegmentInputContainer>
-                      {task_statuses.map(status => (
+                      {statuses.map(status => (
                         <SegmentInput
-                          key={status}
-                          value={status}
-                          label={__(status)}
+                          key={status.name}
+                          value={status.name}
+                          label={status.label}
                         />
                       ))}
                     </SegmentInputContainer>
@@ -227,9 +209,32 @@ export function TaskForm({ task, setActiveTab }) {
               )}
             />
 
+            {Array.isArray(tags) && tags.length > 0 && (
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => {
+                  return (
+                    <FormItem>
+                      <FormLabel>Tags</FormLabel>
+                      <FormControl>
+                        <MultiSelect
+                          staticOptions={tags}
+                          defaultValue={field.value}
+                          onChange={field.onChange}
+                          placeholder="Tags toevoegen"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
+              />
+            )}
+
             <FormField
               control={form.control}
-              name="needs_help"
+              name="help_requested"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm">Collega nodig</FormLabel>
@@ -276,3 +281,50 @@ export function TaskForm({ task, setActiveTab }) {
     </>
   )
 }
+
+const FormSchema = z.object({
+  assignees: z
+    .array(
+      z.object({
+        id: z.number()
+      })
+    )
+    .optional(),
+
+  usersToAssign: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.number()
+      })
+    )
+    .optional(),
+
+  tags: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.number()
+      })
+    )
+    .optional(),
+
+  status: z.string({
+    required_error: 'Status is leeg'
+  }),
+
+  priority: z
+    .string({
+      required_error: 'Prioriteit is leeg'
+    })
+    .nullable(),
+
+  help_requested: z.boolean().optional(),
+
+  updated_at: z.coerce.date(),
+
+  comment: z.string().optional()
+})
+
+const fetchUsers = query =>
+  axios.post('/users/search', { userInput: query }).then(res => res.data)

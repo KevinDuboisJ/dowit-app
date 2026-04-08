@@ -5,18 +5,14 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Task;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Services\TaskAssignmentService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use App\Events\BroadcastEvent;
 use App\Models\Comment;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
@@ -124,11 +120,11 @@ class TaskController extends Controller
     try {
       $this->authorize('update', $task);
 
-      if (! $task->needs_help) {
-        $task = $task->forceFill(['needs_help' => true]);
+      if (! $task->help_requested) {
+        $task = $task->forceFill(['help_requested' => true]);
         $task->comments()->create([
-          'needs_help' => $task->isDirty('needs_help') ? $task->needs_help : null,
-          'metadata' => $taskService->trackTaskMetaDataChanges($task, ['needs_help' => true]),
+          'help_requested' => $task->isDirty('help_requested') ? $task->help_requested : null,
+          'metadata' => $taskService->trackTaskMetaDataChanges($task, ['help_requested' => true]),
         ]);
 
         $task->save();

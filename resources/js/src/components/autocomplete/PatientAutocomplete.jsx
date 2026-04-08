@@ -1,8 +1,9 @@
-import {useState, useEffect, useRef} from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import {Input, Loader} from '@/base-components'
+import { Input, Loader } from '@/base-components'
+import { XIcon } from 'lucide-react'
 
-const PatientAutocomplete = ({onValueChange = null}) => {
+const PatientAutocomplete = ({ onValueChange = null }) => {
   const [searchValue, setSearchValue] = useState('')
   const [visitList, setVisitList] = useState([])
   const [loading, setLoading] = useState(false)
@@ -40,7 +41,7 @@ const PatientAutocomplete = ({onValueChange = null}) => {
   const formatPatientDisplay = visit => {
     if (!visit?.patient) return ''
 
-    const {firstname = '', lastname = '', gender} = visit.patient
+    const { firstname = '', lastname = '', gender } = visit.patient
     const room = visit.bed?.room?.number ?? ''
     const bed = visit.bed?.number ?? ''
 
@@ -58,7 +59,7 @@ const PatientAutocomplete = ({onValueChange = null}) => {
     if (value.length === 8 || (isNaN(value) && value.length > 2)) {
       setLoading(true)
       try {
-        const {data} = await axios.post('/visit/search', {search: value})
+        const { data } = await axios.post('/visit/search', { search: value })
 
         if (Array.isArray(data)) {
           setVisitList(data)
@@ -103,16 +104,17 @@ const PatientAutocomplete = ({onValueChange = null}) => {
 
       {/* Loader */}
       {loading && (
-          <Loader width={40} height={40} className="!absolute !-top-[2px] !right-2"/>
+        <Loader className='absolute top-[6px] right-2' size={32} />
       )}
 
       {searchValue && !loading && (
         <button
           type="button"
-          className="absolute top-1 right-2 text-gray-500 hover:text-red-600"
+          tabIndex={-1}
+          className=""
           onClick={clear}
         >
-          ✕
+          <XIcon className="h-4 w-4 absolute top-3 right-4 flex items-center justify-center text-slate-300 hover:text-red-600" />
         </button>
       )}
 
@@ -136,4 +138,4 @@ const PatientAutocomplete = ({onValueChange = null}) => {
 
 PatientAutocomplete.displayName = 'PatientAutocomplete'
 
-export {PatientAutocomplete}
+export { PatientAutocomplete }

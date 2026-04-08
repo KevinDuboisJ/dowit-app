@@ -1,8 +1,8 @@
 const colors = {
-  Added: "slate-100",
+  Waiting: "text-pink-700 font-semibold",
   InProgress: "bg-sky-100",
-  Completed: "success",
-  Skipped: "orange-400",
+  Completed: "text-success",
+  Skipped: "text-orange-400",
 };
 
 export function getColor(word) {

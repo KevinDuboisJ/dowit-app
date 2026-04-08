@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { router } from '@inertiajs/react'
+import axios from 'axios'
 import { toast } from 'sonner'
 import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/utils'
@@ -8,7 +9,6 @@ import { nlBE } from 'date-fns/locale'
 import { __ } from '@/stores'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { useAxiosFetchByInput } from '@/hooks'
 import { formSchema } from './'
 
 import {
@@ -39,15 +39,6 @@ export const AnnouncementForm = ({ editing, onCreated, onSaved }) => {
       selectedTeams: [],
       announcement: ''
     }
-  })
-
-  const { list: users, fetchList: fetchUserList } = useAxiosFetchByInput({
-    url: '/users/search',
-    queryKey: 'userInput'
-  })
-  const { list: teams, fetchList: fetchTeamList } = useAxiosFetchByInput({
-    url: '/teams/search',
-    queryKey: 'userInput'
   })
 
   // When clicking “Bewerken”, prefill the form
@@ -131,14 +122,16 @@ export const AnnouncementForm = ({ editing, onCreated, onSaved }) => {
               <FormLabel>Gebruikers</FormLabel>
               <FormControl>
                 <MultiSelect
-                  options={users}
-                  onValueChange={selected => {
-                    field.onChange(selected) // Updates form state when MultiSelect changes
+                  staticOptions={[]}
+                  value={field.value}
+                  onChange={field.onChange}
+                  fetchOptions={async query => {
+                    const response = await axios.post('/users/search', {
+                      userInput: query
+                    })
+                    return response.data
                   }}
-                  selectedValues={field.value} // Uses form's field value as the selected value
                   placeholder="Wijs persoon toe"
-                  animation={2}
-                  handleInputOnChange={fetchUserList}
                 />
               </FormControl>
               <FormMessage />
@@ -154,14 +147,16 @@ export const AnnouncementForm = ({ editing, onCreated, onSaved }) => {
               <FormLabel>Teams</FormLabel>
               <FormControl>
                 <MultiSelect
-                  options={teams}
-                  onValueChange={selected => {
-                    field.onChange(selected) // Updates form state when MultiSelect changes
-                  }}
-                  selectedValues={field.value} // Uses form's field value as the selected value
+                  staticOptions={[]}
+                  value={field.value}
+                  onChange={field.onChange}
                   placeholder="Wijs teams toe"
-                  animation={2}
-                  handleInputOnChange={fetchTeamList}
+                  fetchOptions={async query => {
+                    const response = await axios.post('/teams/search', {
+                      userInput: query
+                    })
+                    return response.data
+                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -181,7 +176,7 @@ export const AnnouncementForm = ({ editing, onCreated, onSaved }) => {
                     id="date"
                     variant={'outline'}
                     className={cn(
-                      'w-[300px] justify-start text-left font-normal',
+                      'w-[300px] px-4 py-5 justify-start text-left font-normal',
                       !field.value && 'text-muted-foreground'
                     )}
                     size={'sm'}

@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react'
 import { useLoader } from '@/hooks'
 import { PaginationBar } from '@/base-components'
 import {
@@ -15,6 +16,7 @@ export const TaskDesktopView = ({
   handleTaskUpdate
 }) => {
   const { Loader } = useLoader()
+    const { settings, user } = usePage().props
 
   return (
     <div id="taskDesktopView" className="flex flex-col h-full min-h-0">
@@ -45,10 +47,16 @@ export const TaskDesktopView = ({
             data={data}
             setSheetState={setSheetState}
             handleTaskUpdate={handleTaskUpdate}
+            settings={settings}
+            user={user}
           />
         )}
       </div>
-      <PaginationBar {...data} onPageChange={page => filters.apply(page)} />
+      <PaginationBar
+        {...data}
+        onPageChange={page => filters.apply({ page })}
+        onPerPageChange={perPage => filters.apply({ perPage })}
+      />
     </div>
   )
 }

@@ -21,12 +21,15 @@ import {
   ScrollArea
 } from '@/base-components'
 
-export const TaskTable = ({ data, setSheetState, handleTaskUpdate }) => {
+export const TaskTable = React.memo(({ data, setSheetState, handleTaskUpdate, settings, user }) => {
   const [grouping, setGrouping] = useState(['assignedGroup'])
   const [expanded, setExpanded] = useState(true) // Controls expanded rows
   const tasks = data.data || [] // Ensure tasks is an array even if data is undefined
+
   const columns = useTaskTableColumns({
-    handleTaskUpdate
+    handleTaskUpdate,
+    settings,
+    user
   })
 
   // This is a hack to ensure that the group headers are always shown
@@ -209,4 +212,4 @@ export const TaskTable = ({ data, setSheetState, handleTaskUpdate }) => {
       </ScrollArea>
     </div>
   )
-}
+})

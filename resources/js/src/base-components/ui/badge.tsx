@@ -29,7 +29,7 @@ const badgeVariants = cva(
           "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
         InProgress:
           "font-medium text-sm rounded bg-indigo-50 text-gray-900 border border-indigo-200 hover:bg-indigo-100/50",
-        WaitingForSomeone:
+        Waiting:
           "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",
         Completed:
           "font-normal text-sm rounded bg-success/20 text-success border border-success/20 hover:bg-success/20",

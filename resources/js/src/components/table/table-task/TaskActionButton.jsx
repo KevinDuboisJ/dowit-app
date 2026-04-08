@@ -148,7 +148,7 @@ const getTaskActionConfigs = ({ task, user, handleTaskUpdate }) => {
   }
 
   // 3) Help with task (assign self additionally)
-  if (task.needs_help && !isAssignedToCurrentUser) {
+  if (task.help_requested && !isAssignedToCurrentUser) {
     actions.push({
       trigger: (
         <Button
@@ -164,7 +164,7 @@ const getTaskActionConfigs = ({ task, user, handleTaskUpdate }) => {
       alertDialogAction: 'Helpen',
       onConfirm: () =>
         updateTask(
-          { assignees: [...(task.assignees ?? []).map(item => item.id), userId], needs_help: false, status: 'InProgress' },
+          { assignees: [...(task.assignees ?? []).map(item => item.id), userId], help_requested: false, status: 'InProgress' },
           task,
           {
             onBefore: ({ original }) => {

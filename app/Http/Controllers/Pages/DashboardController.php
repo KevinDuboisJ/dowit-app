@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Services\TaskAssignmentService;
 use App\Models\Announcement;
+use App\Models\Tag;
 use App\Services\TaskService;
 use App\Models\TaskType;
 use App\Models\Team;
@@ -35,8 +36,17 @@ class DashboardController extends Controller
 
       'statuses' => fn() => DB::table('task_statuses')
         ->select('id', 'name')
-        ->whereIn('id', [1, 2, 4, 5, 6, 7, 12])
-        ->get(),
+        ->whereIn('id', [1, 4, 5, 6, 7])
+        ->get()
+        ->map(function ($status) {
+          
+          $enum = TaskStatusEnum::tryFrom($status->id);
+
+          return [
+            'name' => $enum->name,
+            'label' => $enum?->getLabel() ?? $status->name,
+          ];
+        }),
 
       'campuses' => Inertia::lazy(function () {
         return DB::table('campuses')
@@ -49,15 +59,11 @@ class DashboardController extends Controller
           });
       }),
 
-      'tags' => Inertia::lazy(function () {
-        return DB::table('tags')
-          ->select('id', 'name')
-          ->get()->map(function ($item) {
-            return [
-              'value' => $item->id,
-              'label' => $item->name,
-            ];
-          });
+      'tags' => Tag::select('id', 'name', 'icon')->get()->map(function ($item) {
+        return [
+          'value' => $item->id,
+          'label' => $item->name,
+        ];
       }),
 
       'assets' => Inertia::lazy(function () {
@@ -185,13 +191,6 @@ class DashboardController extends Controller
       }),
 
       'priorities' => array_column(TaskPriorityEnum::cases(), 'value'),
-
-      'task_statuses' => [
-        TaskStatusEnum::Added->name,
-        TaskStatusEnum::InProgress->name,
-        TaskStatusEnum::WaitingForSomeone->name,
-        TaskStatusEnum::Completed->name,
-      ],
 
     ]);
   }

@@ -34,7 +34,7 @@ export const Loader = ({
   return (
     <Lottie
       {...options}
-      className={cn('relative -top-2.5', className)}
+      className={cn(className)}
       style={{ height: size, width: size }}
     />
   )

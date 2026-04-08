@@ -47,6 +47,7 @@ class BroadcastEvent implements ShouldBroadcastNow
         if ($this->model instanceof Task) {
             $channels = array_merge(
                 $this->model->teams->map(fn($team) => new PrivateChannel("team.{$team->id}"))->toArray(),
+                $this->model->taskType->requestingTeams->map(fn($team) => new PrivateChannel("team.{$team->id}"))->toArray(),
                 $this->model->assignees->map(fn($user) => new PrivateChannel("user.{$user->id}"))->toArray(),
                 $this->model->creator ? [new PrivateChannel("user.{$this->model->creator->id}")] : [],
                 !empty($this->extraKeys['usersToUnassign']) ? array_map(fn($userId) => new PrivateChannel("user.{$userId}"), $this->extraKeys['usersToUnassign']) : [] // Broadcast to users that were unassigned to remove the task from their list

@@ -13,7 +13,7 @@ import {
   Tooltip
 } from '@/base-components'
 
-import {TaskForm, TaskDetails, TaskIcon} from '@/components'
+import {TaskForm, TaskDetails, AppIcon} from '@/components'
 
 export const TaskOverview = ({
   task,
@@ -70,7 +70,7 @@ export const TaskOverview = ({
           </div>
           <div className="flex flex-wrap flex-col w-full pl-3 leading-tight">
             <div className="flex items-center">
-              <TaskIcon className="h-6 w-6" iconName={task?.task_type?.icon} />{' '}
+              <AppIcon className="h-6 w-6 mr-1" src={task?.task_type?.icon} />{' '}
               <span>{task?.task_type?.name}</span>
             </div>
 

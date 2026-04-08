@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
-
     public function store(UserRequest $userRequest, TeamService $teamService)
     {
         // The request is already validated at this point
@@ -19,7 +18,7 @@ class UserController extends Controller
         // Check if a user with the same username but a different edb_id exists
         $existingUser = User::where('username', $validatedData['username'])->first();
 
-        if ($existingUser && $existingUser->edb_id !== $validatedData['edb_id']) {
+        if ($existingUser && (int) $existingUser->edb_id !== $validatedData['edb_id']) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Username already exists for another edb_id.',

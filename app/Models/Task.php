@@ -28,7 +28,7 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
     protected $appends = ['capabilities', 'is_active', 'start_date_time_with_offset'];
 
     protected $casts = [
-        'needs_help' => 'boolean', // Cast tinyint(1) to boolean
+        'help_requested' => 'boolean', // Cast tinyint(1) to boolean
         'start_date_time' => 'datetime',
         'priority' => TaskPriorityEnum::class,
     ];

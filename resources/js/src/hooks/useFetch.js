@@ -3,48 +3,6 @@ import { debounce } from 'lodash'
 import { router } from '@inertiajs/react'
 import axios from 'axios'
 import { toast } from 'sonner'
-import { delay } from '@/utils'
-import { format } from 'date-fns-tz'
-
-export const useAxiosFetchByInput = ({
-  url, // The endpoint to fetch from
-  method = 'post', // HTTP method
-  queryKey = 'userInput', // Query key for the input
-  debounceDelay = 200 // Debounce delay
-}) => {
-  const [list, setList] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  const fetchList = useCallback(
-    debounce(async input => {
-      if (input.length > 0) {
-        setLoading(true)
-        setError(null)
-        try {
-          const response = await axios({
-            method,
-            url,
-            data: { [queryKey]: input }
-          })
-
-          // Assuming the response contains the data list directly
-          setList(response.data ?? [])
-        } catch (err) {
-          console.error('Error fetching list:', err)
-          setError(err.message || 'An error occurred')
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setList([])
-      }
-    }, debounceDelay),
-    [url, method, queryKey, debounceDelay]
-  )
-
-  return { list, fetchList, loading, error }
-}
 
 export const useInertiaFetchByInput = ({
   only,
@@ -101,7 +59,7 @@ export const useInertiaFetchList = ({
                 acc[key] = response.props[key] ?? []
                 return acc
               }, {})
-            : response.props[only[0]] ?? []
+            : (response.props[only[0]] ?? [])
 
         setList(data)
       }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\CommentableInterface;
+use App\Enums\CommentEventEnum;
 use App\Events\BroadcastEvent;
 
 class Announcement extends Comment implements CommentableInterface
@@ -12,6 +13,7 @@ class Announcement extends Comment implements CommentableInterface
     protected function casts(): array
     {
         return [
+            'event' => CommentEventEnum::class,
             'recipient_users' => 'array',
             'recipient_teams' => 'array',
             'read_by' => 'array',

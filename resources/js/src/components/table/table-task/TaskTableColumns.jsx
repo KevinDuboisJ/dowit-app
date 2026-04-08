@@ -1,16 +1,18 @@
 import { useMemo } from 'react'
-import { usePage } from '@inertiajs/react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { format, parseISO } from 'date-fns'
 import { __ } from '@/stores'
 import { AvatarStack, Tooltip, RichText } from '@/base-components'
-import { TaskActionButton, getPriority, HelpAnimation } from '@/components'
+import {
+  TaskActionButton,
+  getPriority,
+  HelpAnimation,
+  AppIcon
+} from '@/components'
 
 const columnHelper = createColumnHelper()
 
-export const useTaskTableColumns = ({ handleTaskUpdate }) => {
-  const { settings, user, tasks } = usePage().props
-
+export const useTaskTableColumns = ({ handleTaskUpdate, settings, user }) => {
   const columns = useMemo(
     () => [
       // Hidden grouping column (DO NOT set a header)
@@ -36,9 +38,11 @@ export const useTaskTableColumns = ({ handleTaskUpdate }) => {
             data.priority,
             settings.TASK_PRIORITY.value
           )
-          return row.original.needs_help && row.original.is_active && !row.original.capabilities.isAssignedToCurrentUser ? (
+          return row.original.help_requested &&
+            row.original.is_active &&
+            !row.original.capabilities.isAssignedToCurrentUser ? (
             <Tooltip content="Hulp gevraagd">
-              <HelpAnimation/>
+              <HelpAnimation />
             </Tooltip>
           ) : (
             <Tooltip content={priorityInfo.state}>
@@ -105,13 +109,31 @@ export const useTaskTableColumns = ({ handleTaskUpdate }) => {
           const TaskHasPatient = task.visit || null
           const preText =
             TaskHasPatient && task.task_planner_id
-              ? `${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}</br>`
+              ? !task.visit?.discharged_at
+                ? `${task.visit?.patient?.firstname} ${task.visit?.patient?.lastname} (${task.visit?.patient?.gender}) - ${task.visit?.bed?.room?.number}, ${task.visit?.bed?.number}</br>`
+                : `De patiënt is ontslagen</br>`
               : ''
 
           return (
             <div className="flex flex-col">
-              <div className="font-bold leading-4 text-sm">
-                {cell.getValue()}
+              <div className="flex items-center font-bold leading-4 text-sm gap-x-2">
+                <span>{cell.getValue()}</span>
+
+                <div className="flex items-center">
+                  {task?.tags.map(tag => (
+                    <div key={tag.id ?? tag.name}>
+                      {tag.icon ? (
+                        <AppIcon
+                          className="w-5 h-5"
+                          src={tag.icon}
+                          name={tag.name}
+                        />
+                      ) : (
+                        <Badge>{tag.name}</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
               <RichText
                 className="text-gray-500 text-xs"
@@ -170,7 +192,7 @@ export const useTaskTableColumns = ({ handleTaskUpdate }) => {
         )
       })
     ],
-    [settings, user, handleTaskUpdate, tasks.data]
+    [settings, user, handleTaskUpdate]
   )
 
   return columns

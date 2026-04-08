@@ -15,20 +15,12 @@ class UpdateTaskRequest extends FormRequest
         return true;
     }
 
-    /**
-     * Prepare data for validation.
-     */
     protected function prepareForValidation()
     {
-        // Convert to app timezone as all javascript datetime function uses UTC(0)
         $this->merge([
             'updated_at' => Carbon::parse($this->updated_at)->setTimezone(config('app.timezone')),
         ]);
     }
-
-    /**
-     * Define validation rules.
-     */
 
     public function rules(): array
     {
@@ -44,15 +36,21 @@ class UpdateTaskRequest extends FormRequest
                 'nullable',
             ],
 
-            'needs_help' => [
-                'bool',
+            'help_requested' => [
+                'boolean',
             ],
 
-            'assignees' => 'array',
+            'assignees' => [
+                'array',
+            ],
+
+            'tags' => [
+                'array',
+            ],
 
             'comment' => [
                 'string',
-                'nullable'
+                'nullable',
             ],
 
             'updated_at' => [
@@ -62,17 +60,63 @@ class UpdateTaskRequest extends FormRequest
         ];
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $task = $this->route('task');
+
+            if (!$task) {
+                return;
+            }
+
+            $incomingAssignees = collect($this->input('assignees', []))
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $currentAssignees = $task->assignees()
+                ->pluck('users.id')
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $incomingTags = collect($this->input('tags', []))
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $currentTags = $task->tags()
+                ->pluck('tags.id')
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $incomingComment = trim(strip_tags($this->input('comment', '')));
+
+            $hasChanges =
+                $this->input('status') !== $task->status?->name ||
+                $this->input('priority') !== $task->priority?->value ||
+                (bool) $this->input('help_requested') !== (bool) $task->help_requested ||
+                $incomingAssignees !== $currentAssignees ||
+                $incomingTags !== $currentTags ||
+                $incomingComment !== '';
+
+            if (!$hasChanges) {
+                $validator->errors()->add('form', 'Pas minstens één veld aan.');
+            }
+        });
+    }
+
     public function prepareForDatabase()
     {
         $data = $this->validated();
 
-        // Get all request keys
         $requestKeys = array_keys($this->all());
-
-        // Get all valid keys from the rules
         $validKeys = array_keys($this->rules());
-
-        // Check for any extra keys not in the rules
         $extraKeys = array_diff($requestKeys, $validKeys);
 
         if (!empty($extraKeys)) {

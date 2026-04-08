@@ -14,7 +14,7 @@ class TaskStatusSeeder extends Seeder
             'Replaced',
             'Scheduled',
             'InProgress',
-            'WaitingForSomeone',
+            'Waiting',
             'Completed',
             'Rejected',
             'FollowUpViaEmail',

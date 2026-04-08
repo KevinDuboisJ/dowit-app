@@ -67,7 +67,7 @@ const userHasPathAccess = (user, menu) => {
   const myRoleSet = new Set(menu?.roles);
 
   // Check if any value from user roles exists in menu roles using Set lookup.
-  const hasRoleForThis = Object.keys(user.roles).some(value => myRoleSet.has(value));
+  const hasRoleForThis = Object.keys(user?.roles).some(value => myRoleSet.has(value));
 
   // Show the item if the user has the required role or if no roles are defined in the menu item.
   return hasRoleForThis || !('roles' in menu);
