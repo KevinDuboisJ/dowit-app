@@ -215,30 +215,38 @@ const FilterDrawer = ({ open, onClose, onApply, onReset, children }) => {
    Main FilterBar
 ───────────────────────────────────────── */
 export const FilterBar = ({ filters = {} }) => {
+  const { url } = usePage()
   const { user, statuses } = usePage().props
   const filtersRef = filters.get()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // Pathname change resets all filters
+  const pathname = useMemo(() => {
+    return url.split('?')[0]
+  }, [url])
+
+  useEffect(() => {
+    handleResetAll()
+  }, [pathname])
+
   // Local draft state (only committed on Apply)
   const [assignedTo, setAssignedTo] = useState(
-    filtersRef.current.assignedTo?.value || ''
+    filtersRef.assignedTo?.value || ''
   )
   const [statusName, setStatusName] = useState(
-    filtersRef.current.status_id?.value || ''
+    filtersRef.status_id?.value || ''
   )
-  const [teamId, setTeamId] = useState(filtersRef.current.team_id?.value || '')
+  const [teamId, setTeamId] = useState(filtersRef.team_id?.value || '')
   const [dateRange, setDateRange] = useState(
-    filtersRef.current.dateRange?.value ?? null
+    filtersRef.dateRange?.value ?? null
   )
-  const [keyword, setKeyword] = useState(
-    filtersRef.current.keyword?.value || ''
-  )
+  const [keyword, setKeyword] = useState(filtersRef.keyword?.value || '')
   const [onlyAssignedToMe, setOnlyAssignedToMe] = useState(
-    filtersRef.current.onlyAssignedToMe?.value ?? false
+    filtersRef.onlyAssignedToMe?.value ?? false
   )
 
   const sync = (key, value) => {
-    if (filtersRef.current[key]) filtersRef.current[key].value = value
+    if (filtersRef[key]) filtersRef[key].value = value
   }
 
   const selectedStatus = useMemo(
@@ -287,7 +295,7 @@ export const FilterBar = ({ filters = {} }) => {
     setDateRange(null)
     setKeyword('')
     setOnlyAssignedToMe(false)
-    if (filters.reset) filters.reset()
+    filters.reset()
   }
 
   const chipBase = cn(
@@ -298,13 +306,13 @@ export const FilterBar = ({ filters = {} }) => {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         {/* Trigger button */}
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
           className={cn(
-            'bg-gradient-to-br from-cyan-500 to-purple-600 text-white hover:shadow-md shadow shadow-indigo-500/30 group inline-flex items-center gap-2 h-8 px-3.5 rounded-xl border text-sm font-semibold transition-all duration-200'
+            'text-xs font-medium bg-gradient-to-br from-cyan-500 to-purple-600 text-white hover:shadow-md shadow shadow-indigo-500/30 group inline-flex items-center gap-2 h-8 px-3.5 rounded-xl border transition-all duration-200'
           )}
         >
           <div
@@ -331,6 +339,36 @@ export const FilterBar = ({ filters = {} }) => {
             </span>
           )}
         </button>
+        {/* <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className={cn(
+            'group inline-flex h-10 items-center gap-2 rounded-t-lg border-b-2 px-3 text-sm font-medium transition-all duration-200',
+            activeCount > 0
+              ? 'border-emerald-500 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          )}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4 transition-transform duration-200 group-hover:scale-105"
+          >
+            <path d="M2 4h12M4.5 8h7M7 12h2" />
+          </svg>
+
+          <span>Filters</span>
+
+          {activeCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[11px] font-semibold text-slate-700">
+              {activeCount}
+            </span>
+          )}
+        </button> */}
 
         {/* Active filter chips */}
         {activeCount > 0 && (
@@ -414,7 +452,7 @@ export const FilterBar = ({ filters = {} }) => {
 
             {onlyAssignedToMe && (
               <span className={chipBase}>
-                Alleen mijn taken
+                Alleen aan mij toegewezen
                 <button
                   onClick={() => {
                     setOnlyAssignedToMe(false)
@@ -489,7 +527,7 @@ export const FilterBar = ({ filters = {} }) => {
         >
           <label className="flex items-center justify-between gap-3 select-none">
             <span className="text-sm text-slate-700 font-medium">
-              Alleen mijn taken
+              Alleen aan mij toegewezen
             </span>
 
             <button
@@ -522,7 +560,7 @@ export const FilterBar = ({ filters = {} }) => {
                 type="text"
                 value={assignedTo}
                 onChange={e => setAssignedTo(e.target.value)}
-                placeholder="Naam of gebruiker…"
+                placeholder="Zoeken op naam…"
                 className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-teal-400"
               />
             </div>

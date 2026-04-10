@@ -30,7 +30,6 @@ export const TaskDetails = ({ task: selectedTask }) => {
     () => tasks?.data?.find(t => t.id === selectedTask.id) ?? null,
     [tasks.data]
   )
-
   const priorityObj = getPriority(
     task.created_at,
     task.priority,
@@ -76,7 +75,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
             className="rounded-xl"
             style={{ backgroundColor: tag.bg_color }}
           >
-            <AppIcon src={tag.icon} className="w-3.5 h-3.5 mr-1"/>
+            <AppIcon src={tag.icon} className="w-3.5 h-3.5 mr-1" />
             {tag.name}
           </Badge>
         ))}
@@ -115,8 +114,8 @@ export const TaskDetails = ({ task: selectedTask }) => {
               />
             }
             label="Tijd:"
-            value={<div className='text-sm'>
-           
+            value={
+              <div className="text-sm">
                 {format(parseISO(task.start_date_time), 'PP HH:mm')}
 
                 {task.visit_id && (
@@ -130,8 +129,8 @@ export const TaskDetails = ({ task: selectedTask }) => {
                     </span>
                   </>
                 )}
-             
-            </div>}
+              </div>
+            }
           />
 
           {task?.visit && (
@@ -210,6 +209,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
               Geen persoon toegewezen
             </span>
           )}
+
         </div>
 
         <AssetList assets={task?.task_type?.assets} />

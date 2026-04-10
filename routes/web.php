@@ -36,13 +36,17 @@ Route::group(['middleware' => ['guest', HandleInertiaRequests::class]], function
 Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function () {
 
     // Dashboard
-    Route::match(['get', 'post'], '/', [DashboardController::class, 'index'])->name('dashboard.index');
+    Route::match(['get', 'post'], '/', [DashboardController::class, 'index'])
+        ->name('dashboard.index');
+
+    Route::match(['get', 'post'], '/requested-tasks', [DashboardController::class, 'requestedTasks'])
+        ->name('dashboard.requested-tasks');
 
     // Tasks
     Route::get('/tasks/{id}', [TaskController::class, 'find'])->name('task.find');
     Route::get('/tasks/{id}/comments', [TaskController::class, 'comments'])->name('task.comments');
     Route::post('/task/store', [TaskController::class, 'store'])->name('task.store');
-    Route::patch( '/task/{task}/request-help', [TaskController::class, 'requestHelp'])->name('task.requestHelp');
+    Route::patch('/task/{task}/request-help', [TaskController::class, 'requestHelp'])->name('task.requestHelp');
     Route::match(['post', 'delete'], '/task/{task}/update', [TaskController::class, 'update'])->name('task.update');
 
     Route::post('users/search', [UserController::class, 'search'])->name('user.search');

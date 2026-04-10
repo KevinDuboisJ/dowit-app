@@ -279,10 +279,9 @@ class TaskService
     ];
   }
 
-  public function fetchAndCombineTasks(Request $request)
+  public function fetchAndCombineTasks(Request $request, string $view)
   {
     $hasFilterByStatus = false;
-
     $relationships = [
       'visit' => fn($q) => $q->with(['patient', 'bed.room']),
       'tags',
@@ -299,22 +298,28 @@ class TaskService
     $hasFilters = !empty($filters);
     $perPage = min((int) $request->input('perPage', 100), 200);
 
+    $user = Auth::user();
+
     $query = Task::query()
       ->with($relationships)
       ->select('tasks.*')
       ->distinct();
 
-    // Apply filters (only if active filters exist)
+    // Base scope depending on selected mode
+    if ($view === 'requested-tasks') {
+      $query->byRequestedTasks($user);
+    } else {
+      $query->byTasksToExecute($user);
+    }
+
     if ($hasFilters) {
       $this->applyFilters($query, $filters, $hasFilterByStatus, $request);
     }
 
-    // Default active scope if no status filter
     if (!$hasFilterByStatus && !$hasFilters) {
       $query->byActive();
     }
 
-    // Sorters
     if (!empty($sorters)) {
       foreach ($sorters as $sorter) {
         $field = $sorter['field'] ?? null;
@@ -334,22 +339,19 @@ class TaskService
         }
       }
     } elseif ($hasFilters) {
-      // Default ordering when filters are present
       $query->orderByDesc('tasks.start_date_time');
     }
 
-    // Your existing default ordering
     $query
       ->withExists([
         'assignees as assigned_to_me' => fn($q) => $q->whereKey(Auth::id()),
       ])
-      ->orderByDesc('assigned_to_me') // true (1) first, false (0) af
+      ->orderByDesc('assigned_to_me')
       ->orderByDesc(DB::raw('COALESCE(tasks.help_requested, 0)'))
       ->orderByDesc(DB::raw('tasks.task_type_id = 5'))
       ->orderBy('tasks.status_id')
       ->orderByDesc('tasks.start_date_time');
 
-    // Paginate only for active filters
     $tasks = $query->paginate($perPage);
 
     return [

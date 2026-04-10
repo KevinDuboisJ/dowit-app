@@ -30,7 +30,7 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
     if (key) {
       return filtersRef.current?.[key] ?? null
     }
-    return filtersRef
+    return filtersRef.current
   }, [])
 
   const resetFilters = useCallback(() => {
@@ -73,12 +73,17 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
     return perPage ? Number(perPage) : undefined
   }
 
+  const getCurrentPath = useCallback(() => {
+    return url.split('?')[0] || window.location.pathname || '/'
+  }, [url])
+
   const apply = ({ page, perPage } = {}) => {
     const resolvedPerPage = perPage ?? getPerPageFromUrl()
+    const currentPath = getCurrentPath()
 
     setLoading(true)
     router.get(
-      '/',
+      currentPath,
       { filters: getActiveFilters(), page, perPage: resolvedPerPage },
       {
         only: ['tasks'],

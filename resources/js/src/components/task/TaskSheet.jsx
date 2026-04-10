@@ -50,15 +50,17 @@ export const TaskSheet = () => {
   const [sheetState, setSheetState] = useState(false)
   const [loading, setLoading] = useState(false)
 
-   useEffect(() => {
-    router.reload({
-      only: ['task_types', 'campuses']
-    })
-  }, [])
-
   const handleSheetOpenChange = open => {
     setSheetState(open)
-    form.reset()
+
+    if (!open) {
+      form.reset()
+      return
+    }
+
+    if (open) {
+      router.reload({ only: ['task_types', 'campuses'] })
+    }
   }
 
   const FormSchema = React.useMemo(
@@ -540,6 +542,7 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
 
   useEffect(() => {
     router.reload({
+      method: 'post',
       data: {
         taskType: taskType,
         campus: campus,
@@ -549,7 +552,7 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
       },
       only: ['teamsMatchingAssignmentRules']
     })
-  }, [taskType, campus, tags])
+  }, [taskType, campus, tags, space, spaceTo])
 
   useEffect(() => {
     const ids = teamsMatchingAssignmentRules

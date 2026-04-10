@@ -16,10 +16,22 @@ trait HasFilamentTeamFields
         return Select::make('teams')
             ->label($label)
             ->multiple()
-            ->relationship('teams', 'name', modifyQueryUsing: fn($query) => $query->whereIn(
-                'teams.id',
-                Auth::user()?->teams()->pluck('teams.id') ?? []
-            ),)
+            ->relationship(
+                'teams',
+                'name',
+                modifyQueryUsing: function ($query) {
+                    $user = Auth::user();
+
+                    if ($user?->isSuperAdmin()) {
+                        return $query;
+                    }
+
+                    return $query->whereIn(
+                        'teams.id',
+                        $user?->teams()->pluck('teams.id')->toArray() ?? []
+                    );
+                }
+            )
             ->default(fn() => Auth::user()->teams()->pluck('teams.id')->toArray())
             ->preload()
             ->hint(

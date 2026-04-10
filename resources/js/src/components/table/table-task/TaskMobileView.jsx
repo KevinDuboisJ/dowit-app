@@ -104,9 +104,7 @@ export const TaskMobileView = ({
           <div className="flex items-center justify-between">
             {/* LEFT */}
             <div className="flex flex-wrap items-center min-w-0">
-              <div className="text-base font-bold mr-2">
-                {task.name}
-              </div>
+              <div className="text-base font-bold mr-2">{task.name}</div>
 
               {task?.visit_id && (
                 <div className="flex items-center text-xs font-medium text-gray-500">
@@ -139,39 +137,34 @@ export const TaskMobileView = ({
                   )}
                 </span>
               ))}
-              
             </div>
           </div>
-              {/* Patient info */}
-              {task?.visit && (
-                <div className="flex flex-wrap items-center gap-x-1 leading-none text-gray-500 text-base">
-                  <span>
-                    {task.visit.patient.lastname},{' '}
-                    {task.visit.patient.firstname}
-                  </span>
-                  <span className="text-xs pr-1 py-0.5">
-                    ({task.visit?.patient?.gender})
-                  </span>
-                  {!task.visit.discharged_at ? (
-                    <span>
-                      {task.visit.bed?.room?.number}, {task.visit.bed?.number}
-                    </span>
-                  ) : (
-                    <span className="text-xs mt-auto">
-                      De patiënt is ontslagen
-                    </span>
-                  )}
-                </div>
+          {/* Patient info */}
+          {task?.visit && (
+            <div className="flex flex-wrap items-center gap-x-1 leading-none text-gray-500 text-base">
+              <span>
+                {task.visit.patient.lastname}, {task.visit.patient.firstname}
+              </span>
+              <span className="text-xs pr-1 py-0.5">
+                ({task.visit?.patient?.gender})
+              </span>
+              {!task.visit.discharged_at ? (
+                <span>
+                  {task.visit.bed?.room?.number}, {task.visit.bed?.number}
+                </span>
+              ) : (
+                <span className="text-xs mt-auto">De patiënt is ontslagen</span>
               )}
-              {/* Task description */}
-              <RichText
-                className="truncate text-gray-500 text-sm"
-                text={
-                  plainText.length > 60
-                    ? `${plainText.slice(0, 60)}...`
-                    : plainText
-                }
-              />
+            </div>
+          )}
+          {/* Task description */}
+          <RichText
+            className="truncate text-gray-500 text-sm"
+            text={
+              plainText.length > 60 ? `${plainText.slice(0, 60)}...` : plainText
+            }
+          />
+
           <div className="flex flex-col mt-3">
             {/* Priority */}
             <InfoRow

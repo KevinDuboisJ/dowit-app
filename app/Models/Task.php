@@ -164,6 +164,33 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
         });
     }
 
+    public function scopeByTasksToExecute($query, User $user)
+    {
+        $teamIds = $user->getTeamIds();
+
+        return $query->where(function ($q) use ($user, $teamIds) {
+            $q->whereHas('assignees', fn($sub) => $sub->whereKey($user->id))
+                ->orWhereHas('teams', fn($sub) => $sub->whereIn('teams.id', $teamIds));
+        });
+    }
+
+    public function scopeByRequestedTasks(Builder $query, User $user): Builder
+    {
+        $teamIds = $user->getTeamIds();
+
+        return $query->where(function (Builder $q) use ($user, $teamIds) {
+            $q->whereHas('creator', fn(Builder $sub) => $sub->whereKey($user->id))
+                ->orWhere(function (Builder $sub) use ($teamIds) {
+                    $sub->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {
+                        $q->whereIn('teams.id', $teamIds);
+                    })
+                        ->whereDoesntHave('teams', function (Builder $q) use ($teamIds) {
+                            $q->whereIn('teams.id', $teamIds);
+                        });
+                });
+        });
+    }
+
     public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
     {
         return $query->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {

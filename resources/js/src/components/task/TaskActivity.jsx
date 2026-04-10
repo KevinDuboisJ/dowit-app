@@ -58,7 +58,6 @@ export const TaskActivity = ({ comments }) => {
 
 /* ---------------- helpers ---------------- */
 const RenderBox = ({ activity }) => {
-
   if (activity.event === CommentEventEnum.TaskCreated) {
     return <TaskCreatedBox activity={activity} />
   }
@@ -237,27 +236,30 @@ const ActivityDetailsCard = ({ activity, changes = [] }) => {
 }
 
 const TaskStartedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   return (
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Gestart</p>
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskCreatedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   return (
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Taak aangemaakt</p>
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskRejectedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   const changes = normalizeMetadataChanges(activity.metadata).filter(
     change => change.key !== 'status'
   )
@@ -266,13 +268,15 @@ const TaskRejectedBox = ({ activity }) => {
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Afgewezen</p>
       <ActivityDetailsCard activity={activity} changes={changes} />
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskCompletedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   const changes = normalizeMetadataChanges(activity.metadata).filter(
     change => change.key !== 'status'
   )
@@ -281,13 +285,15 @@ const TaskCompletedBox = ({ activity }) => {
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Afgerond</p>
       <ActivityDetailsCard activity={activity} changes={changes} />
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskHelpRequestedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   const changes = normalizeMetadataChanges(activity.metadata).filter(
     change => change.key !== 'help_requested'
   )
@@ -296,23 +302,27 @@ const TaskHelpRequestedBox = ({ activity }) => {
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Collega nodig</p>
       <ActivityDetailsCard activity={activity} changes={changes} />
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskHelpGivenBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   return (
     <div className="space-y-1">
       <p className="text-sm text-slate-600">Hulp toegezegd</p>
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
 const TaskUpdatedBox = ({ activity }) => {
-  const name = fullName(activity.creator)
   const changes = normalizeMetadataChanges(activity.metadata)
 
   if (!activity.content && changes.length === 0) {
@@ -323,20 +333,27 @@ const TaskUpdatedBox = ({ activity }) => {
     <div className="flex flex-col space-y-1.5">
       <p className="text-sm text-slate-600">Bewerking</p>
       <ActivityDetailsCard activity={activity} changes={changes} />
-      <Creator creatorName={name} createdAt={formatDate(activity.created_at)} />
+      <Creator
+        activity={activity}
+        createdAt={formatDate(activity.created_at)}
+      />
     </div>
   )
 }
 
-const Creator = ({ creatorName, createdAt }) => (
-  <div className="flex items-start gap-2">
-    <span className="text-xs font-semibold text-slate-900">
-      {creatorName || 'Onbekende gebruiker'}
-    </span>
-
-    <div className="text-[0.7rem] text-slate-400">{createdAt}</div>
-  </div>
-)
+const Creator = ({ activity, createdAt }) => {
+  const creator = activity?.creator
+  const fullname = fullName(creator)
+  
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-xs font-semibold text-slate-900">
+        {fullname || 'Onbekende gebruiker'}
+      </span>
+      <div className="text-[0.7rem] text-slate-400">{createdAt}</div>
+    </div>
+  )
+}
 
 /* ---------------- tiny bits ---------------- */
 

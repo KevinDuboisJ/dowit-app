@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use App\Models\PATIENTLIST\Bed;
+use App\Models\PATIENTLIST\BedVisit;
 use App\Models\PATIENTLIST\Department;
 use Illuminate\Http\Request;
 
@@ -23,12 +24,17 @@ class BedController extends Controller
       'show_cleaned_only' => $request->boolean('show_cleaned_only'),
     ];
 
+    $departmentIds = ['2214', '3112', '2112', '3111'];
+
     $beds = Bed::query()
       ->with([
         'room.campus',
         'room.department',
         'bedVisits.visit.patient',
       ])
+      ->whereHas('room.department', function ($q) use ($departmentIds) {
+        $q->whereIn('number', $departmentIds);
+      })
       ->filter($filters)
       ->latest('id')
       ->paginate(25)

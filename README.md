@@ -97,6 +97,8 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 22. inifinite scroll not working on mobile for tasks
 23. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
 24. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
+25. hannes from webaking can also select the task type for aanvraag bewaking i dont think that is the idea
+26. add completed_at in the task
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//

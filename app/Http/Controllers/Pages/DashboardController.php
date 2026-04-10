@@ -23,14 +23,25 @@ use App\Models\User;
 
 class DashboardController extends Controller
 {
+
   public function index(Request $request, TaskService $taskService)
+  {
+    return $this->renderDashboard($request, $taskService, 'tasks');
+  }
+
+  public function requestedTasks(Request $request, TaskService $taskService)
+  {
+    return $this->renderDashboard($request, $taskService, 'requested-tasks');
+  }
+
+  private function renderDashboard(Request $request, TaskService $taskService, string $view)
   {
     $user = Auth::user();
     $settings = $user->getSettings();
-    $userTeamsIds = $user->getTeamIds();
+    $userTeamIds = $user->getTeamIds();
 
     return Inertia::render('Dashboard', [
-      'tasks' => fn() => $taskService->fetchAndCombineTasks($request),
+      'tasks' => fn() => $taskService->fetchAndCombineTasks($request, $view),
 
       'settings' => fn() => $settings,
 
@@ -39,7 +50,7 @@ class DashboardController extends Controller
         ->whereIn('id', [1, 4, 5, 6, 7])
         ->get()
         ->map(function ($status) {
-          
+
           $enum = TaskStatusEnum::tryFrom($status->id);
 
           return [
@@ -48,7 +59,7 @@ class DashboardController extends Controller
           ];
         }),
 
-      'campuses' => Inertia::lazy(function () {
+      'campuses' => Inertia::optional(function () {
         return DB::table('campuses')
           ->select('id', 'name')
           ->get()->map(function ($item) {
@@ -66,7 +77,7 @@ class DashboardController extends Controller
         ];
       }),
 
-      'assets' => Inertia::lazy(function () {
+      'assets' => Inertia::optional(function () {
         return DB::table('tags')
           ->select('id', 'name')
           ->get()->map(function ($item) {
@@ -77,18 +88,22 @@ class DashboardController extends Controller
           });
       }),
 
-      'task_types' => Inertia::lazy(function () {
-
-        return TaskType::all()->mapWithKeys(fn($t) => [
-          $t->id => [
-            'name' => $t->name,
-            'value' => $t->id,
-            'isPatientTransport' => TaskTypeEnum::tryFrom($t->id)?->isPatientTransport(),
-          ],
-        ]);
+      'task_types' => Inertia::optional(function () use ($userTeamIds) {
+        return TaskType::query()
+          ->whereHas('requestingTeams', function ($q) use ($userTeamIds) {
+            $q->whereIn('teams.id', $userTeamIds);
+          })
+          ->get()
+          ->mapWithKeys(fn($t) => [
+            $t->id => [
+              'name' => $t->name,
+              'value' => $t->id,
+              'isPatientTransport' => TaskTypeEnum::tryFrom($t->id)?->isPatientTransport(),
+            ],
+          ]);
       }),
 
-      'teamsMatchingAssignmentRules' => Inertia::lazy(function () use ($request) {
+      'teamsMatchingAssignmentRules' => Inertia::optional(function () use ($request) {
 
         $task = new Task([
           'campus_id' => $request->input('campus') ?? null,
@@ -107,11 +122,11 @@ class DashboardController extends Controller
       }),
 
       'announcements' => Comment::with('creator')
-        ->where(function ($query) use ($userTeamsIds) {
-          if (!empty($userTeamsIds)) {
+        ->where(function ($query) use ($userTeamIds) {
+          if (!empty($userTeamIds)) {
             $query->whereRaw(implode(' OR ', array_map(function ($teamId) {
               return "JSON_CONTAINS(recipient_teams, '$teamId')";
-            }, $userTeamsIds)));
+            }, $userTeamIds)));
           }
           $query->orWhereJsonContains('recipient_users', Auth::id());
         })
@@ -191,7 +206,6 @@ class DashboardController extends Controller
       }),
 
       'priorities' => array_column(TaskPriorityEnum::cases(), 'value'),
-
     ]);
   }
 }
