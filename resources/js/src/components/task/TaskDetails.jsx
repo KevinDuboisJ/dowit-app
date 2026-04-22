@@ -63,7 +63,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
   }, [task.comments])
 
   return (
-    <TabsContent className="p-6 py-4 fadeInUp" value="details">
+    <TabsContent className="p-6 py-4" value="details">
       <div className="flex items-center space-x-2">
         <Badge className="rounded-xl" variant={task.status.name}>
           {__(task.status.name)}

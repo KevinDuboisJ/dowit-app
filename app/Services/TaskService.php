@@ -47,9 +47,9 @@ class TaskService
       ]);
 
       //Sync side stuff (tags, assignees, teams)
-      $task->syncTags($data['tags']);
-      $task->syncAssignees($data['assignees']);
-      $task->syncTeams($data['teamsMatchingAssignment']);
+      $task->syncTags($data['tags'] ?? []);
+      $task->syncAssignees($data['assignees'] ?? []);
+      $task->syncTeams($data['teamsMatchingAssignment'] ?? []);
 
       $userId =  Auth::id() ?? config('app.system_user_id');
 
@@ -113,6 +113,13 @@ class TaskService
 
       if (array_key_exists('tags', $data)) {
         $task->syncTags($data['tags']);
+      }
+
+      // Handle task completion timestamp
+      if($task->status_id === TaskStatusEnum::Completed->value) {
+        $task->update(['completed_at' => now()]);
+      } else {
+        $task->update(['completed_at' => null]);
       }
 
       $this->handleAutoStatusReset($task, $data);

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\CommentEventEnum;
+use App\Enums\EventEnum;
 use App\Enums\TaskStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -52,38 +52,34 @@ class Comment extends Model
             $isOnlySelfAssigned = count($addedAssignees) === 1 && data_get($addedAssignees, '0.id') === $comment->created_by;
 
             if ($comment->start_date) {
-                return $comment->event = CommentEventEnum::Announcement;
+                return $comment->event = EventEnum::Announcement;
             }
 
             if ($comment->help_requested) {
-                return $comment->event = CommentEventEnum::TaskHelpRequested;
-            }
-
-            if ($comment->help_requested === false) {
-                return $comment->event = CommentEventEnum::TaskHelpRequested;
+                return $comment->event = EventEnum::TaskHelpRequested;
             }
 
             if (isset($comment->help_requested) && !$comment->help_requested) {
-                return $comment->event = CommentEventEnum::TaskHelpGiven;
+                return $comment->event = EventEnum::TaskHelpGiven;
             }
 
             if ($comment->status_id === TaskStatusEnum::InProgress->value && $isOnlySelfAssigned) {
-                return $comment->event = CommentEventEnum::TaskStarted;
+                return $comment->event = EventEnum::TaskStarted;
             }
 
             if ($comment->status_id === TaskStatusEnum::Rejected->value) {
-                return $comment->event = CommentEventEnum::TaskRejected;
+                return $comment->event = EventEnum::TaskRejected;
             }
 
             if ($comment->created_at?->equalTo($task->created_at)) {
-                return $comment->event = CommentEventEnum::TaskCreated;
+                return $comment->event = EventEnum::TaskCreated;
             }
 
             if ($comment->status_id === TaskStatusEnum::Completed->value) {
-                return $comment->event = CommentEventEnum::TaskCompleted;
+                return $comment->event = EventEnum::TaskCompleted;
             }
 
-            return $comment->event = CommentEventEnum::TaskUpdated;
+            return $comment->event = EventEnum::TaskUpdated;
         });
     }
 

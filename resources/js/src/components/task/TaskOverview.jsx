@@ -102,7 +102,7 @@ export const TaskOverview = ({
       </CardHeader>
 
       {activeTab === 'details' && (
-        <ScrollArea className="fadeInUp">
+        <ScrollArea>
           {/* Swipe container inside ScrollArea for Details */}
           <div {...swipeHandlersDetails} style={{touchAction: 'pan-y'}}>
             <TaskDetails task={task} />
@@ -114,7 +114,7 @@ export const TaskOverview = ({
         <ScrollArea>
           {/* Swipe container inside ScrollArea for Edit */}
           <div {...swipeHandlersEdit} style={{touchAction: 'pan-y'}}>
-            <TabsContent className="p-8 py-4 fadeInUp" value="edit">
+            <TabsContent className="p-8 py-4" value="edit">
               <TaskForm
                 task={task}
                 setActiveTab={setActiveTab}

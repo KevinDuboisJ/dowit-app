@@ -36,7 +36,7 @@ class LoginService implements UserAuthenticator
 
     // Record the timestamp of the user's last login attempt to monitor login activity.
     if (!$this->isImpersonated()) {
-      $user->last_login = Carbon::now();
+      $user->last_login = now();
       $user->save();
     }
 

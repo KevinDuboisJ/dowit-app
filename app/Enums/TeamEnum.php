@@ -2,11 +2,11 @@
 
 namespace App\Enums;
 
-use App\Traits\HasEnumCaseNames;
 use Filament\Support\Contracts\HasLabel;
 
 enum TeamEnum: int implements HasLabel
 {
+    case Bewaking = 4;
     case Revalidatie = 5;
 
     public function getLabel(): ?string

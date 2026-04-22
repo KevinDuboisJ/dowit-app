@@ -4,7 +4,7 @@ import { __ } from '@/stores'
 import { RichText, Heroicon } from '@/base-components'
 import { LucideHandshake } from 'lucide-react'
 
-export const CommentEventEnum = Object.freeze({
+export const EventEnum = Object.freeze({
   TaskCreated: 'task_created',
   TaskStarted: 'task_started',
   TaskUpdated: 'task_updated',
@@ -58,27 +58,27 @@ export const TaskActivity = ({ comments }) => {
 
 /* ---------------- helpers ---------------- */
 const RenderBox = ({ activity }) => {
-  if (activity.event === CommentEventEnum.TaskCreated) {
+  if (activity.event === EventEnum.TaskCreated) {
     return <TaskCreatedBox activity={activity} />
   }
 
-  if (activity.event === CommentEventEnum.TaskStarted) {
+  if (activity.event === EventEnum.TaskStarted) {
     return <TaskStartedBox activity={activity} />
   }
 
-  if (activity.event === CommentEventEnum.TaskHelpRequested) {
+  if (activity.event === EventEnum.TaskHelpRequested) {
     return <TaskHelpRequestedBox activity={activity} />
   }
 
-  if (activity.event === CommentEventEnum.TaskHelpGiven) {
+  if (activity.event === EventEnum.TaskHelpGiven) {
     return <TaskHelpGivenBox activity={activity} />
   }
 
-  if (activity.event === CommentEventEnum.TaskCompleted) {
+  if (activity.event === EventEnum.TaskCompleted) {
     return <TaskCompletedBox activity={activity} />
   }
 
-  if (activity.event === CommentEventEnum.TaskRejected) {
+  if (activity.event === EventEnum.TaskRejected) {
     return <TaskRejectedBox activity={activity} />
   }
 
@@ -124,13 +124,13 @@ const TimelineIcon = ({ event, index }) => {
   )
 
   if (!showPing) {
-    if (event === CommentEventEnum.TaskCreated) {
+    if (event === EventEnum.TaskCreated) {
       circle = (
         <div className="absolute z-10 -left-[8px] top-0 bg-gray-400 w-4 h-4 rounded-full flex items-center justify-center" />
       )
     }
 
-    if (event === CommentEventEnum.TaskStarted) {
+    if (event === EventEnum.TaskStarted) {
       circle = (
         <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
           <Heroicon icon="Play" variant="solid" className="w-4 h-4" />
@@ -138,7 +138,7 @@ const TimelineIcon = ({ event, index }) => {
       )
     }
 
-    if (event === CommentEventEnum.TaskHelpRequested) {
+    if (event === EventEnum.TaskHelpRequested) {
       circle = (
         <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
           <Heroicon icon="HandRaised" variant="solid" className="w-4 h-4" />
@@ -146,7 +146,7 @@ const TimelineIcon = ({ event, index }) => {
       )
     }
 
-    if (event === CommentEventEnum.TaskHelpGiven) {
+    if (event === EventEnum.TaskHelpGiven) {
       circle = (
         <div className="absolute z-10 p-1.5 -left-[15px] -top-0.5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#9CA3AF] shadow-sm">
           <Heroicon icon="Users" variant="solid" className="w-4 h-4" />
@@ -155,7 +155,7 @@ const TimelineIcon = ({ event, index }) => {
     }
   }
 
-  if (event === CommentEventEnum.TaskCompleted) {
+  if (event === EventEnum.TaskCompleted) {
     circle = (
       <div className="absolute z-10 p-1 -left-[12px] -top-0.5 bg-green-500 rounded-full flex items-center justify-center">
         <svg
@@ -176,7 +176,7 @@ const TimelineIcon = ({ event, index }) => {
     )
   }
 
-  if (event === CommentEventEnum.TaskRejected) {
+  if (event === EventEnum.TaskRejected) {
     circle = (
       <div className="absolute z-10 p-1 -left-[12px] -top-0.5 bg-red-500 rounded-full flex items-center justify-center">
         <Heroicon icon="XMark" variant="solid" className="w-4 h-4 text-white" />

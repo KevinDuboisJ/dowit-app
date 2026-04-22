@@ -51,11 +51,11 @@ class LoginController extends Controller
                 'wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker',
             ]);
         } catch (Exception $e) {
+            $errors = method_exists($e, 'errors') ? $e->errors() : null;
             throw ValidationException::withMessages([
-                'wrongCredentials' => $e->getMessage(),
+                'wrongCredentials' => $errors ? [collect($errors)->flatten()->first()] : $e->getMessage(),
             ]);
         }
-
         $this->registerDeviceUse(Auth::user());
         return Inertia::location(Session::get('url.intended', '/'));
     }

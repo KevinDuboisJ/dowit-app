@@ -3,17 +3,43 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
 use App\Models\PATIENTLIST\Bed;
-use App\Models\PATIENTLIST\BedVisit;
 use App\Models\PATIENTLIST\Department;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class BedController extends Controller
 {
-  public function index(Request $request)
+  public function index(Request $request): Response
   {
-    $filters = [
+    $filters = $this->getFilters($request);
+
+    $beds = Bed::query()
+      ->with([
+        'room.campus',
+        'room.department',
+        'bedVisits.visit.patient',
+        'latestBedVisit',
+      ])
+      ->filter($filters)
+      ->latest('id')
+      ->paginate(25)
+      ->withQueryString()
+      ->through(fn(Bed $bed) => $this->transformBed($bed));
+
+    $filterOptions = $this->getFilterOptions();
+
+    return Inertia::render('Bed', [
+      'beds' => $beds,
+      'filters' => $filters,
+      'filterOptions' => $filterOptions,
+    ]);
+  }
+
+  private function getFilters(Request $request): array
+  {
+    return [
       'department' => $request->string('department')->value() ?: 'all',
       'campus' => $request->string('campus')->value() ?: 'all',
       'room' => $request->string('room')->value() ?: 'all',
@@ -23,58 +49,60 @@ class BedController extends Controller
       'show_occupied_only' => $request->boolean('show_occupied_only'),
       'show_cleaned_only' => $request->boolean('show_cleaned_only'),
     ];
+  }
 
-    $departmentIds = ['2214', '3112', '2112', '3111'];
+  private function transformBed(Bed $bed): array
+  {
+    $room = $bed->room;
+    $latestBedVisit = $bed->latestBedVisit;
 
-    $beds = Bed::query()
-      ->with([
-        'room.campus',
-        'room.department',
-        'bedVisits.visit.patient',
-      ])
-      ->whereHas('room.department', function ($q) use ($departmentIds) {
-        $q->whereIn('number', $departmentIds);
-      })
-      ->filter($filters)
-      ->latest('id')
-      ->paginate(25)
-      ->withQueryString()
-      ->through(function (Bed $bed) {
-        return [
-          'id' => $bed->id,
-          'number' => $bed->number,
-          'occupied_at' => $bed->occupied_at,
-          'cleaned_at' => $bed->cleaned_at,
-          'room' => [
-            'number' => $bed->room?->number,
-            'campus' => [
-              'name' => $bed->room?->campus?->name,
-            ],
-            'department' => [
-              'number' => $bed->room?->department?->number,
-            ],
-          ],
-          'bed_visits' => $bed->bedVisits->map(function ($bedVisit) {
-            return [
-              'id' => $bedVisit->id,
-              'vacated_at' => $bedVisit->vacated_at,
-              'occupied_at' => $bedVisit->occupied_at,
-              'visit' => [
-                'patient' => [
-                  'firstname' => $bedVisit->visit?->patient?->firstname,
-                  'lastname' => $bedVisit->visit?->patient?->lastname,
-                ],
-              ],
-            ];
-          }),
-        ];
-      });
+    return [
+      'id' => $bed->id,
+      'number' => $bed->number,
+      'room' => [
+        'number' => $room?->number,
+        'campus' => [
+          'name' => $room?->campus?->name,
+        ],
+        'department' => [
+          'number' => $room?->department?->number,
+        ],
+      ],
+      'bed_visits' => $bed->bedVisits->map(fn($bedVisit) => $this->transformBedVisit($bedVisit)),
+      'latest_bed_visit' => $latestBedVisit ? [
+        'id' => $latestBedVisit->id,
+        'occupied_at' => $latestBedVisit->occupied_at,
+        'vacated_at' => $latestBedVisit->vacated_at,
+        'cleaned_at' => $latestBedVisit->cleaned_at,
+      ] : null,
+    ];
+  }
 
-    $filterOptions = [
+  private function transformBedVisit($bedVisit): array
+  {
+    $patient = $bedVisit->visit?->patient;
+
+    return [
+      'id' => $bedVisit->id,
+      'vacated_at' => $bedVisit->vacated_at,
+      'occupied_at' => $bedVisit->occupied_at,
+      'visit' => [
+        'patient' => [
+          'firstname' => $patient?->firstname,
+          'lastname' => $patient?->lastname,
+        ],
+      ],
+    ];
+  }
+
+  private function getFilterOptions(): array
+  {
+    return [
       'departments' => Department::query()
         ->orderBy('number')
         ->pluck('number')
         ->values(),
+
       'campuses' => Bed::query()
         ->join('rooms', 'rooms.id', '=', 'beds.room_id')
         ->join('campuses', 'campuses.id', '=', 'rooms.campus_id')
@@ -83,6 +111,7 @@ class BedController extends Controller
         ->orderBy('campuses.name')
         ->pluck('campuses.name')
         ->values(),
+
       'rooms' => Bed::query()
         ->join('rooms', 'rooms.id', '=', 'beds.room_id')
         ->whereNotNull('rooms.number')
@@ -90,6 +119,7 @@ class BedController extends Controller
         ->orderByRaw('CAST(rooms.number as unsigned)')
         ->pluck('rooms.number')
         ->values(),
+
       'beds' => Bed::query()
         ->whereNotNull('number')
         ->distinct()
@@ -97,11 +127,5 @@ class BedController extends Controller
         ->pluck('number')
         ->values(),
     ];
-
-    return Inertia::render('Bed', [
-      'beds' => $beds,
-      'filters' => $filters,
-      'filterOptions' => $filterOptions,
-    ]);
   }
 }

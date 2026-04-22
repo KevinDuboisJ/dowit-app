@@ -28,7 +28,7 @@ class TeamService
         }
 
         // Check if the profession matches regardless of department
-        if ($rule['profession_id'] === $formattedProfessionId) {
+        if ($rule['profession_id'] === $formattedProfessionId && is_null($rule['department_id'])) {
           $shouldSync = true;
         }
       }

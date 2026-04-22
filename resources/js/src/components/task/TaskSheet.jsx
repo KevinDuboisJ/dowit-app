@@ -491,7 +491,7 @@ export const TaskSheet = () => {
                 name="assignees"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Toewezen</FormLabel>
+                    <FormLabel>Toewijzing</FormLabel>
                     <FormControl>
                       <MultiSelect
                         value={field.value}

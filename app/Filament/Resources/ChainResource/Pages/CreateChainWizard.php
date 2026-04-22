@@ -3,474 +3,477 @@
 namespace App\Filament\Resources\ChainResource\Pages;
 
 use App\Enums\ChainActionType;
+use App\Enums\EventEnum;
 use App\Filament\Resources\ChainResource;
+use App\Models\Campus;
 use App\Models\Chain;
+use App\Models\Space;
+use App\Models\TaskType;
+use App\Traits\HasFilamentTeamFields;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Resources\Pages\Page;
-use Filament\Forms\Components\Wizard;
-use Filament\Forms\Components\Wizard\Step;
-use Filament\Forms\Components\View;
-use Filament\Notifications\Notification;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Support\Facades\FilamentAsset;
-use Illuminate\Support\Facades\Vite;
-use Filament\Support\Assets\Js;
-use Filament\Forms\Form;
-use Filament\Forms\Components\ViewField;
 use Filament\Forms\Components\Actions\Action as ComponentAction;
-use Filament\Forms\Components\Select;
-use FilamentTiptapEditor\TiptapEditor;
-use App\Models\Space;
-use Filament\Forms\Get;
-use Filament\Forms\Components\TextInput;
-use App\Models\TaskType;
-use App\Models\Campus;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Wizard;
+use Filament\Forms\Components\Wizard\Step;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Page;
+use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Support\HtmlString;
-use App\Traits\HasFilamentTeamFields;
-use FilamentTiptapEditor\Enums\TiptapOutput;
-
-use Closure;
 
 class CreateChainWizard extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    /**
-     * If Filament routes you here with an existing Chain ID, this will be set.
-     * Otherwise (creating new), it stays null.
-     */
     public ?Chain $record = null;
 
-    /**
-     * Holds “chain” data (e.g. name, description). Bound to the wizard form.
-     */
     public ?string $identifier = null;
     public ?string $description = null;
     public ?string $trigger_type = null;
+    public ?int $trigger_task_type_id = null;
     public ?string $action = null;
-    public ?array  $actions = null;
-    public ?array  $ip_whitelist = null;
-    public ?bool   $is_active = null;
-    public ?array  $teams = null;
-
+    public ?array $actions = null;
+    public ?array $ip_whitelist = null;
+    public ?bool $is_active = null;
+    public ?array $teams = null;
 
     protected static string $resource = ChainResource::class;
-    protected static string $view     = 'filament.pages.create-chain-wizard';
-
-    /**
-     * mount(): runs when Filament instantiates this Page. If $recordId was passed
-     * (i.e. we’re editing), load the existing Chain. Also register
-     * our custom JS asset here.
-     */
+    protected static string $view = 'filament.pages.create-chain-wizard';
 
     public function mount(?Chain $record): void
     {
+        $this->record = $record;
 
         if ($record?->actions) {
-            $key = array_key_first($record->actions);
-            $record->action = $key;
+            $record->action = array_key_first($record->actions);
         }
 
-        // Register the compiled JS (Alpine + SortableJS) so Filament loads it.
-        // FilamentAsset::register([
-        //     Js::make('sort.js', Vite::asset('resources/js/src/filament/sort.js')),
-        // ]);
-
-        // If a record‐ID was provided by Filament (edit mode), load it from DB.
-
-
-        //     $this->actions = [
-        //     ['id' => 99, 'type' => 'email', 'name' => 'Test Email', 'expanded' => false],
-        //     ['id' => 100, 'type' => 'approval', 'name' => 'Test Approval', 'expanded' => false],
-        // ];
-
-        // Pre‐fill the Filament form with data so the “Review” step sees them.
         $this->form->fill(array_merge(
-            $record->attributesToArray(),
+            $record?->attributesToArray() ?? [],
             [
-                'teams' => $record->teams->pluck('id')->toArray(),
+                'teams' => $record?->teams?->pluck('id')->toArray() ?? [],
             ]
         ));
     }
 
-    /**
-     * Build the Filament wizard. We have two actions:
-     *  1) “Configuration” – chain info + our drag‐and‐drop view
-     *  2) “Review & Submit” – a placeholder that shows a summary
-     */
     public function form(Form $form): Form
     {
+        return $form
+            ->schema([
+                Wizard::make([
+                    Step::make('Configuratie')
+                        ->icon('heroicon-m-cog-6-tooth')
+                        ->schema([
+                            Section::make([
+                                TextInput::make('identifier')
+                                    ->label('Identificatie')
+                                    ->required()
+                                    ->columnSpan(1),
 
-        return $form->schema([
-            Wizard::make([
-                Step::make('Configuratie')
-                    ->icon('heroicon-m-cog-6-tooth')
-                    ->schema([
-                        Forms\Components\Section::make([
-                            Forms\Components\TextInput::make('identifier')
-                                ->label('Identificatie')
-                                ->required(),
+                                TextInput::make('description')
+                                    ->label('Omschrijving')
+                                    ->columnSpan(1),
 
-                            Forms\Components\TextInput::make('description')
-                                ->label('Omschrijving'),
-
-                            Forms\Components\Select::make('trigger_type')
-                                ->label('Triggertype ')
-                                ->options([
-                                    'api' => 'API',
-                                    'internal' => 'Intern',
-                                ])
-                                ->afterStateUpdated(function ($state, $set) {
-                                    if ($state === 'internal') {
-                                        $set('ip_whitelist', null);
-                                    }
-                                })
-                                ->required()
-                                ->live(),
-
-                            // Forms\Components\KeyValue::make('trigger_conditions')
-                            //     ->label('Conditions')
-                            //     ->keyLabel('field')
-                            //     ->valueLabel('value')
-                            //     ->required(),
-
-                            Forms\Components\Select::make('action')
-                                ->label('Actie')
-                                ->options(ChainActionType::class)
-                                ->required()
-                                // load existing value on edit
-                                ->afterStateHydrated(function ($set, $get, $record) {
-                                    if ($record?->actions) {
-                                        $key = array_key_first($record->actions);
-                                        $set('action', $key);
-                                    }
-                                })
-                                // when the user changes the action, clear the class field
-                                ->afterStateUpdated(function ($state, $set) {
-                                    if ($state === ChainActionType::CreateTask->name) {
-                                        $set('actions.' . ChainActionType::CustomCode->name, null); // clear custom code data, preserve CreateTask
-                                    } elseif ($state === ChainActionType::CustomCode->name) {
-                                        $set('actions.' . ChainActionType::CreateTask->name, null); // clear task fields only
-                                    }
-                                })
-                                // but we do NOT want Filament to try to save this directly
-                                ->dehydrated(false)
-                                ->live(),
-
-
-                        ])->extraAttributes(['class' => 'h-full'])->columnSpan(6)->columns(2),
-
-                        Forms\Components\Section::make([
-                            Forms\Components\TagsInput::make('ip_whitelist')
-                                ->label('IP Whitelist')
-                                ->placeholder('Nieuwe IP toevoegen')
-                                ->helperText('Alleen numerieke IPv4 adressen')
-                                ->rules([
-                                    'array',
-                                    'nullable',
-                                    fn(): Closure => function (string $attribute, $value, Closure $fail) {
-                                        foreach ($value as $ip) {
-                                            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                                                $fail("'$ip' is geen geldig IPv4-adres.");
-                                            }
+                                Select::make('trigger_type')
+                                    ->label('Triggertype')
+                                    ->options([
+                                        'api' => 'API',
+                                        EventEnum::TaskCompleted->value => EventEnum::TaskCompleted->getLabel(),
+                                    ])
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Set $set) {
+                                        if ($state !== 'api') {
+                                            $set('ip_whitelist', null);
                                         }
-                                    },
-                                ])
-                                ->visible(fn($get) => $get('trigger_type') === 'api')
-                                ->dehydratedWhenHidden(true),
 
-                            HasFilamentTeamFields::customPageBelongsToTeamsField(tooltip: 'Teams waaraan de actie wordt toegewezen'),
+                                        if ($state !== EventEnum::TaskCompleted->value) {
+                                            $set('trigger_task_type_id', null);
+                                        }
+                                    })
+                                    ->columnSpan(1),
 
-                            Forms\Components\Toggle::make('is_active')
-                                ->label('Actief'),
+                                Select::make('trigger_task_type_id')
+                                    ->label('Trigger taaktype')
+                                    ->options(fn() => TaskType::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->visible(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value)
+                                    ->required(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value),
 
-                        ])->columnSpan(2),
+                                Select::make('action')
+                                    ->label('Actie')
+                                    ->options(ChainActionType::class)
+                                    ->required()
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function (Set $set, $get, $record) {
+                                        if ($record?->actions) {
+                                            $set('action', array_key_first($record->actions));
+                                        }
+                                    })
+                                    ->afterStateUpdated(function ($state, Set $set) {
+                                        if ($state === ChainActionType::CreateTask->name) {
+                                            $set('actions.' . ChainActionType::CustomCode->name, null);
+                                        }
 
-                        Forms\Components\Group::make()
-                            ->schema([
-                                Forms\Components\Section::make()->schema([
-                                    TextInput::make('name')
-                                        ->label('Naam')
-                                        ->nullable()
-                                        ->required(),
+                                        if ($state === ChainActionType::CustomCode->name) {
+                                            $set('actions.' . ChainActionType::CreateTask->name, null);
+                                        }
+                                    }),
+                            ])
+                                ->columnSpan(6)
+                                ->columns(2),
 
-                                    TiptapEditor::make('description')
-                                        ->label('Omschrijving')
-                                        ->placeholder('Voer hier een omschrijving in...')
-                                        ->tools([
-                                            'bold',
-                                            'italic',
-                                            'link',
-                                            'bullet-list',
-                                            'ordered-list',
+                            Section::make([
+                                Forms\Components\TagsInput::make('ip_whitelist')
+                                    ->label('IP Whitelist')
+                                    ->placeholder('Nieuwe IP toevoegen')
+                                    ->helperText('Alleen numerieke IPv4 adressen')
+                                    ->rules([
+                                        'array',
+                                        'nullable',
+                                        fn(): Closure => function (string $attribute, $value, Closure $fail) {
+                                            foreach ($value as $ip) {
+                                                if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                                                    $fail("'{$ip}' is geen geldig IPv4-adres.");
+                                                }
+                                            }
+                                        },
+                                    ])
+                                    ->visible(fn(Get $get) => $get('trigger_type') === 'api')
+                                    ->dehydratedWhenHidden(true),
+
+                                HasFilamentTeamFields::customPageBelongsToTeamsField(
+                                    tooltip: 'Teams waaraan de actie wordt toegewezen'
+                                )
+                                    ->required(fn(Get $get): bool => $get('action') !== ChainActionType::CustomCode->name)
+                                    ->validationAttribute('teams'),
+
+                                Toggle::make('is_active')
+                                    ->label('Actief'),
+                            ])
+                                ->columnSpan(2),
+
+                            Group::make()
+                                ->schema([
+                                    Section::make('Taak aanmaken')
+                                        ->schema([
+                                            Toggle::make('inherit_missing_from_trigger_task')
+                                                ->label('Lege velden overnemen van oorspronkelijke taak')
+                                                ->visible(fn(Get $get) => $this->isTaskCompletedTrigger($get))
+                                                ->helperText('Als dit aan staat, worden velden die je leeg laat automatisch ingevuld met de waarden van de taak die deze ketting heeft getriggerd.')
+                                                ->columnSpanFull()
+                                                ->live(),
+
+                                            TextInput::make('name')
+                                                ->label('Naam')
+                                                ->nullable()
+                                                ->columnSpanFull()
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
+
+                                            TiptapEditor::make('description')
+                                                ->label('Omschrijving')
+                                                ->placeholder('Voer hier een omschrijving in...')
+                                                ->tools([
+                                                    'bold',
+                                                    'italic',
+                                                    'link',
+                                                    'bullet-list',
+                                                    'ordered-list',
+                                                ])
+                                                ->disableFloatingMenus()
+                                                ->disableBubbleMenus()
+                                                ->nullable()
+                                                ->extraInputAttributes(['style' => 'min-height: 12rem;'])
+                                                ->maxContentWidth('full')
+                                                ->columnSpanFull()
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
+
+                                            Select::make('task_type_id')
+                                                ->label('Taaktype')
+                                                ->options(fn() => TaskType::pluck('name', 'id'))
+                                                ->searchable()
+                                                ->nullable()
+                                                ->live()
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
+
+                                            Select::make('campus_id')
+                                                ->label('Campus')
+                                                ->options(fn() => Campus::pluck('name', 'id'))
+                                                ->searchable()
+                                                ->nullable()
+                                                ->live()
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
+
+                                            Select::make('space_id')
+                                                ->label('Locatie')
+                                                ->native(false)
+                                                ->searchable(['name', '_spccode'])
+                                                ->getSearchResultsUsing(
+                                                    fn(string $search) => Space::query()
+                                                        ->where('name', 'like', "%{$search}%")
+                                                        ->orWhere('_spccode', 'like', "%{$search}%")
+                                                        ->limit(50)
+                                                        ->get()
+                                                        ->mapWithKeys(fn($space) => [
+                                                            $space->id => "{$space->name} ({$space->_spccode})",
+                                                        ])
+                                                )
+                                                ->getOptionLabelUsing(
+                                                    fn($value): ?string => ($space = Space::find($value))
+                                                        ? "{$space->name} ({$space->_spccode})"
+                                                        : null
+                                                )
+                                                ->preload()
+                                                ->nullable()
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
+
+                                            Select::make('space_to_id')
+                                                ->label('Bestemmingslocatie')
+                                                ->native(false)
+                                                ->searchable(['name', '_spccode'])
+                                                ->getSearchResultsUsing(
+                                                    fn(string $search) => Space::query()
+                                                        ->where('name', 'like', "%{$search}%")
+                                                        ->orWhere('_spccode', 'like', "%{$search}%")
+                                                        ->limit(50)
+                                                        ->get()
+                                                        ->mapWithKeys(fn($space) => [
+                                                            $space->id => "{$space->name} ({$space->_spccode})",
+                                                        ])
+                                                )
+                                                ->getOptionLabelUsing(
+                                                    fn($value): ?string => ($space = Space::find($value))
+                                                        ? "{$space->name} ({$space->_spccode})"
+                                                        : null
+                                                )
+                                                ->preload()
+                                                ->nullable()
+                                                ->visible(fn(Get $get) => $this->shouldShowSpaceToField($get))
+                                                ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
                                         ])
-                                        ->disableFloatingMenus()
-                                        ->disableBubbleMenus()
-                                        ->nullable()
-                                        ->extraInputAttributes(['style' => 'min-height: 12rem;'])
-                                        ->maxContentWidth('full')
-                                        ->columnSpanFull(),
-
-                                    Select::make('task_type_id')
-                                        ->label('Taaktype')
-                                        ->options(fn() => TaskType::pluck('name', 'id'))
-                                        ->required()
-                                        ->live(),
-
-                                    Select::make('campus_id')
-                                        ->label('Campus')
-                                        ->options(fn() => Campus::pluck('name', 'id'))
-                                        ->required()
-                                        ->live(),
-
-                                    Select::make('space_id')
-                                        ->label('Locatie')
-                                        ->native(false)
-                                        ->searchable(['name', '_spccode'])
-                                        ->getSearchResultsUsing(
-                                            fn(string $search) =>
-                                            Space::query()
-                                                ->where('name', 'like', "%{$search}%")
-                                                ->orWhere('_spccode', 'like', "%{$search}%")
-                                                ->limit(50)
-                                                ->get()
-                                                ->mapWithKeys(fn($space) => [
-                                                    $space->id => "{$space->name} ({$space->_spccode})",
-                                                ])
-                                        )
-                                        ->getOptionLabelUsing(
-                                            fn($value): ?string => ($space = Space::find($value))
-                                                ? "{$space->name} ({$space->_spccode})"
-                                                : null
-                                        )
-                                        ->preload(),
-
-                                    Select::make('space_to_id')
-                                        ->label('Bestemmingslocatie')
-                                        ->native(false)
-                                        ->searchable(['name', '_spccode'])
-                                        ->getSearchResultsUsing(
-                                            fn(string $search) =>
-                                            Space::query()
-                                                ->where('name', 'like', "%{$search}%")
-                                                ->orWhere('_spccode', 'like', "%{$search}%")
-                                                ->limit(50)
-                                                ->get()
-                                                ->mapWithKeys(fn($space) => [
-                                                    $space->id => "{$space->name} ({$space->_spccode})",
-                                                ])
-                                        )
-                                        ->required()
-                                        ->visible(fn(Get $get): bool => $get('task_type_id') === '1'),
+                                        ->columns(2),
                                 ])
+                                ->statePath('actions.' . ChainActionType::CreateTask->name)
+                                ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
+                                ->columnSpan(6)
+                                ->columns(2),
 
-                            ])
-                            ->statePath('actions.' . ChainActionType::CreateTask->name)
-                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
-                            ->columnSpan(6)
-                            ->columns(2),
-
-                        Forms\Components\Group::make()
-                            ->schema([
-                                Forms\Components\Section::make()->schema([
-                                    Forms\Components\TextInput::make('CustomCode')
-                                        ->label('Aangepaste codeklasse')
-                                        ->required()
+                            Group::make()
+                                ->schema([
+                                    Section::make('Script')
+                                        ->schema([
+                                            TextInput::make('CustomCode')
+                                                ->label('Script')
+                                                ->required(),
+                                        ]),
                                 ])
-
-                            ])
-                            ->statePath('actions.' . ChainActionType::CustomCode->name)
-                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
-                            ->columnSpan(6)
-                            ->columns(2),
-
-
-
-
-                    ])->columns(8),
-
-                // Step::make('Acties')
-                //     ->icon('heroicon-m-list-bullet')
-                //     ->schema([
-                //         // ── Custom two‐pane builder ──
-                //         ViewField::make('actions')->view('filament.pages.chain-builder', ['actions' => $this->actions])->columnSpanFull(),
-
-                //     ])->afterValidation(fn() => dd($this->actions)),
-
-                //
-                Step::make('Bevestigen')
-                    ->icon('heroicon-m-check-circle')
-                    ->schema([
-                        Forms\Components\Section::make()->schema([
-                            Placeholder::make('identifier')
-                                ->label('Identificatie: ')
-                                ->content(fn(Get $get): string => $get('identifier') ?? '')
-                                ->extraAttributes(['class' => 'text-green-700']),
-
-                            Placeholder::make('description')
-                                ->label('Omschrijving: ')
-                                ->content(fn(Get $get): string => $get('description') ?? '')
-                                ->extraAttributes(['class' => 'text-green-700']),
-
-
-                            Placeholder::make('trigger_type')
-                                ->label('Triggertype: ')
-                                ->content(fn(Get $get): string => $get('trigger_type') ?? '')
-                                ->extraAttributes(['class' => 'text-green-700']),
-
-                            Placeholder::make('action')
-                                ->label('Actie: ')
-                                ->content(fn(Get $get): string => $get('action') ? ChainActionType::fromCaseName($get('action'))->getLabel() : '')
-                                ->extraAttributes(['class' => 'text-green-700']),
-
-                            Placeholder::make('ip_whitelist')
-                                ->label('IP Whitelist')
-                                ->content(function (Get $get): HtmlString {
-                                    $ips = $get('ip_whitelist');
-
-                                    if (!is_array($ips) || empty($ips)) {
-                                        return new HtmlString('<em>Geen IP-adressen opgegeven.</em>');
-                                    }
-
-                                    $listItems = collect($ips)
-                                        ->map(fn($ip) => "<li>{$ip}</li>")
-                                        ->implode('');
-
-                                    return new HtmlString("<ul class='list-disc ml-5'>{$listItems}</ul>");
-                                })
-                                ->extraAttributes(['class' => 'text-green-700'])
-                                ->visible(fn($get) => $get('trigger_type') === 'api'),
-
-                            Placeholder::make('teams')
-                                ->label('Teams')
-                                ->content(function (Get $get): HtmlString {
-                                    $teamIds = $get('teams');
-
-                                    $teamNames = \App\Models\Team::whereIn('id', $teamIds)->pluck('name')->toArray();
-
-                                    $listItems = collect($teamNames)
-                                        ->map(fn($name) => "<li>{$name}</li>")
-                                        ->implode('');
-
-                                    return new HtmlString("<ul class='list-disc ml-5'>{$listItems}</ul>");
-                                })
-                                ->extraAttributes(['class' => 'text-green-700']),
-
-
-                            Placeholder::make('is_active')
-                                ->label('Actief: ')
-                                ->content(fn(Get $get): string => $get('is_active') ? 'Ja' : 'Nee')
-                                ->extraAttributes(['class' => 'text-green-700']),
-                        ])->columns(4),
-
-                        Forms\Components\Group::make()->schema([
-                            Forms\Components\Section::make()->schema([
-                                Placeholder::make('CustomCode')
-                                    ->label('Codeklasse: ')
-                                    ->content(fn(Get $get): string => $get(ChainActionType::CustomCode->name) ?? '')
-                                    ->visible(fn($state) => filled($state))
-                                    ->extraAttributes(['class' => 'text-green-700']),
-                            ])
+                                ->statePath('actions.' . ChainActionType::CustomCode->name)
+                                ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
+                                ->columnSpan(6)
+                                ->columns(2),
                         ])
-                            ->statePath('actions.' . ChainActionType::CustomCode->name)
-                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
-                            ->columnSpanFull()
-                            ->columns(4),
+                        ->columns(8),
 
-                        Forms\Components\Group::make()->schema([
-                            Forms\Components\Section::make()->schema([
-                                Placeholder::make('name')
-                                    ->label('Taaknaam: ')
-                                    ->content(fn(Get $get): string => $get('name') ?? '')
-                                    ->extraAttributes(['class' => 'text-green-700']),
+                    Step::make('Bevestigen')
+                        ->icon('heroicon-m-check-circle')
+                        ->schema([
+                            Section::make()
+                                ->schema([
+                                    Placeholder::make('identifier')
+                                        ->label('Identificatie')
+                                        ->content(fn(Get $get): string => $get('identifier') ?? ''),
 
-                                Placeholder::make('description')
-                                    ->label('Omschrijving taak: ')
-                                    ->content(fn(Get $get) => new HtmlString(
-                                        tiptap_converter()->asHTML($get('description') ?? '')
-                                    ))
-                                    ->extraAttributes(['class' => 'text-green-700']),
+                                    Placeholder::make('description')
+                                        ->label('Omschrijving')
+                                        ->content(fn(Get $get): string => $get('description') ?? ''),
 
-                                Placeholder::make('task_type_id')
-                                    ->label('Taaktype: ')
-                                    ->content(fn(Get $get): string => TaskType::find($get('task_type_id'))?->name ?? '')
-                                    ->extraAttributes(['class' => 'text-green-700']),
+                                    Placeholder::make('trigger_type')
+                                        ->label('Triggertype')
+                                        ->content(fn(Get $get): string => $get('trigger_type') ?? ''),
 
-                                Placeholder::make('campus_id')
-                                    ->label('Campus: ')
-                                    ->content(fn(Get $get): string => Campus::find($get('campus_id'))?->name ?? '')
-                                    ->extraAttributes(['class' => 'text-green-700']),
+                                    Placeholder::make('trigger_task_type_id')
+                                        ->label('Trigger taaktype')
+                                        ->content(fn(Get $get): string => TaskType::find($get('trigger_task_type_id'))?->name ?? '')
+                                        ->visible(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value),
 
-                                Placeholder::make('space_id')
-                                    ->label('Locatie: ')
-                                    ->content(function (Get $get) {
-                                        $space = \App\Models\Space::find($get('space_id'));
-                                        return $space ? "{$space->name} ({$space->_spccode})" : '';
-                                    })
-                                    ->extraAttributes(['class' => 'text-green-700']),
+                                    Placeholder::make('action')
+                                        ->label('Actie')
+                                        ->content(fn(Get $get): string => $get('action')
+                                            ? ChainActionType::fromCaseName($get('action'))->getLabel()
+                                            : ''),
 
-                                Placeholder::make('space_to_id')
-                                    ->label('Bestemming: ')
-                                    ->content(function (Get $get) {
-                                        $space = Space::find($get('space_to_id'));
-                                        return $space ? "{$space->name} ({$space->_spccode})" : '';
-                                    })
-                                    ->visible(fn(Get $get): bool => $get('task_type_id') === '1')
-                                    ->extraAttributes(['class' => 'text-green-700']),
-                            ])
-                                ->columns(4)
+                                    Placeholder::make('ip_whitelist')
+                                        ->label('IP Whitelist')
+                                        ->content(function (Get $get): HtmlString {
+                                            $ips = $get('ip_whitelist');
 
+                                            if (! is_array($ips) || empty($ips)) {
+                                                return new HtmlString('<em>Geen IP-adressen opgegeven.</em>');
+                                            }
+
+                                            $listItems = collect($ips)
+                                                ->map(fn($ip) => "<li>{$ip}</li>")
+                                                ->implode('');
+
+                                            return new HtmlString("<ul class='list-disc ml-5'>{$listItems}</ul>");
+                                        })
+                                        ->visible(fn(Get $get) => $get('trigger_type') === 'api'),
+
+                                    Placeholder::make('teams')
+                                        ->label('Teams')
+                                        ->content(function (Get $get): HtmlString {
+                                            $teamIds = $get('teams') ?? [];
+
+                                            if (empty($teamIds)) {
+                                                return new HtmlString('<em>Geen teams geselecteerd.</em>');
+                                            }
+
+                                            $teamNames = \App\Models\Team::whereIn('id', $teamIds)->pluck('name')->toArray();
+
+                                            $listItems = collect($teamNames)
+                                                ->map(fn($name) => "<li>{$name}</li>")
+                                                ->implode('');
+
+                                            return new HtmlString("<ul class='list-disc ml-5'>{$listItems}</ul>");
+                                        }),
+
+                                    Placeholder::make('is_active')
+                                        ->label('Actief')
+                                        ->content(fn(Get $get): string => $get('is_active') ? 'Ja' : 'Nee'),
+                                ])
+                                ->columns(4),
+
+                            Group::make()
+                                ->schema([
+                                    Section::make('Script')
+                                        ->schema([
+                                            Placeholder::make('Script')
+                                                ->label('Script')
+                                                ->content(fn(Get $get): string => $get('CustomCode') ?? ''),
+                                        ]),
+                                ])
+                                ->statePath('actions.' . ChainActionType::CustomCode->name)
+                                ->visible(fn(Get $get) => $get('action') === ChainActionType::CustomCode->name)
+                                ->columnSpanFull(),
+
+                            Group::make()
+                                ->schema([
+                                    Section::make('Taak aanmaken')
+                                        ->schema([
+                                            Placeholder::make('inherit_missing_from_trigger_task')
+                                                ->label('Lege velden overnemen')
+                                                ->content(fn(Get $get): string => $get('inherit_missing_from_trigger_task') ? 'Ja' : 'Nee')
+                                                ->visible(fn(Get $get) => $this->isTaskCompletedTrigger($get)),
+
+                                            Placeholder::make('name')
+                                                ->label('Naam')
+                                                ->content(fn(Get $get): string => $this->displayOptionalValue($get('name'))),
+
+                                            Placeholder::make('description')
+                                                ->label('Omschrijving')
+                                                ->content(function (Get $get) {
+                                                    $value = $get('description');
+
+                                                    if (blank($value)) {
+                                                        return new HtmlString('<em>Leeg</em>');
+                                                    }
+
+                                                    return new HtmlString(
+                                                        tiptap_converter()->asHTML($value)
+                                                    );
+                                                }),
+
+                                            Placeholder::make('task_type_id')
+                                                ->label('Taaktype')
+                                                ->content(fn(Get $get): string => $get('task_type_id')
+                                                    ? (TaskType::find($get('task_type_id'))?->name ?? '')
+                                                    : 'Leeg'),
+
+                                            Placeholder::make('campus_id')
+                                                ->label('Campus')
+                                                ->content(fn(Get $get): string => $get('campus_id')
+                                                    ? (Campus::find($get('campus_id'))?->name ?? '')
+                                                    : 'Leeg'),
+
+                                            Placeholder::make('space_id')
+                                                ->label('Locatie')
+                                                ->content(function (Get $get): string {
+                                                    if (! $get('space_id')) {
+                                                        return 'Leeg';
+                                                    }
+
+                                                    $space = Space::find($get('space_id'));
+
+                                                    return $space ? "{$space->name} ({$space->_spccode})" : '';
+                                                }),
+
+                                            Placeholder::make('space_to_id')
+                                                ->label('Bestemmingslocatie')
+                                                ->content(function (Get $get): string {
+                                                    if (! $get('space_to_id')) {
+                                                        return 'Leeg';
+                                                    }
+
+                                                    $space = Space::find($get('space_to_id'));
+
+                                                    return $space ? "{$space->name} ({$space->_spccode})" : '';
+                                                })
+                                                ->visible(fn(Get $get) => $this->shouldShowSpaceToReview($get)),
+                                        ])
+                                        ->columns(4),
+                                ])
+                                ->statePath('actions.' . ChainActionType::CreateTask->name)
+                                ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
+                                ->columnSpanFull(),
+
+                            HasFilamentTeamFields::creatorField(),
                         ])
-                            ->statePath('actions.' . ChainActionType::CreateTask->name)
-                            ->visible(fn(Get $get) => $get('action') === ChainActionType::CreateTask->name)
-                            ->columnSpanFull(),
-
-
-                    ])
-                    ->columns(8),
-
-
-                HasFilamentTeamFields::creatorField(),
+                        ->columns(8),
+                ])
+                    ->nextAction(
+                        fn(ComponentAction $action) => $action->label('Volgende')
+                    )
+                    ->contained(false)
+                    ->submitAction(
+                        Action::make('save')
+                            ->label($this->record ? 'Wijzigingen opslaan' : 'Aanmaken')
+                            ->submit('save')
+                    ),
             ])
-                ->nextAction(
-                    fn(ComponentAction $action) => $action->label('Volgende'),
-                )
-                ->contained(false)
-                ->submitAction(
-                    Action::make('save')
-                        ->label($this->record ? 'Wijzigingen opslaan' : 'Aanmaken')
-                        ->submit('create')
-                ),
-
-        ])->model(Chain::class);
+            ->model(Chain::class);
     }
 
-    /**
-     * Persist (create or update) the Chain
-     */
     public function save(): void
     {
         $data = $this->form->getState();
-        $chain = null;
-
-        // Extract and remove teams from $data
         $teamIds = $data['teams'] ?? [];
         unset($data['teams']);
 
-        if ($this->record) {
-            // ── Update existing Chain ──
+        if (isset($data['actions'][ChainActionType::CreateTask->name])) {
+            $data['actions'][ChainActionType::CreateTask->name] = $this->normalizeCreateTaskAction(
+                $data['actions'][ChainActionType::CreateTask->name]
+            );
+        }
+
+        if ($this->record?->exists) {
             $chain = $this->record;
             $chain->update($data);
         } else {
-            // Create a new Chain
             $chain = Chain::create($data);
         }
 
-        // Sync teams manually
         $chain->teams()->sync($teamIds);
 
         Notification::make()
@@ -478,17 +481,54 @@ class CreateChainWizard extends Page implements HasForms
             ->success()
             ->send();
 
-        // Redirect to the Resource index
         $this->redirect(ChainResource::getUrl('index'));
     }
 
-    /**
-     * Let Filament know that our “data” is using the Chain model
-     * (mainly for correct form binding). We manually populated $this->data
-     * in mount(), so nothing else is needed here.
-     */
+    protected function normalizeTriggerConditions(?array $conditions): array
+    {
+        return [
+            'task' => [
+                'only_with_locker' => (bool) data_get($conditions, 'task.only_with_locker', false),
+            ],
+        ];
+    }
+
     protected function getFormModel(): string
     {
         return Chain::class;
+    }
+
+    protected function normalizeCreateTaskAction(array $action): array
+    {
+        foreach ($action as $key => $value) {
+            if (is_string($value) && blank($value)) {
+                $action[$key] = null;
+            }
+        }
+
+        return $action;
+    }
+
+    protected function isTaskCompletedTrigger(Get $get): bool
+    {
+        return $get('../../trigger_type') === EventEnum::TaskCompleted->value
+            || $get('trigger_type') === EventEnum::TaskCompleted->value;
+    }
+
+    protected function shouldShowSpaceToField(Get $get): bool
+    {
+        $taskTypeId = $get('task_type_id');
+
+        return (string) $taskTypeId === '1';
+    }
+
+    protected function shouldShowSpaceToReview(Get $get): bool
+    {
+        return (string) $get('task_type_id') === '1' || filled($get('space_to_id'));
+    }
+
+    protected function displayOptionalValue(mixed $value): string
+    {
+        return filled($value) ? (string) $value : 'Leeg';
     }
 }

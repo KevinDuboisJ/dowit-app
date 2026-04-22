@@ -248,13 +248,47 @@ const Bed = ({ beds, filters: initialFilters, filterOptions }) => {
       <ScrollArea className="flex flex-col h-full shrink-1 min-h-0">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 p-4 pt-2 fadeInUp">
           {rows.map(bed => {
-            const currentVisit = bed.bed_visits.find(v => !v.vacated_at)
+            const currentVisit = [...(bed.bed_visits ?? [])].reverse().find(v => !v.vacated_at)
+            const latestBedVisit = bed.latest_bed_visit
             const patient = currentVisit?.visit?.patient
+
+            const occupied = !!currentVisit
+
+            const hasLatestBedVisit = !!latestBedVisit
+            const hasVacatedAt = !!latestBedVisit?.vacated_at
+            const hasCleanedAt = !!latestBedVisit?.cleaned_at
+
             const hasToBeCleaned =
-              (!bed.occupied_at && !bed.cleaned_at) ||
-              (bed.occupied_at && !bed.cleaned_at)
-            const occupied = bed.occupied_at && bed.cleaned_at
-            const ready = !bed.occupied_at && bed.cleaned_at
+              !occupied &&
+              hasLatestBedVisit &&
+              hasVacatedAt &&
+              (!hasCleanedAt ||
+                new Date(latestBedVisit.cleaned_at) <
+                  new Date(latestBedVisit.vacated_at))
+
+            const ready =
+              !occupied &&
+              hasLatestBedVisit &&
+              hasVacatedAt &&
+              hasCleanedAt &&
+              new Date(latestBedVisit.cleaned_at) >=
+                new Date(latestBedVisit.vacated_at)
+
+            const statusVariant = occupied
+              ? 'destructive'
+              : hasToBeCleaned
+                ? 'warning'
+                : ready
+                  ? 'success'
+                  : 'secondary'
+
+            const statusLabel = occupied
+              ? 'Bezet'
+              : hasToBeCleaned
+                ? 'Poetsen'
+                : ready
+                  ? 'Klaar'
+                  : 'Onbekend'
 
             return (
               <Card key={bed.id}>
@@ -270,17 +304,7 @@ const Bed = ({ beds, filters: initialFilters, filterOptions }) => {
                     </div>
 
                     <div className="space-x-2">
-                      <Badge
-                        variant={
-                          (occupied && 'destructive') ||
-                          (ready && 'success') ||
-                          (hasToBeCleaned && 'warning')
-                        }
-                      >
-                        {hasToBeCleaned && 'Poetsen'}
-                        {occupied && !hasToBeCleaned && 'Bezet'}
-                        {ready && 'Klaar'}
-                      </Badge>
+                      <Badge variant={statusVariant}>{statusLabel}</Badge>
                     </div>
                   </div>
 
@@ -309,9 +333,9 @@ const Bed = ({ beds, filters: initialFilters, filterOptions }) => {
                     </p>
                   )}
 
-                  {bed.cleaned_at && (
+                  {latestBedVisit?.cleaned_at && (
                     <span className="text-xs italic text-muted-foreground opacity-[0.3] mt-auto">
-                      Gepoetst op: {bed.cleaned_at}
+                      Gepoetst op: {latestBedVisit.cleaned_at}
                     </span>
                   )}
                 </CardContent>

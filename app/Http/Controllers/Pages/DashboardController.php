@@ -90,6 +90,7 @@ class DashboardController extends Controller
 
       'task_types' => Inertia::optional(function () use ($userTeamIds) {
         return TaskType::query()
+          ->where('is_system', false)
           ->whereHas('requestingTeams', function ($q) use ($userTeamIds) {
             $q->whereIn('teams.id', $userTeamIds);
           })

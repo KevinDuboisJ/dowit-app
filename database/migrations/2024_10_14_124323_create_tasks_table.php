@@ -28,6 +28,7 @@ return new class extends Migration
             $table->foreignId('space_id')->nullable();
             $table->foreignId('space_to_id')->nullable();
             $table->foreignId('status_id');
+            $table->foreignId('locker_id')->nullable();
             $table->enum('priority', ['low', 'medium', 'high'])->nullable();
             $table->boolean('help_requested')->default(false);
             $table->foreignId('created_by')->constrained('users');

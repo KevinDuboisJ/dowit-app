@@ -13,6 +13,13 @@ class Tag extends Model
 {
     use HasCreator, HasTeams, HasAccessScope;
 
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => ucfirst(strtolower($value)),
+        );
+    }
+
     public function taskPlanners()
     {
         return $this->belongsToMany(TaskPlanner::class);

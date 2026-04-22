@@ -20,6 +20,11 @@ class Bed extends Model
         return $this->hasMany(BedVisit::class);
     }
 
+    public function latestBedVisit()
+    {
+        return $this->hasOne(BedVisit::class)->latestOfMany();
+    }
+
     public function scopeFilter(Builder $query, array $filters): Builder
     {
         return $query
@@ -42,22 +47,36 @@ class Bed extends Model
                 $query->where('number', $filters['bed']);
             })
             ->when(($filters['needs_cleaning_only'] ?? false), function (Builder $query) {
-                $query->whereNull('cleaned_at');
+                $query->whereHas('latestBedVisit', function (Builder $q) {
+                    $q->whereNotNull('vacated_at')
+                        ->where(function (Builder $q) {
+                            $q->whereNull('cleaned_at')
+                                ->orWhereColumn('cleaned_at', '<', 'vacated_at');
+                        });
+                });
             })
             ->when(($filters['show_occupied_only'] ?? false), function (Builder $query) {
-                $query->whereNotNull('occupied_at');
+                $query->whereHas('bedVisits', function (Builder $q) {
+                    $q->whereNull('vacated_at');
+                });
             })
             ->when(($filters['show_cleaned_only'] ?? false), function (Builder $query) {
-                $query->whereNotNull('cleaned_at');
+                $query->whereDoesntHave('bedVisits', function (Builder $q) {
+                    $q->whereNull('vacated_at');
+                })->whereHas('latestBedVisit', function (Builder $q) {
+                    $q->whereNotNull('vacated_at')
+                        ->whereNotNull('cleaned_at')
+                        ->whereColumn('cleaned_at', '>=', 'vacated_at');
+                });
             })
             ->when(($filters['room_type'] ?? 'all') === 'one', function (Builder $query) {
                 $query->whereHas('room', function (Builder $query) {
-                    $query->withCount('beds')->having('beds_count', 1);
+                    $query->has('beds', '=', 1);
                 });
             })
             ->when(($filters['room_type'] ?? 'all') === 'two', function (Builder $query) {
                 $query->whereHas('room', function (Builder $query) {
-                    $query->withCount('beds')->having('beds_count', 2);
+                    $query->has('beds', '=', 2);
                 });
             });
     }

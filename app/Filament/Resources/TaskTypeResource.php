@@ -4,18 +4,20 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TaskTypeResource\Pages;
 use App\Models\TaskType;
+use App\Traits\HasFilamentTeamFields;
+use Filament\Forms\Components\Group;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\IconColumn as TablesIconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Guava\FilamentIconPicker\Forms\IconPicker;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\Section;
-use App\Traits\HasFilamentTeamFields;
-use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Select;
 use Illuminate\Support\HtmlString;
 
 class TaskTypeResource extends Resource
@@ -37,23 +39,24 @@ class TaskTypeResource extends Resource
         return $form
             ->schema([
                 Group::make()
-                    ->schema(
-                        [
-                            HasFilamentTeamFields::belongsToTeamsField(label: 'Uitvoerende teams', tooltip: 'Teams die dit type taken kunnen aanvragen en uitvoeren'),
+                    ->schema([
+                        HasFilamentTeamFields::belongsToTeamsField(
+                            label: 'Uitvoerende teams',
+                            tooltip: 'Teams die dit type taken kunnen aanvragen en uitvoeren'
+                        ),
 
-                            Select::make('requesting_teams')
-                                ->label('Aanvraagende teams')
-                                ->multiple()
-                                ->relationship('requestingTeams', 'name')
-                                ->preload()
-                                ->searchable()
-                                ->hint(
-                                    new HtmlString(view('filament.components.hint-icon', [
-                                        'tooltip' => 'Teams die dit type taken kunnen aanvragen',
-                                    ])->render())
-                                )
-                        ]
-                    )
+                        Select::make('requesting_teams')
+                            ->label('Aanvragende teams')
+                            ->multiple()
+                            ->relationship('requestingTeams', 'name')
+                            ->preload()
+                            ->searchable()
+                            ->hint(
+                                new HtmlString(view('filament.components.hint-icon', [
+                                    'tooltip' => 'Teams die dit type taken kunnen aanvragen',
+                                ])->render())
+                            ),
+                    ])
                     ->columnSpanFull(),
 
                 Group::make()
@@ -67,7 +70,10 @@ class TaskTypeResource extends Resource
                             ->default(0)
                             ->numeric()
                             ->required()
-                            ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'Voeg minuten toe om de taak eerder aan te maken dan gepland'),
+                            ->hintIcon(
+                                'heroicon-m-question-mark-circle',
+                                tooltip: 'Voeg minuten toe om de taak eerder aan te maken dan gepland'
+                            ),
 
                         IconPicker::make('icon')
                             ->label('Icoon')
@@ -82,11 +88,26 @@ class TaskTypeResource extends Resource
                             ->extraAttributes([
                                 'class' => '!bg-transparent !border-none !shadow-none !focus:ring-0 !ring-0 !focus:border-none !max-h-[6px]',
                             ]),
+
                     ])
                     ->extraAttributes([
                         'class' => 'h-full',
                     ])
-                    ->columns(3)
+                    ->columns(4)
+                    ->columnSpanFull(),
+
+
+                Group::make()
+                    ->schema([
+                        Toggle::make('is_system')
+                            ->label('Systeem taaktype')
+                            ->default(false)
+                            ->inline(false)
+                            ->hintIcon(
+                                'heroicon-m-question-mark-circle',
+                                tooltip: 'Dit taaktype is enkel bedoeld voor intern systeemgebruik en mag niet door gebruikers geselecteerd worden.'
+                            ),
+                    ])
                     ->columnSpanFull(),
 
                 HasFilamentTeamFields::creatorField(),
@@ -98,6 +119,10 @@ class TaskTypeResource extends Resource
     {
         return $table
             ->columns([
+                IconColumn::make('icon')
+                    ->label('Icoon')
+                    ->view('filament.components.icon-picker-column'),
+
                 TextColumn::make('name')
                     ->label('Naam')
                     ->width('300px'),
@@ -108,7 +133,7 @@ class TaskTypeResource extends Resource
                     ->listWithLineBreaks(),
 
                 TextColumn::make('requestingTeams.name')
-                    ->label('Aanvraagende teams')
+                    ->label('Aanvragende teams')
                     ->width('300px')
                     ->listWithLineBreaks(),
 
@@ -116,9 +141,13 @@ class TaskTypeResource extends Resource
                     ->label('Taakcreatie versnellen')
                     ->formatStateUsing(fn($state) => $state . ' minuten'),
 
-                IconColumn::make('icon')
-                    ->label('Icoon')
-                    ->view('filament.components.icon-picker-column'),
+                Tables\Columns\IconColumn::make('is_system')
+                    ->label('Kiesbaar')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-x-circle')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('success')
 
             ])
             ->filters([

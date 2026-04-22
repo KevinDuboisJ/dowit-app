@@ -18,7 +18,6 @@ class Chain extends Model
             'trigger_conditions' => 'array',
             'actions'            => 'array',
             'ip_whitelist'       => 'array',
-            // 'is_active'          => 'boolean',
         ];
     }
 
@@ -30,5 +29,10 @@ class Chain extends Model
     public function taskType()
     {
         return $this->belongsTo(TaskType::class);
+    }
+
+    public function triggerTaskType()
+    {
+        return $this->belongsTo(TaskType::class, 'trigger_task_type_id');
     }
 }

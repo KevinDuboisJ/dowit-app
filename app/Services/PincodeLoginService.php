@@ -38,6 +38,9 @@ class PincodeLoginService implements UserAuthenticator
       throw new AuthenticationException('Je hebt geen toegangsprofiel');
     }
 
+    $user->last_login = now();
+    $user->save();
+
     $user->roles = $roles;
 
     Auth::login($user);

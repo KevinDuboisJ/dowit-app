@@ -86,19 +86,17 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 
 
 1. Change icons in filament.
-3. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
-4. Create an extension for the customLink that has target '\_blank' as default, probably has to become a icon as the original link. look at link source code for help.
-7. Add Phone sound and vibration on task creation
-13. See if i can see if a user is active in an application, and add this information to the user resource in admin panel
-16. Patientransport task where patient is selected from the taskplanner has to update the "FROM location" automatic when the patient moves from bed.
-18. Toegewezen doesnt appear if you are in a team that is asker of the tasktype
-20. When an announcement is deleted the dashboard announcemenet feed doesnt pull the new state
-21. mededeling zonder einddatum wordt eindatum op +1 maand
-22. inifinite scroll not working on mobile for tasks
-23. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
-24. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
-25. hannes from webaking can also select the task type for aanvraag bewaking i dont think that is the idea
-26. add completed_at in the task
+2. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
+3. Create an extension for the customLink that has target '\_blank' as default, probably has to become a icon as the original link. look at link source code for help.
+4. Add Phone sound and vibration on task creation
+5. See if i can see if a user is active in an application, and add this information to the user resource in admin panel
+6. Patientransport task where patient is selected from the taskplanner has to update the "FROM location" automatic when the patient moves from bed.
+8. When an announcement is deleted the dashboard announcemenet feed doesnt pull the new state
+9. mededeling zonder einddatum wordt eindatum op +1 maand
+10. inifinite scroll not working on mobile for tasks
+11. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
+12. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
+16. Ask Natascha how to handle the updates of the tasks. Currently if a user asking teams is also the execution team then it can update it. Task id 18819 is an example of this
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//

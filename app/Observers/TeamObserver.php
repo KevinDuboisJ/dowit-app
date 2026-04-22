@@ -19,7 +19,6 @@ class TeamObserver
 
     public function updated(Team $team)
     {
-        $teamService = new TeamService();
         // Only trigger sync for teams that have automatic assignment
         if ($team->wasChanged('autoassign_rules') && $team->autoassign_rules !== null) {
             $teamService = new TeamService();

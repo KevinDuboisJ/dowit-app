@@ -219,13 +219,17 @@ export const FilterBar = ({ filters = {} }) => {
   const { user, statuses } = usePage().props
   const filtersRef = filters.get()
   const [drawerOpen, setDrawerOpen] = useState(false)
-
-  // Pathname change resets all filters
+  const didMountRef = useRef(false)
   const pathname = useMemo(() => {
     return url.split('?')[0]
   }, [url])
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
+
     handleResetAll()
   }, [pathname])
 

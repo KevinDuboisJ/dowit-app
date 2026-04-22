@@ -22,7 +22,7 @@ use Filament\Tables\Actions\DeleteAction;
 use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Model;
 use App\Enums\ChainActionType;
-
+use App\Enums\EventEnum;
 use App\Filament\Resources\ChainResource\Pages\CreateChainWizard;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +82,7 @@ class ChainResource extends Resource
                     }
 
                     if (!empty($record->actions[ChainActionType::CustomCode->name])) {
-                        $text = '<h4 class="text-green-800">Code:</h4>';
+                        $text = '<h4 class="text-green-800">Script:</h4>';
                         $text .= '<div>';
                         $text .= "<span class='text-sm'>{$record->actions[ChainActionType::CustomCode->name][ChainActionType::CustomCode->name]}</span>";
                         $text .= '</div>';
@@ -91,7 +91,13 @@ class ChainResource extends Resource
                     return new HtmlString($text);
                 }),
             // TextColumn::make('actions')->label('Acties')->listWithLineBreaks(),
-            TextColumn::make('trigger_type')->label('Triggertype'),
+            TextColumn::make('trigger_type')
+                ->label('Triggertype')
+                ->badge()
+                ->formatStateUsing(
+                    fn($state) =>
+                    strtoupper(EventEnum::tryFrom($state)?->getLabel() ?? strtoupper($state))
+                ),
             IconColumn::make('is_active')
                 ->label('Active')
                 ->boolean(),

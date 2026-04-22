@@ -16,7 +16,7 @@ enum ChainActionType implements HasLabel
     {
         return match ($this) {
             self::CreateTask => 'Taak aanmaken',
-            self::CustomCode => 'Aangepast script',
+            self::CustomCode => 'Script',
         };
     }
 }

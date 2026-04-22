@@ -18,6 +18,7 @@ enum TaskTypeEnum: int implements HasLabel
     case PatientTransportOnFootAssisted = 7;
     case PatientTransportNotify = 8;
     case PatientTransportWithCrutches = 9;
+    case UnlockLocker = 13;
 
     public function getLabel(): ?string
     {

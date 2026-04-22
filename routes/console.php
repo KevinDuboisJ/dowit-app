@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Console\Commands\HandleTaskPlanners;
 use App\Console\Commands\FailoverHolidaySeed;
-use App\Console\Commands\FailoverTaskPlanners;
+use App\Console\Commands\HandleLockers;
 use App\Console\Commands\SeedHolidayDatabase;
-use App\Console\Commands\HandlePatientVisits;
 use App\Console\Commands\HandleScheduledTasks;
+use App\Services\LockerService;
+use App\Services\PatientService;
+use App\Services\TaskService;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,4 +44,11 @@ Schedule::command(HandleTaskPlanners::class)->everyMinute();
 Schedule::command(HandleScheduledTasks::class)->everyMinute();
 Schedule::command(SeedHolidayDatabase::class)->yearly(); // Seed holidays
 Schedule::command(FailoverHolidaySeed::class)->yearlyOn(1, 2, '00:00'); // Runs January 2nd
-Schedule::command(HandlePatientVisits::class)->everyFiveMinutes();
+
+Schedule::call(function (PatientService $patientService) { 
+    $patientService->getOccupiedRooms(); 
+})->everyFiveMinutes();
+
+// Schedule::call(function (LockerService $lockerService, TaskService $taskService) { 
+//     $lockerService->handleUnlockTasks($taskService); 
+// })->everyMinute();

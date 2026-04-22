@@ -99,12 +99,6 @@ class TeamResource extends Resource
             ]);
     }
 
-    // public static function getEloquentQuery(): Builder
-    // {
-    //     return parent::getEloquentQuery()
-    //         ->withCount(['users']); // Replace 'relationName' with the actual relation you want to count
-    // }
-
     public static function table(Table $table): Table
     {
         return $table

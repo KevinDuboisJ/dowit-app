@@ -9,7 +9,7 @@ import {
 } from '@/base-components'
 import { __ } from '@/stores'
 
-export const CommentEventEnum = Object.freeze({
+export const EventEnum = Object.freeze({
   TaskCreated: 'task_created',
   TaskStarted: 'task_started',
   TaskUpdated: 'task_updated',
@@ -103,15 +103,15 @@ export const NewsItem = ({ newsItem }) => {
 
 const getEventLabel = event => {
   switch (event) {
-    case CommentEventEnum.TaskCreated:
+    case EventEnum.TaskCreated:
       return 'Taak aangemaakt'
-    case CommentEventEnum.TaskStarted:
+    case EventEnum.TaskStarted:
       return 'Taak gestart'
-    case CommentEventEnum.TaskCompleted:
+    case EventEnum.TaskCompleted:
       return 'Taak afgerond'
-    case CommentEventEnum.TaskHelpRequested:
+    case EventEnum.TaskHelpRequested:
       return 'Collega nodig'
-    case CommentEventEnum.TaskHelpGiven:
+    case EventEnum.TaskHelpGiven:
       return 'Hulp toegezegd'
     default:
       return null
@@ -122,12 +122,12 @@ const renderMetadataChanges = (meta, event) => {
   const rows = []
 
   const shouldHideHelpRequested =
-    event === CommentEventEnum.TaskHelpRequested && meta.help_requested?.to?.value === true
+    event === EventEnum.TaskHelpRequested && meta.help_requested?.to?.value === true
 
   const statusToValue = meta.status?.to?.value
   const shouldHideStatus =
-    (event === CommentEventEnum.TaskStarted && statusToValue === 'InProgress') ||
-    (event === CommentEventEnum.TaskCompleted && statusToValue === 'Completed')
+    (event === EventEnum.TaskStarted && statusToValue === 'InProgress') ||
+    (event === EventEnum.TaskCompleted && statusToValue === 'Completed')
 
   if (!shouldHideHelpRequested && meta.help_requested?.to?.value === true) {
     rows.push(

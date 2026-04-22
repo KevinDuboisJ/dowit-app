@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Traits\HasTeams;
 use App\Traits\HasCreator;
 use App\Enums\TaskStatusEnum;
+use App\Services\ChainService;
 use App\Traits\HasAssignees;
 use App\Traits\HasAccessScope;
 use Carbon\Carbon;
@@ -39,6 +40,16 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
         static::saving(function ($task) {
             if ($task->status_id === null) {
                 $task->status_id = TaskStatusEnum::fromStartDateTime($task->start_date_time)->value;
+            }
+        });
+
+        static::updated(function (Task $task) {
+            $statusId = $task->status_id instanceof TaskStatusEnum
+                ? $task->status_id->value
+                : $task->status_id;
+
+            if ($task->wasChanged('status_id') && (int) $statusId === TaskStatusEnum::Completed->value) {
+                ChainService::executeForCompletedTask($task);
             }
         });
     }

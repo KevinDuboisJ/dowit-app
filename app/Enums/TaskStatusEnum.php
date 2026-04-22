@@ -34,26 +34,27 @@ enum TaskStatusEnum: int implements HasLabel
         return self::ACTIVE_STATUSES;
     }
 
-    public static function isActiveStatus($statusId): bool {
+    public static function isActiveStatus($statusId): bool
+    {
         return in_array($statusId, self::activeStatuses());
     }
 
     public function getLabel(): ?string
     {
-         return match ($this) {
-        self::Added => 'Toegevoegd',
-        self::Replaced => 'Vervangen',
-        self::Scheduled => 'Gepland',
-        self::InProgress => 'In verwerking',
-        self::Waiting => 'In afwachting',
-        self::Completed => 'Afgehandeld',
-        self::Rejected => 'Afgewezen',
-        self::FollowUpViaEmail => 'Opvolging via e-mail',
-        self::WaitingForDelivery => 'Wachten op levering',
-        self::Postponed => 'Uitgesteld',
-        self::Paused => 'Gepauzeerd',
-        self::Skipped => 'Overgeslagen',
-    };
+        return match ($this) {
+            self::Added => 'Toegevoegd',
+            self::Replaced => 'Vervangen',
+            self::Scheduled => 'Gepland',
+            self::InProgress => 'In verwerking',
+            self::Waiting => 'In afwachting',
+            self::Completed => 'Afgehandeld',
+            self::Rejected => 'Afgewezen',
+            self::FollowUpViaEmail => 'Opvolging via e-mail',
+            self::WaitingForDelivery => 'Wachten op levering',
+            self::Postponed => 'Uitgesteld',
+            self::Paused => 'Gepauzeerd',
+            self::Skipped => 'Overgeslagen',
+        };
     }
 
     public static function fromStartDateTime(Carbon $startDateTime): self
