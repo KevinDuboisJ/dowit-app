@@ -7,4 +7,5 @@ enum TaskPlannerEvaluationResultEnum
     case ShouldTrigger;
     case Deactivated;
     case Rescheduled;
+    case SoftDeleted;
 }

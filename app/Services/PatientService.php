@@ -305,7 +305,16 @@ class PatientService
       CAST(av.dis_date AS DATETIME) + CAST(av.dis_time AS DATETIME) AS discharged_at 
       FROM OAZP.dbo.BEDGRID AS bg
       LEFT JOIN adt_visit AS av ON bg.VISIT_ID = av.visit_id
-      WHERE PATINDEX('%[^0-9]%', bg.ROOM_ID) = 0
+      WHERE
+      (
+        PATINDEX('%[^0-9]%', bg.ROOM_ID) = 0
+        AND bg.ROOM_ID <> ''
+      )
+      OR
+      (
+        bg.ROOM_ID LIKE '[0-9]%I'
+        AND PATINDEX('%[^0-9]%', LEFT(bg.ROOM_ID, LEN(bg.ROOM_ID) - 1)) = 0
+      )
       ORDER BY bg.ROOM_ID;
     ";
   }
@@ -374,7 +383,12 @@ class PatientService
     foreach ($noLongerOccupied as $bedVisit) {
       $spaceId = self::resolveSpaceIdFromRoom($bedVisit->bed->room, $bedVisit->visit->number);
 
-      $allowedDepartments = ['2214', '3112', '2112', '3111'];
+      $allowedDepartmentsCA = ['2214', '3112', '2112', '3111'];
+      $allowedDepartmentsCD = ['2121', '2122', '2124', '2125','2221', '2222', '2223', '2321', '2602', '3021', '3022', '3702', '4921'];
+
+      //$allowedDepartments = $allowedDepartmentsCA;
+      $allowedDepartments = array_merge($allowedDepartmentsCA, $allowedDepartmentsCD);
+
       $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500'], true);
 
       if (
@@ -402,7 +416,7 @@ class PatientService
         }
 
         if ($bedVisit->bed->room->campus_id === 2) {
-          $data['teamsMatchingAssignment'] = [6];
+          $data['teamsMatchingAssignment'] = [9];
         }
 
         $taskService = new TaskService();

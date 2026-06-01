@@ -22,7 +22,9 @@ class CreateUsersTable extends Migration
             $table->smallInteger('department_id')->unsigned()->nullable();
             $table->smallInteger('profession_id')->unsigned()->nullable();
             $table->string('password')->nullable();
-            $table->dateTime('last_login')->nullable();
+            $table->dateTime('last_login_at')->nullable();
+            $table->datetime('last_seen_at')->nullable();
+            $table->datetime('last_logout_at')->nullable()->after('last_seen_at');
             $table->string('object_sid')->unique()->nullable();
             $table->string('image_path')->nullable();
             $table->string('email')->nullable();

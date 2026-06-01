@@ -81,6 +81,11 @@ class TagResource extends Resource
                     ->label('Naam')
                     ->width('300px'),
 
+                TextColumn::make('teams.name')
+                    ->label('Teams')
+                    ->width('300px')
+                    ->listWithLineBreaks(),
+
                 ColorColumn::make('bg_color')
                     ->label('Kleur')
                     ->width('300px'),

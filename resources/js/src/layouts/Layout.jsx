@@ -6,7 +6,7 @@ import { Toaster } from '@/base-components'
 import classnames from 'classnames'
 import TopBar from '@/components/top-bar/TopBar'
 import { router, usePage } from '@inertiajs/react'
-import { useFontSize, useIsMobile } from '@/hooks'
+import { useFontSize, useIsMobile, useHeartbeat } from '@/hooks'
 import { SideMenu } from './SideMenu'
 
 const Layout = ({
@@ -21,6 +21,8 @@ const Layout = ({
   const [mobileMenu, setMobileMenu] = useState(false)
   const { fontSize, setFontSize } = useFontSize() // Default size in pixels
   const { isMobile } = useIsMobile()
+
+  useHeartbeat()
 
   const sideMenuLinks = useMemo(
     () =>
@@ -45,12 +47,23 @@ const Layout = ({
       if (menu.subMenu) {
         setActiveDropdowns(prevState => ({
           ...prevState,
-          [menu.title || pathname]: !prevState[menu.title || pathname] // Toggle activeDropdown
+          [menu.title || pathname]: !prevState[menu.title || pathname]
         }))
-      } else {
-        router.get(pathname, {}, { replace: true })
-        if (mobileMenu) setMobileMenu(false)
+
+        return
       }
+
+      const targetUrl = new URL(pathname, window.location.origin)
+      const isExternalDomain = targetUrl.origin !== window.location.origin
+
+      if (isExternalDomain) {
+        window.location.href = targetUrl.href
+        return
+      }
+
+      router.get(pathname, {}, { replace: true })
+
+      if (mobileMenu) setMobileMenu(false)
     },
     [mobileMenu]
   )

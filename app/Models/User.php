@@ -38,7 +38,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         'object_sid',
         'is_active',
         'updated_at',
-        'last_login',
+        'last_login_at',
         'edb_id',
         'department_id',
         'created_at'
@@ -50,7 +50,9 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
      */
     protected $casts = [
         'password' => 'hashed',
-        'last_login' => 'datetime',
+        'last_login_at' => 'datetime',
+        'last_seen_at' => 'datetime',
+        'last_logout_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -120,7 +122,18 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 
     public function setLastLogin()
     {
-        $this->last_login = Carbon::now()->format('Y-m-d H:i:s');
+        $this->last_login_at = now();
+        $this->last_seen_at = now();
+        $this->last_logout_at = null;
+
+        return $this;
+    }
+    
+    public function setLastLogout()
+    {
+        $this->last_logout_at = now();
+        $this->last_seen_at = now();
+
         return $this;
     }
 

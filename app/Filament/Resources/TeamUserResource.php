@@ -86,7 +86,7 @@ class TeamUserResource extends Resource
                     ->limit(30) // Truncate display after 20 characters
                     ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state),
                     
-                TextColumn::make('last_login')
+                TextColumn::make('last_login_at')
                     ->label('Laatste aanmelding')
                     ->datetime('d/m/Y H:m:s')
                     ->sortable(),

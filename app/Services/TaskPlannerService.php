@@ -11,13 +11,11 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use App\Enums\TaskPlannerEvaluationResultEnum;
 use Illuminate\Support\Carbon;
-use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Mail;
 
 class TaskPlannerService
@@ -39,9 +37,7 @@ class TaskPlannerService
       return TaskPlanner::with(['teams', 'tags', 'visit', 'taskType'])
         ->select('task_planners.*')
         ->join('task_types', 'task_planners.task_type_id', '=', 'task_types.id')
-        ->where('is_active', true)
-        // optional: Add this if you want to limit to only today's planners
-        // ->whereDate('next_run_at', today())
+        // ->whereDate('next_run_at', today())   // optional: Add this if you want to limit to only today's planners
         ->get();
     });
 
@@ -167,6 +163,13 @@ class TaskPlannerService
     return TaskPlannerEvaluationResultEnum::Deactivated;
   }
 
+  public function softDelete($taskPlanner): TaskPlannerEvaluationResultEnum
+  {
+    $taskPlanner->deactivate();
+    $taskPlanner->delete();
+    return TaskPlannerEvaluationResultEnum::SoftDeleted;
+  }
+
   public function reschedule($taskPlanner): TaskPlannerEvaluationResultEnum
   {
     $taskPlanner->updateNextRunDate();
@@ -192,10 +195,10 @@ class TaskPlannerService
     }
 
     if ($taskPlanner->visit_id && $taskPlanner->visit?->discharged_at !== null) {
-      return $this->deactivate($taskPlanner);
+      return $this->softDelete($taskPlanner);
     }
 
-    if ($taskPlanner->nextRunAtIsExcluded() || $this->handleHoliday($taskPlanner)) {
+    if (!$taskPlanner->is_active || $taskPlanner->nextRunAtIsExcluded() || $this->handleHoliday($taskPlanner)) {
       return $this->reschedule($taskPlanner);
     }
 

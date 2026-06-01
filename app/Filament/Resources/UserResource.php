@@ -16,7 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use App\Traits\HasTeams;
-
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\Filter;
 
 class UserResource extends Resource
 {
@@ -49,6 +50,15 @@ class UserResource extends Resource
         return $table
             ->modifyQueryUsing(fn(Builder $query) => $query->whereNot('id', 1))
             ->columns([
+
+                IconColumn::make('is_online')
+                    ->label('Online')
+                    ->boolean()
+                    ->getStateUsing(
+                        fn(User $record): bool =>
+                        $record->last_seen_at?->gt(now()->subMinutes(2)) ?? false
+                    ),
+
                 TextColumn::make('firstname')
                     ->label('Voornaam')
                     ->sortable()
@@ -74,13 +84,25 @@ class UserResource extends Resource
                     ->limit(30) // Truncate display after 20 characters
                     ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state),
 
-                TextColumn::make('last_login')
+                TextColumn::make('last_login_at')
                     ->label('Laatste aanmelding')
-                    ->datetime('d/m/Y H:m:s')
+                    ->dateTime('d/m/Y H:m:s')
+                    ->sortable(),
+
+                TextColumn::make('last_seen_at')
+                    ->label('Laatst actief')
+                    ->dateTime('d/m/Y H:i:s')
+                    ->sortable(),
+
+                TextColumn::make('last_logout_at')
+                    ->label('Laatste afmelding')
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable(),
             ])
             ->filters([
-                //
+                Filter::make('inactive')
+                    ->label('Inactieve gebruikers')
+                    ->query(fn(Builder $query): Builder => $query->where('is_active', false)),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()

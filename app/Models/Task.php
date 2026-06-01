@@ -195,7 +195,7 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
                     $sub->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {
                         $q->whereIn('teams.id', $teamIds);
                     })
-                        ->whereDoesntHave('teams', function (Builder $q) use ($teamIds) {
+                        ->whereDoesntHave('taskType.teams', function (Builder $q) use ($teamIds) {
                             $q->whereIn('teams.id', $teamIds);
                         });
                 });

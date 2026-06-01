@@ -8,6 +8,8 @@ enum TeamEnum: int implements HasLabel
 {
     case Bewaking = 4;
     case Revalidatie = 5;
+    case SchoonmaakCA = 3;
+    case SchoonmaakCD = 9;
 
     public function getLabel(): ?string
     {

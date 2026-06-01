@@ -14,6 +14,7 @@ use App\Http\Controllers\Pages\SpaceController;
 use App\Http\Controllers\Pages\TagController;
 use App\Http\Controllers\Pages\VisitController;
 use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -64,6 +65,27 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
     Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
     Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.announce');
     Route::post('/announcements/{announcement}/mark-as-read', [AnnouncementController::class, 'markAsRead'])->name('announcements.markAsRead');
+
+    // Hearbeat
+    Route::post('/me/heartbeat', function () {
+        $user = auth()->user();
+
+        if (! $user) {
+            return response()->noContent();
+        }
+
+        $cacheKey = "users:{$user->id}:last_seen_write_lock";
+
+        if (! Cache::has($cacheKey)) {
+            $user->forceFill([
+                'last_seen_at' => now(),
+            ])->save();
+
+            Cache::put($cacheKey, true, now()->addMinutes(2));
+        }
+
+        return response()->noContent();
+    })->middleware('auth')->name('presence.heartbeat');
 
     // Logout
     Route::post('logout', [LoginController::class, 'logout'])->name('logout');

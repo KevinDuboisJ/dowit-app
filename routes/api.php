@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\ChainController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 Route::get('/tooltip', [TooltipController::class, 'find'])->name('tooltip.find');
 Route::put('/users/edbid/{user:edb_id}', [UserController::class, 'updateByEdbId'])->name('users.edbid.update');
 Route::post('/users', [UserController::class, 'store'])->name('users.store');

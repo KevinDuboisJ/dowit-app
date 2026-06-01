@@ -34,6 +34,7 @@ class TaskPlanner extends Model
         'assignments' => 'array',
         'assets' => 'array',
         'excluded_dates' => 'array',
+        'is_active' => 'boolean',
     ];
 
     // Automatically handle logic during creation
@@ -124,58 +125,91 @@ class TaskPlanner extends Model
         return $query->where('is_active', true);
     }
 
-    // Deprecated
-    // public function scopeByWithinWindow($query, Carbon $now)
-    // {
-    //     return $query->whereRaw('DATE_SUB(next_run_at, INTERVAL task_types.creation_time_offset MINUTE) <= ?', [$now]);
-    // }
-
-    public function getNextRunDate(Carbon|CarbonImmutable|null $next_run_at = null, ?string $frequency = null, array|string|null $interval = null): Carbon|CarbonImmutable
+    public function getNextRunDate(Carbon|CarbonImmutable|null $next_run_at = null, ?string $frequency = null, array|string|null $interval = null, bool $catchUpToToday = true): Carbon|CarbonImmutable
     {
-        // Fallback to the model's properties if no arguments are passed
         $next_run_at = $next_run_at ?? $this->next_run_at;
         $frequency = $frequency ?? $this->frequency->name;
         $interval = $interval ?? $this->interval;
 
-        // The copy() method on the Carbon instance ensures that a new instance of the date is returned after adding the day/week/month.
-        // This avoids mutating the original next_run_at value stored in the model.
+        $date = $this->advanceRunDateOnce($next_run_at, $frequency, $interval);
 
+        if (! $catchUpToToday) {
+            return $date;
+        }
+
+        $now = $next_run_at instanceof CarbonImmutable
+            ? CarbonImmutable::now($next_run_at->getTimezone())
+            : Carbon::now($next_run_at->getTimezone());
+
+        if (! $date->lt($now)) {
+            return $date;
+        }
+
+        return $this->advanceRunDateToNow($date, $now, $frequency, $interval);
+    }
+
+    protected function advanceRunDateToNow(Carbon|CarbonImmutable $date, Carbon|CarbonImmutable $today, string $frequency, array|string|null $interval = null): Carbon|CarbonImmutable
+    {
+        return match ($frequency) {
+            'Daily' => $this->catchUpByDays($date, $today, 1),
+            'Weekly' => $this->catchUpByDays($date, $today, 7),
+            'EachXDay' => $this->catchUpByDays(
+                $date,
+                $today,
+                $this->validatePositiveIntInterval($interval, "Day interval must be provided for 'EachXDay'.")
+            ),
+            'Monthly' => $this->catchUpMonthly($date, $today, 1, false, null),
+            'Quarterly' => $this->catchUpMonthly($date, $today, 3, false, null),
+            'EachXMonth' => $this->catchUpEachXMonth($date, $today, $interval),
+
+            // These are calendar-based and safer to iterate
+            'SpecificDays',
+            'Weekdays',
+            'WeekdayInMonth' => $this->catchUpIteratively($date, $today, $frequency, $interval),
+
+            default => throw new InvalidArgumentException("Invalid frequency: $frequency"),
+        };
+    }
+
+    protected function advanceRunDateOnce(Carbon|CarbonImmutable $next_run_at, string $frequency, array|string|null $interval = null): Carbon|CarbonImmutable
+    {
         switch ($frequency) {
             case 'Daily':
                 return $next_run_at->copy()->addDay();
-                break;
 
             case 'Weekly':
                 return $next_run_at->copy()->addWeek();
-                break;
 
             case 'Monthly':
                 return $next_run_at->copy()->addMonth();
-                break;
 
             case 'Quarterly':
                 return $next_run_at->copy()->addMonths(3);
-                break;
 
             case 'EachXDay':
-                if (!$interval) {
-                    throw new InvalidArgumentException("Day interval must be provided for 'EachXDay'.");
-                }
-                return $next_run_at->copy()->addDays((int) $interval);
+                return $next_run_at->copy()->addDays(
+                    $this->validatePositiveIntInterval($interval, "Day interval must be provided for 'EachXDay'.")
+                );
 
             case 'EachXMonth':
-                if (!$interval) {
+                if (! $interval) {
                     throw new InvalidArgumentException("Interval must be provided for 'EachXMonth'.");
                 }
 
-                // Support either a plain integer (e.g., 3) or an array of options.
                 if (is_array($interval)) {
-                    if (!isset($interval['months'])) {
+                    if (! isset($interval['months'])) {
                         throw new InvalidArgumentException("Interval array for 'EachXMonth' must contain a 'months' key.");
                     }
 
                     $months = (int) $interval['months'];
-                    $noOverflow = array_key_exists('no_overflow', $interval) ? (bool) $interval['no_overflow'] : true;
+                    if ($months < 1) {
+                        throw new InvalidArgumentException("'months' must be greater than 0 for 'EachXMonth'.");
+                    }
+
+                    $noOverflow = array_key_exists('no_overflow', $interval)
+                        ? (bool) $interval['no_overflow']
+                        : true;
+
                     $anchorDay = $interval['day_of_month'] ?? null;
 
                     $date = $noOverflow
@@ -183,48 +217,174 @@ class TaskPlanner extends Model
                         : $next_run_at->copy()->addMonths($months);
 
                     if ($anchorDay !== null) {
-                        $anchorDay = (int) $anchorDay;
-                        if ($anchorDay < 1 || $anchorDay > 31) {
-                            throw new InvalidArgumentException("'day_of_month' must be between 1 and 31 for 'EachXMonth'.");
-                        }
-                        // Clamp to the last day of the target month if anchor exceeds it
-                        $lastDayOfMonth = $date->copy()->endOfMonth()->day;
-                        $date->day(min($anchorDay, $lastDayOfMonth));
+                        $date = $this->applyAnchorDay($date, $anchorDay);
                     }
 
                     return $date;
                 }
 
-                // If it's just a scalar, treat it as the month count and use no-overflow by default.
-                return $next_run_at->copy()->addMonthsNoOverflow((int) $interval);
+                $months = (int) $interval;
+                if ($months < 1) {
+                    throw new InvalidArgumentException("Interval must be greater than 0 for 'EachXMonth'.");
+                }
+
+                return $next_run_at->copy()->addMonthsNoOverflow($months);
 
             case 'SpecificDays':
-
-                if (!$interval) {
+                if (! $interval) {
                     throw new InvalidArgumentException("Specific days must be provided for 'interval'.");
                 }
 
-                // Find the next occurrence of one of the specific days
                 return $this->getNextSpecificDay($next_run_at, $interval);
 
             case 'Weekdays':
-                // If it's Fri, this will jump to Monday; if Tue, it goes to Wed, etc.
                 return $next_run_at->copy()->nextWeekday();
 
             case 'WeekdayInMonth':
                 if (
-                    !is_array($interval) ||
-                    !isset($interval['week_number']) ||
-                    !isset($interval['day_of_week'])
+                    ! is_array($interval) ||
+                    ! isset($interval['week_number']) ||
+                    ! isset($interval['day_of_week'])
                 ) {
                     throw new InvalidArgumentException("Interval must contain 'week_number' and 'day_of_week' for 'WeekdayInMonth'.");
                 }
 
-                return $this->getNextWeekdayInMonth($next_run_at, $interval['week_number'], $interval['day_of_week']);
+                return $this->getNextWeekdayInMonth(
+                    $next_run_at,
+                    $interval['week_number'],
+                    $interval['day_of_week']
+                );
 
             default:
                 throw new InvalidArgumentException("Invalid frequency: $frequency");
         }
+    }
+
+    protected function catchUpByDays(Carbon|CarbonImmutable $date, Carbon|CarbonImmutable $now, int $stepDays): Carbon|CarbonImmutable
+    {
+        if ($stepDays < 1) {
+            throw new InvalidArgumentException('Step days must be greater than 0.');
+        }
+
+        if (! $date->lt($now)) {
+            return $date;
+        }
+
+        $secondsDiff = $date->diffInSeconds($now, false);
+
+        if ($secondsDiff <= 0) {
+            return $date;
+        }
+
+        $stepSeconds = $stepDays * 86400;
+        $jumps = (int) ceil($secondsDiff / $stepSeconds);
+
+        return $date->copy()->addDays($jumps * $stepDays);
+    }
+
+    protected function catchUpMonthly(Carbon|CarbonImmutable $date, Carbon|CarbonImmutable $now, int $stepMonths, bool $noOverflow = false, ?int $anchorDay = null): Carbon|CarbonImmutable
+    {
+        if ($stepMonths < 1) {
+            throw new InvalidArgumentException('Step months must be greater than 0.');
+        }
+
+        if (! $date->lt($now)) {
+            return $date;
+        }
+
+        $monthsDiff = (($now->year - $date->year) * 12) + ($now->month - $date->month);
+        $jumps = max(1, (int) floor($monthsDiff / $stepMonths));
+
+        $candidate = $this->addMonthsSafely($date, $jumps * $stepMonths, $noOverflow, $anchorDay);
+
+        while ($candidate->lt($now)) {
+            $candidate = $this->addMonthsSafely($candidate, $stepMonths, $noOverflow, $anchorDay);
+        }
+
+        return $candidate;
+    }
+
+    protected function catchUpEachXMonth(Carbon|CarbonImmutable $date, Carbon|CarbonImmutable $now, array|string|null $interval): Carbon|CarbonImmutable
+    {
+        if (! $interval) {
+            throw new InvalidArgumentException("Interval must be provided for 'EachXMonth'.");
+        }
+
+        if (is_array($interval)) {
+            if (! isset($interval['months'])) {
+                throw new InvalidArgumentException("Interval array for 'EachXMonth' must contain a 'months' key.");
+            }
+
+            $months = (int) $interval['months'];
+            if ($months < 1) {
+                throw new InvalidArgumentException("'months' must be greater than 0 for 'EachXMonth'.");
+            }
+
+            $noOverflow = array_key_exists('no_overflow', $interval)
+                ? (bool) $interval['no_overflow']
+                : true;
+
+            $anchorDay = isset($interval['day_of_month']) ? (int) $interval['day_of_month'] : null;
+
+            return $this->catchUpMonthly($date, $now, $months, $noOverflow, $anchorDay);
+        }
+
+        $months = (int) $interval;
+        if ($months < 1) {
+            throw new InvalidArgumentException("Interval must be greater than 0 for 'EachXMonth'.");
+        }
+
+        return $this->catchUpMonthly($date, $now, $months, true, null);
+    }
+
+    protected function catchUpIteratively(Carbon|CarbonImmutable $date, Carbon|CarbonImmutable $now, string $frequency, array|string|null $interval = null): Carbon|CarbonImmutable
+    {
+        while ($date->lt($now)) {
+            $date = $this->advanceRunDateOnce($date, $frequency, $interval);
+        }
+
+        return $date;
+    }
+
+    protected function addMonthsSafely(Carbon|CarbonImmutable $date, int $months, bool $noOverflow = true, int $anchorDay): Carbon|CarbonImmutable
+    {
+        $result = $noOverflow
+            ? $date->copy()->addMonthsNoOverflow($months)
+            : $date->copy()->addMonths($months);
+
+        if ($anchorDay !== null) {
+            $result = $this->applyAnchorDay($result, $anchorDay);
+        }
+
+        return $result;
+    }
+
+    protected function applyAnchorDay(Carbon|CarbonImmutable $date, int $anchorDay,): Carbon|CarbonImmutable
+    {
+        if ($anchorDay < 1 || $anchorDay > 31) {
+            throw new InvalidArgumentException("'day_of_month' must be between 1 and 31 for 'EachXMonth'.");
+        }
+
+        $lastDayOfMonth = $date->copy()->endOfMonth()->day;
+
+        return $date->copy()->day(min($anchorDay, $lastDayOfMonth));
+    }
+
+    protected function validatePositiveIntInterval(
+        array|string|null $interval,
+        string $message,
+    ): int {
+        if ($interval === null || $interval === '') {
+            throw new InvalidArgumentException($message);
+        }
+
+        $value = (int) $interval;
+
+        if ($value < 1) {
+            throw new InvalidArgumentException($message);
+        }
+
+        return $value;
     }
 
     public function getNextWeekdayInMonth(Carbon|CarbonImmutable $fromDate, int $weekNumber, string $dayOfWeek): Carbon

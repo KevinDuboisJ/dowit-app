@@ -3,9 +3,7 @@
 namespace App\Filament\Resources\TaskPlannerResource\Pages;
 
 use App\Filament\Resources\TaskPlannerResource;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Model;
 use App\Enums\CampusEnum;
 use App\Enums\TaskPlannerFrequency;
 use App\Enums\TaskTypeEnum;
@@ -16,6 +14,11 @@ class CreateTaskPlanner extends CreateRecord
     protected static string $resource = TaskPlannerResource::class;
     protected static bool $canCreateAnother = false;
     public ?string $source = null;
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
 
     public function mount(): void
     {

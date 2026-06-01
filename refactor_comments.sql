@@ -321,3 +321,26 @@ WHERE event IS NULL;
 UPDATE comments
 SET event = 'task_rejected'
 WHERE status_id = 7;
+
+
+-- Additional
+-- ***************************
+ALTER TABLE tasks
+ADD COLUMN locker_id BIGINT UNSIGNED NULL
+AFTER status_id;
+
+ALTER TABLE chains
+ADD COLUMN trigger_task_type_id BIGINT UNSIGNED NULL AFTER trigger_type,
+ADD CONSTRAINT chains_trigger_task_type_id_foreign
+FOREIGN KEY (trigger_task_type_id)
+REFERENCES task_types(id)
+ON DELETE SET NULL;
+
+ALTER TABLE task_types
+ADD COLUMN is_system TINYINT(1) NOT NULL DEFAULT 0
+AFTER creation_time_offset;
+
+ALTER TABLE tasks
+ADD COLUMN completed_at 
+TIMESTAMP NULL AFTER help_requested;
+-- ************************

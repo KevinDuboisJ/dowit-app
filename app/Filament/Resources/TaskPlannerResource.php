@@ -46,12 +46,14 @@ use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Coolsam\Flatpickr\Forms\Components\Flatpickr;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Actions\ReplicateAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
 use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Model;
@@ -103,7 +105,7 @@ class TaskPlannerResource extends Resource
                     ->live(),
 
                 TextInput::make('name')
-                    ->label('Naam')
+                    ->label('Onderwerp')
                     ->nullable()
                     ->required()
                     ->extraAttributes([
@@ -111,26 +113,17 @@ class TaskPlannerResource extends Resource
                         'wire:target' => 'data.task_type_id',
                     ]),
 
-                Flatpickr::make('next_run_at')
+                DateTimePicker::make('next_run_at')
                     ->label('Uitvoerstijdstip')
                     ->required()
-                    ->time(true)
+                    ->native(false)
                     ->seconds(false)
-                    ->native(true)
-                    ->time24hr(true)
-                    ->displayFormat(' j F Y H:i')
+                    ->timezone('Europe/Brussels')
+                    ->displayFormat('d/m/Y H:i')
+                    ->format('Y-m-d H:i:s')
                     ->default(now()->addMinute())
-                    ->after(function ($state, ?string $context, ?TaskPlanner $record) {
-                        // Apply 'after' validation only in the 'create' context or in the 'edit' context when the value has been changed by the user
-                        $now = now();
-
-                        if ($context === 'edit') {
-                            // Validate only if the value has changed
-                            return $record->next_run_at !== $state ? $now : null;
-                        }
-
-                        return $now;
-                    })->hint(
+                    ->dehydrateStateUsing(fn($state) => Carbon::parse($state)->format('Y-m-d H:i:s'))
+                    ->hint(
                         new HtmlString(view('filament.components.hint-icon', [
                             'tooltip' => 'Voor patiëntentransport is dit het tijdstip op locatie',
                         ])->render())
@@ -543,31 +536,28 @@ class TaskPlannerResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label('Naam')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('teams.id')
                     ->label('Teams/Medewerkers')
                     ->getStateUsing(function ($record) {
-                        // 1) Get team names
                         $teamNames = $record->teams->pluck('name')->toArray();
 
-                        // 2) Decode the assignments JSON
                         $assignments = is_string($record->assignments)
                             ? json_decode($record->assignments, true)
                             : $record->assignments;
 
-                        // 3) Fetch user names if there are assigned user IDs
                         $userNames = [];
-                        if (!empty($assignments['users'])) {
+
+                        if (! empty($assignments['users'])) {
                             $userNames = User::whereIn('id', $assignments['users'])
                                 ->get()
                                 ->map(fn($user) => "{$user->firstname} {$user->lastname}")
                                 ->toArray();
                         }
 
-                        // 4) Merge teams + employees
-                        return collect($teamNames)
-                            ->merge($userNames);
+                        return collect($teamNames)->merge($userNames);
                     })
                     ->listWithLineBreaks(),
 
@@ -576,11 +566,12 @@ class TaskPlannerResource extends Resource
                     ->view('filament.tables.columns.interval')
                     ->state(fn($record) => [
                         'frequency' => $record->frequency,
-                        'interval'  => $record->interval,
+                        'interval' => $record->interval,
                     ]),
 
                 TextColumn::make('campus.name')
                     ->label('Locatie')
+                    ->sortable()
                     ->getStateUsing(
                         fn($record) => "<div>{$record->campus?->name}</div> <div class='text-xs text-gray-500 dark:text-gray-400'>{$record->space?->name}</div>"
                     )
@@ -588,15 +579,16 @@ class TaskPlannerResource extends Resource
 
                 TextColumn::make('taskType.name')
                     ->label('Taaktype')
-                    ->getStateUsing(
-                        function ($record) {
-                            $subHtmlData = "";
-                            if ($record->visit) {
-                                $subHtmlData = "<div class='text-xs text-gray-500 dark:text-gray-400'>{$record->visit->patient?->firstname} {$record->visit->patient?->lastname} ({$record->visit->patient?->gender}) - {$record->visit->bed?->room?->number} {$record->visit->bed?->number}<br>{$record->visit->number}</div>";
-                            }
-                            return "<div>{$record->taskType?->name}</div> $subHtmlData";
+                    ->sortable()
+                    ->getStateUsing(function ($record) {
+                        $subHtmlData = '';
+
+                        if ($record->visit) {
+                            $subHtmlData = "<div class='text-xs text-gray-500 dark:text-gray-400'>{$record->visit->patient?->firstname} {$record->visit->patient?->lastname} ({$record->visit->patient?->gender}) - {$record->visit->bed?->room?->number} {$record->visit->bed?->number}<br>{$record->visit->number}</div>";
                         }
-                    )
+
+                        return "<div>{$record->taskType?->name}</div> {$subHtmlData}";
+                    })
                     ->searchable(query: function (Builder $query, string $search) {
                         $query
                             ->orWhereHas('taskType', fn($q) => $q->where('name', 'like', "%{$search}%"))
@@ -604,22 +596,29 @@ class TaskPlannerResource extends Resource
                     })
                     ->html(),
 
-                TextColumn::make('tags.name')->label('Tags')->badge(),
-                TextColumn::make('on_holiday')->label('Feestdagen'),
+                TextColumn::make('tags.name')
+                    ->label('Tags')
+                    ->badge(),
+
+                TextColumn::make('on_holiday')
+                    ->label('Feestdagen')
+                    ->sortable(),
 
                 TextColumn::make('next_run_at')
                     ->label('Ingepland voor')
-                    ->dateTime('j F Y H:i'),
+                    ->dateTime('j F Y H:i')
+                    ->sortable(),
 
                 IconColumn::make('is_active')
                     ->label('Actief')
-                    ->icon(fn(string $state): string => match ($state) {
-                        '0' => 'heroicon-o-x-circle',
-                        '1' => 'heroicon-o-check-circle',
+                    ->sortable()
+                    ->icon(fn(bool $state): string => match ($state) {
+                        false => 'heroicon-o-x-circle',
+                        true => 'heroicon-o-check-circle',
                     })
-                    ->color(fn(string $state): string => match ($state) {
-                        '0' => 'gray',
-                        '1' => 'success',
+                    ->color(fn(bool $state): string => match ($state) {
+                        false => 'gray',
+                        true => 'success',
                     }),
             ])
 
@@ -627,10 +626,31 @@ class TaskPlannerResource extends Resource
                 SelectFilter::make('teams')
                     ->relationship('teams', 'name', fn($query) => $query->whereIn('teams.id', Auth::user()->teams->pluck('id'))),
 
-                // Filter to show only inactive records
+                Filter::make('next_run_at')
+                    ->label('Ingepland voor')
+                    ->form([
+                        DatePicker::make('date')
+                            ->label('Ingepland voor')
+                            ->native(false)
+                            ->displayFormat('j F Y'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['date'] ?? null,
+                            fn(Builder $query, $date): Builder => $query->whereDate('next_run_at', $date),
+                        );
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if (! filled($data['date'] ?? null)) {
+                            return null;
+                        }
+
+                        return 'Ingepland voor: ' . Carbon::parse($data['date'])->translatedFormat('j F Y');
+                    }),
+
                 Filter::make('inactives')
                     ->label('Inactieven')
-                    ->toggle() // built-in toggle, no extra field nesting
+                    ->toggle()
                     ->baseQuery(function (Builder $query) {
                         return $query->withoutGlobalScope('active')->where('is_active', false);
                     }),
@@ -731,6 +751,17 @@ class TaskPlannerResource extends Resource
             ->view('filament.components.task-planner-table')
             ->poll('30s')
             ->bulkActions([
+
+                DeleteBulkAction::make()
+                    ->label('Verwijderen')
+                    ->modalHeading('Records verwijderen')
+                    ->modalDescription('Weet je zeker dat je de geselecteerde records wilt verwijderen?')
+                    ->modalSubmitActionLabel('Verwijderen')
+                    ->visible(
+                        fn($livewire) => data_get($livewire->getTableFilterState('inactives'), 'isActive') === false
+                    )
+                    ->deselectRecordsAfterCompletion(),
+
                 // Only show when filtering to active rows
                 BulkAction::make('Inactiveren')
                     ->visible(
@@ -778,7 +809,7 @@ class TaskPlannerResource extends Resource
                     ->deselectRecordsAfterCompletion(),
             ])
             ->defaultSort(function (Builder $query): Builder {
-                return $query->orderBy('next_run_at', 'asc')
+                return $query->orderBy('name', 'asc')
                     ->orderBy('name', 'asc');
             });
     }

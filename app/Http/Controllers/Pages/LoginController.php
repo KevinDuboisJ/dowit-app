@@ -69,8 +69,10 @@ class LoginController extends Controller
         ]);
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request, User $user)
     {
+        $user->setLastLogout();
+
         Auth::logout();
 
         $request->session()->invalidate();

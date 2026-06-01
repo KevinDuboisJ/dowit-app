@@ -30,7 +30,7 @@ class UserController extends Controller
             // Create or update the user
             $user = User::updateOrCreate(
                 ['edb_id' => $validatedData['edb_id']],
-                array_merge($validatedData, ['is_active' => 1]) // Ensure is_active = 1
+                $validatedData
             );
 
             // Assign user to the correct teams

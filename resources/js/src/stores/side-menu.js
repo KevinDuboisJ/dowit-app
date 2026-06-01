@@ -34,7 +34,14 @@ const sideMenu = {
       icon: 'Squares2X2',
       pathname: '/beds',
       title: 'Bedden',
-      roles: ['1', '2'],
+      roles: ['1', '2']
+    },
+
+    {
+      icon: 'ListBullet',
+      pathname: 'https://formbuilder.monica.be/?page=form&fo_id=59',
+      title: 'Controlelijst',
+      roles: ['1', '2']
     },
 
     {
@@ -54,23 +61,23 @@ const sideMenu = {
           pathname: '/adm/holidays',
           roles: ['1', '2'],
           title: 'Feestdagen'
-        },
+        }
       ]
     }
   ]
-
 }
 
 const userHasPathAccess = (user, menu) => {
-
   // Create a Set from menu roles for efficient lookup.
-  const myRoleSet = new Set(menu?.roles);
+  const myRoleSet = new Set(menu?.roles)
 
   // Check if any value from user roles exists in menu roles using Set lookup.
-  const hasRoleForThis = Object.keys(user?.roles).some(value => myRoleSet.has(value));
+  const hasRoleForThis = Object.keys(user?.roles).some(value =>
+    myRoleSet.has(value)
+  )
 
   // Show the item if the user has the required role or if no roles are defined in the menu item.
-  return hasRoleForThis || !('roles' in menu);
+  return hasRoleForThis || !('roles' in menu)
 }
 
 export { sideMenu, userHasPathAccess }

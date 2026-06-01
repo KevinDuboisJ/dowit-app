@@ -1,3 +1,13 @@
+ADD last_seen_at and last_logout_at to the database as DATETIME
+
+i need to resolve how i will handle the assignation of teams whena  task is created from the chain module. currently you can assign a team from there what means it skips the task assignation rules.
+Is that OK, if so i would have to add a trigger Campus to assign to the correct team and create two chain rules.
+
+1. bed ocupation means if somone is in the bed in the room at that moment, there are database tables that shows only this.
+2. But that doesnt mean the patient has changed permantly of room/bed it can mean the patient temporal moved to another location, for example for an examen like a endoscopy.
+3. I also found that there are departments like 1627 where there are "zaal" instead of "kamer" that is shared by multiple patients. and for example table view VW_BEDOCC in oazis just shows one patient record 
+
+
 [2026-02-17 08:50:14] production.DEBUG: array (
 'message' => 'An error occurred in createTask: Pusher error: cURL error 28: SSL connection timeout (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for https://dowit.monica.be:6002/apps/795051/events?auth_key=s3w3thzezulgp5g0e5bw&auth_timestamp=1771314604&auth_version=1.0&body_md5=8260bfbc34d4b4d312cd3778e15667f9&auth_signature=65c947ca67b02880a06b28f95b6850205cfe9ca74255184706580afb80af8ef1.',
 'file' => 'D:\\Applicaties\\dowit\\vendor\\laravel\\framework\\src\\Illuminate\\Broadcasting\\Broadcasters\\PusherBroadcaster.php',
@@ -97,6 +107,9 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 11. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
 12. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
 16. Ask Natascha how to handle the updates of the tasks. Currently if a user asking teams is also the execution team then it can update it. Task id 18819 is an example of this
+17. geen taken gevonden met dze filters on aanvragende taken when it is empty. seems weird, it shouldnt say filter
+18. add started_at to the tasks
+19. Liliane Lambrichts lambrli check patient rol stoel doesnt show in history task created comment
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//
