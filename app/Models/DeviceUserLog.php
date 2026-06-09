@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DeviceUser extends Model
+class DeviceUserLog extends Model
 {
     public function user()
     {

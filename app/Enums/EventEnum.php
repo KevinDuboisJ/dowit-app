@@ -12,6 +12,8 @@ enum EventEnum: string
     case TaskHelpRequested = 'task_help_requested';
     case TaskHelpGiven = 'task_help_given';
     case Announcement = 'announcement';
+    case UserLoggedIn = 'user_logged_in';
+    case UserLoggedOut = 'user_logged_out';
 
     public function getLabel(): ?string
     {
@@ -24,6 +26,8 @@ enum EventEnum: string
             self::TaskHelpRequested => 'Hulp gevraagd',
             self::TaskHelpGiven => 'Hulp gegeven',
             self::Announcement => 'Aankondiging',
+            self::UserLoggedIn => 'ingelogd',
+            self::UserLoggedOut => 'Uitgelogd',
         };
     }
 }

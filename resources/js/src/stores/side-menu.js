@@ -41,7 +41,7 @@ const sideMenu = {
       icon: 'ListBullet',
       pathname: 'https://formbuilder.monica.be/?page=form&fo_id=59',
       title: 'Controlelijst',
-      roles: ['1', '2']
+      teams: ['3', '9']
     },
 
     {
@@ -68,16 +68,18 @@ const sideMenu = {
 }
 
 const userHasPathAccess = (user, menu) => {
-  // Create a Set from menu roles for efficient lookup.
-  const myRoleSet = new Set(menu?.roles)
+  const menuRoleSet = new Set(menu?.roles ?? [])
+  const menuTeamSet = new Set(menu?.teams ?? [])
 
-  // Check if any value from user roles exists in menu roles using Set lookup.
-  const hasRoleForThis = Object.keys(user?.roles).some(value =>
-    myRoleSet.has(value)
+  const hasRoleForThis = Object.keys(user?.roles ?? {}).some(role =>
+    menuRoleSet.has(role)
   )
 
-  // Show the item if the user has the required role or if no roles are defined in the menu item.
-  return hasRoleForThis || !('roles' in menu)
+  const hasTeamForThis = (user?.teams ?? []).some(team =>
+    menuTeamSet.has(String(team.id))
+  )
+
+  return hasRoleForThis || hasTeamForThis || (!menu?.roles && !menu?.teams)
 }
 
 export { sideMenu, userHasPathAccess }

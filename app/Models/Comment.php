@@ -78,8 +78,7 @@ class Comment extends Model
             if ($comment->status_id === TaskStatusEnum::Completed->value) {
                 return $comment->event = EventEnum::TaskCompleted;
             }
-
-            return $comment->event = EventEnum::TaskUpdated;
+            
         });
     }
 

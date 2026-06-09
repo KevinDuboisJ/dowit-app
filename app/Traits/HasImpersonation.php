@@ -18,12 +18,12 @@ trait HasImpersonation
     }
   }
 
-  protected function isImpersonated(): bool
+  public function isImpersonated(): bool
   {
     return $this->primaryUsername != $this->loginAsUsername;
   }
 
-  protected function canImpersonate(string $username): bool
+  private function canImpersonate(string $username): bool
   {
     // Retrieve usernames of persons that can impersonate
     $admins = array_map('strtolower', explode(',', config('app.admins')));

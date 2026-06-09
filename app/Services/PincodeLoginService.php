@@ -4,6 +4,8 @@ namespace App\Services;
 
 use Illuminate\Http\Request;
 use App\Contracts\UserAuthenticator;
+use App\Enums\EventEnum;
+use App\Models\Device;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\AuthenticationException;
@@ -41,7 +43,11 @@ class PincodeLoginService implements UserAuthenticator
     $user->setLastLogin();
     $user->save();
 
-    $user->roles = $roles;
+    session(['roles' => $roles]);
+
+    $device = Device::resolveFromHostname();
+    $device->setLastUsed($user)->save();
+    $device->logUserUsage($user, EventEnum::UserLoggedIn);
 
     Auth::login($user);
     return $user;

@@ -84,7 +84,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
     {
         return Attribute::make(
             get: fn() => session()->get('roles', []),
-            set: fn(array $value) => session(['roles' => $value]),
         );
     }
 

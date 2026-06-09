@@ -1,4 +1,7 @@
-ADD last_seen_at and last_logout_at to the database as DATETIME
+what if the is a team that needs to make both a task for aanvraag schoonmaak CA en CD do i keep them separtaed, the weird is that it says for example CA but
+still they also have to choose a campus. while it clearly in the subtask it says "anvraag schoonmaak CA"
+
+
 
 i need to resolve how i will handle the assignation of teams whena  task is created from the chain module. currently you can assign a team from there what means it skips the task assignation rules.
 Is that OK, if so i would have to add a trigger Campus to assign to the correct team and create two chain rules.
@@ -108,7 +111,6 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 12. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
 16. Ask Natascha how to handle the updates of the tasks. Currently if a user asking teams is also the execution team then it can update it. Task id 18819 is an example of this
 17. geen taken gevonden met dze filters on aanvragende taken when it is empty. seems weird, it shouldnt say filter
-18. add started_at to the tasks
 19. Liliane Lambrichts lambrli check patient rol stoel doesnt show in history task created comment
 
 

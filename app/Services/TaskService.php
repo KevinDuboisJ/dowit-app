@@ -355,7 +355,7 @@ class TaskService
       ])
       ->orderByDesc('assigned_to_me')
       ->orderByDesc(DB::raw('COALESCE(tasks.help_requested, 0)'))
-      ->orderByDesc(DB::raw('tasks.task_type_id = 5'))
+      ->orderByDesc(DB::raw('tasks.task_type_id = 5 OR tasks.task_type_id = 15'))
       ->orderBy('tasks.status_id')
       ->orderByDesc('tasks.start_date_time');
 

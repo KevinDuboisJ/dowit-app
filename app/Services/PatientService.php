@@ -184,7 +184,7 @@ class PatientService
       'department_id' => $department->id,
       'bed_id' => $bed->id,
       'admitted_at' => $data['admitted_at'] ?? $visit->admitted_at,
-      'discharged_at' => $data['discharged_at'] ?? $visit->discharged_at,
+      'discharged_at' => $data['discharged_at'],
     ]);
 
     if ($visit->isDirty()) {
@@ -261,7 +261,7 @@ class PatientService
     if (
       $task->status_id === TaskStatusEnum::Completed->value
       && $task->bed_visit_id
-      && $task->task_type_id === TaskTypeEnum::EndOfStayCleaning->value
+      && TaskTypeEnum::from($task->task_type_id)->isEndOfStayCleaning()
     ) {
       $taskBedVisit = $task->bedVisit;
 
@@ -382,26 +382,33 @@ class PatientService
 
     foreach ($noLongerOccupied as $bedVisit) {
       $spaceId = self::resolveSpaceIdFromRoom($bedVisit->bed->room, $bedVisit->visit->number);
+      $departmentNumber = $bedVisit->bed->room->department->number;
 
       $allowedDepartmentsCA = ['2214', '3112', '2112', '3111'];
-      $allowedDepartmentsCD = ['2121', '2122', '2124', '2125','2221', '2222', '2223', '2321', '2602', '3021', '3022', '3702', '4921'];
+      $allowedDepartmentsCD = ['2121', '2122', '2124', '2125', '2221', '2222', '2223', '2321', '2602', '3021', '3022', '3702', '4921'];
 
-      //$allowedDepartments = $allowedDepartmentsCA;
       $allowedDepartments = array_merge($allowedDepartmentsCA, $allowedDepartmentsCD);
 
       $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500'], true);
 
       if (
-        in_array($bedVisit->bed->room->department->number, $allowedDepartments, true)
+        in_array($departmentNumber, $allowedDepartments, true)
         && !$skipThisBed
       ) {
+
+        $taskTypeId = match (true) {
+          in_array($departmentNumber, $allowedDepartmentsCA, true) => TaskTypeEnum::EndOfStayCleaningCA->value,
+          in_array($departmentNumber, $allowedDepartmentsCD, true) => TaskTypeEnum::EndOfStayCleaningCD->value,
+          default => null,
+        };
+
         $data = [
           'task' => [
             'name' => 'Eindpoets patiëntkamer',
             'start_date_time' => $now,
             'description' => "Kamer {$bedVisit->bed->room->number}, Bed {$bedVisit->bed->number} - " . strtoupper($bedVisit->visit->patient->lastname),
             'campus_id' => $bedVisit->bed->room->campus_id,
-            'task_type_id' => TaskTypeEnum::EndOfStayCleaning->value,
+            'task_type_id' => $taskTypeId,
             'space_id' => $spaceId ?? null,
             'priority' => TaskPriorityEnum::Medium->value,
             'bed_visit_id' => $bedVisit->id,

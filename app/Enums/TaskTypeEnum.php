@@ -13,12 +13,13 @@ enum TaskTypeEnum: int implements HasLabel
     case Cleaning = 2;
     case PeriodicCheck = 3;
     case SecurityGuardTask = 4;
-    case EndOfStayCleaning = 5;
+    case EndOfStayCleaningCA = 5;
     case PatientTransportInWheelchair = 6;
     case PatientTransportOnFootAssisted = 7;
     case PatientTransportNotify = 8;
     case PatientTransportWithCrutches = 9;
     case UnlockLocker = 13;
+    case EndOfStayCleaningCD = 15;
 
     public function getLabel(): ?string
     {
@@ -27,7 +28,8 @@ enum TaskTypeEnum: int implements HasLabel
             self::Cleaning                       => 'Poets',
             self::PeriodicCheck                  => 'Periodieke controle',
             self::SecurityGuardTask              => 'Taak bewaking',
-            self::EndOfStayCleaning              => 'Eindpoets',
+            self::EndOfStayCleaningCA            => 'Eindpoets CA',
+            self::EndOfStayCleaningCD            => 'Eindpoets CD',
             self::PatientTransportInWheelchair   => 'Patiëntentransport - in rolstoel',
             self::PatientTransportOnFootAssisted => 'Patiëntentransport - te voet begeleid',
             self::PatientTransportNotify         => 'Patiëntentransport - verwittigen',
@@ -53,6 +55,14 @@ enum TaskTypeEnum: int implements HasLabel
             self::PatientTransportOnFootAssisted,
             self::PatientTransportNotify,
             self::PatientTransportWithCrutches,
+        ], true);
+    }
+
+    public function isEndOfStayCleaning(): bool
+    {
+        return in_array($this, [
+            self::EndOfStayCleaningCA,
+            self::EndOfStayCleaningCD,
         ], true);
     }
 }

@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\Contracts\SupportsImpersonation;
 use Illuminate\Http\Request;
 use App\Contracts\UserAuthenticator;
+use App\Enums\EventEnum;
+use App\Models\Comment;
+use App\Models\Device;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\AuthenticationException;
-use App\Models\EDB\Account;
 use App\Traits\HasImpersonation;
-use Illuminate\Support\Carbon;
 use App\Models\EDB\Role as EDBRole;
 use App\Services\LdapService;
 use App\Models\Role;
@@ -34,12 +36,6 @@ class LoginService implements UserAuthenticator
 
     $user = User::where('username', $loginAsUsername)->where('is_active', true)->firstOrFail();
 
-    // Record the timestamp of the user's last login attempt to monitor login activity.
-    if (!$this->isImpersonated()) {
-      $user->setLastLogin();
-      $user->save();
-    }
-
     // Retrieve Dowit account roles from EDB
     $roles = EDBRole::byDowitAccountUsername($loginAsUsername)
       ->pluck('ro_name')
@@ -54,7 +50,24 @@ class LoginService implements UserAuthenticator
       throw new AuthenticationException('Je hebt geen toegangsprofiel');
     }
 
-    $user->roles = $roles;
+    session(['roles' => $roles]);
+
+    if (!$this->isImpersonated()) {
+      // Record the timestamp of the user's last login attempt to monitor login activity.
+      $user->setLastLogin();
+      $user->save();
+      Comment::create([
+        'created_by' => $user->id,
+        'event' => EventEnum::UserLoggedIn->value,
+        'content' => 'Gebruiker heeft zich ingelogd',
+      ]);
+
+      $device = Device::resolveFromHostname();
+      $device->setLastUsed($user)->save();
+      $device->logUserUsage($user, EventEnum::UserLoggedIn);
+    }
+
+
 
     Auth::login($user);
     return $user;

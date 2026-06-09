@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Contracts\UserAuthenticator;
-use App\Models\Edb\Account;
+use App\Enums\EventEnum;
+use App\Models\Comment;
+use App\Models\Device;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Models\DeviceUser;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -46,6 +47,7 @@ class LoginController extends Controller
         try {
             $validated = $authenticator->validate($request);
             $authenticator->authenticate($validated['username'], $validated['password']);
+            
         } catch (ModelNotFoundException $e) {
             throw ValidationException::withMessages([
                 'wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker',
@@ -56,22 +58,27 @@ class LoginController extends Controller
                 'wrongCredentials' => $errors ? [collect($errors)->flatten()->first()] : $e->getMessage(),
             ]);
         }
-        $this->registerDeviceUse(Auth::user());
+
         return Inertia::location(Session::get('url.intended', '/'));
     }
 
-    public function registerDeviceUse(User $user)
+    public function logout(Request $request)
     {
-        // Create a new device usage record
-        DeviceUser::create([
-            'user_id' => $user->id,
-            'hostname' => preg_replace('/\.monica\.be$/', '', gethostbyaddr($_SERVER['REMOTE_ADDR'])),
-        ]);
-    }
-
-    public function logout(Request $request, User $user)
-    {
+        $user = $request->user();
+        
         $user->setLastLogout();
+
+        $user->save();
+
+        Comment::create([
+            'created_by' => $user->id,
+            'event' => EventEnum::UserLoggedOut->value,
+            'content' => 'Gebruiker heeft zich uitgelogd',
+        ]);
+
+        $device = Device::resolveFromHostname();
+        $device->setLastUsed($user)->save();
+        $device->logUserUsage($user, EventEnum::UserLoggedOut);
 
         Auth::logout();
 

@@ -36,18 +36,28 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
 
     protected static function booted()
     {
-        // Set the default task status
         static::saving(function ($task) {
+            // If the task is being saved without a status, determine the appropriate status based on the start date and time
             if ($task->status_id === null) {
                 $task->status_id = TaskStatusEnum::fromStartDateTime($task->start_date_time)->value;
             }
         });
 
-        static::updated(function (Task $task) {
-            $statusId = $task->status_id instanceof TaskStatusEnum
-                ? $task->status_id->value
-                : $task->status_id;
+        static::updating(function (Task $task) {
+            // Determine the current status ID, accounting for possible enum casting
+            $statusId = $task->status_id instanceof TaskStatusEnum ? $task->status_id->value : $task->status_id;
 
+            // If the task was just marked as completed, execute any related chains
+            if ($task->isDirty('status_id') && (int) $statusId === TaskStatusEnum::InProgress->value && $task->started_at === null) {
+                $task->started_at = now();
+            }
+        });
+
+        static::updated(function (Task $task) {
+            // Determine the current status ID, accounting for possible enum casting
+            $statusId = $task->status_id instanceof TaskStatusEnum ? $task->status_id->value : $task->status_id;
+
+            // If the task was just marked as completed, execute any related chains
             if ($task->wasChanged('status_id') && (int) $statusId === TaskStatusEnum::Completed->value) {
                 ChainService::executeForCompletedTask($task);
             }

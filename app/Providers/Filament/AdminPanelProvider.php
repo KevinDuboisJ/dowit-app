@@ -23,6 +23,7 @@ use App\Filament\Pages\Dashboard;
 use App\Http\Middleware\InertiaExternalRedirect;
 use Filament\Facades\Filament;
 use BladeUI\Icons\Factory as IconFactory;
+use Filament\Navigation\MenuItem;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Assets\Js;
 use Illuminate\Support\Facades\Vite;
@@ -88,6 +89,12 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+             ->userMenuItems([
+            'logout' => MenuItem::make()
+                ->label('Afmelden')
+                ->icon('heroicon-o-arrow-left-on-rectangle')
+                ->url('/logout'),
+        ])
             ->spa()
             ->brandLogo(asset('images/logo.png'))
             ->brandLogoHeight('3.7rem')
