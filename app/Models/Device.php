@@ -3,27 +3,50 @@
 namespace App\Models;
 
 use App\Enums\EventEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Device extends Model
 {
-    static function resolveFromHostname(): Device
+    protected $fillable = [
+        'identifier',
+        'description',
+        'type',
+        'campus_id',
+        'is_registered',
+        'last_used_by',
+        'last_used_at',
+    ];
+
+    protected $casts = [
+        'is_registered' => 'boolean',
+        'last_used_at' => 'datetime',
+    ];
+
+    public static function resolveFromHostname(): Device
     {
         $identifier = self::getHostname();
         $device = self::where('identifier', $identifier)->first();
-        $device = $device ?: new device(['identifier' => $identifier, 'is_registered' => false]);
-        return $device;
+
+        return $device ?: new self(['identifier' => $identifier, 'is_registered' => false]);
+    }
+
+    public function scopeRegistered(Builder $query): Builder
+    {
+        return $query->where('is_registered', true);
     }
 
     public function setLastUsed(User $user): Device
     {
         $this->last_used_by = $user->id;
         $this->last_used_at = now();
+
         return $this;
     }
 
-    static function getHostname(): ?string
+    public static function getHostname(): ?string
     {
         return preg_replace('/\.monica\.be$/', '', gethostbyaddr($_SERVER['REMOTE_ADDR']));
     }
@@ -34,7 +57,7 @@ class Device extends Model
             'identifier' => $this->identifier,
             'user_id' => $user->id,
             'device_id' => $this->id,
-            'event' => $event->value,
+            'event' => $event,
         ]);
     }
 
@@ -43,8 +66,13 @@ class Device extends Model
         return $this->belongsTo(Campus::class);
     }
 
-    public function LastUsedBy()
+    public function lastUsedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_used_by');
+    }
+
+    public function userLogs(): HasMany
+    {
+        return $this->hasMany(DeviceUserLog::class);
     }
 }
