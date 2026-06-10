@@ -66,6 +66,11 @@ class Team extends Model
         return $this->belongsToMany(TaskAssignmentRule::class);
     }
 
+    public function campus()
+    {
+        return $this->belongsTo(Campus::class);
+    }
+
     public function settings()
     {
         return $this->belongsToMany(Setting::class, 'setting_team')

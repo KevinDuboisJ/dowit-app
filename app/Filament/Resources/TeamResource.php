@@ -26,7 +26,7 @@ use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-
+use Filament\Tables\Filters\SelectFilter;
 
 class TeamResource extends Resource
 {
@@ -41,6 +41,14 @@ class TeamResource extends Resource
                 TextInput::make('name')
                     ->required()
                     ->label('Teamnaam'),
+
+                Select::make('campus_id')
+                    ->label('Campus')
+                    ->relationship('campus', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
+
                 Checkbox::make('show_rules')
                     ->formatStateUsing(fn(?Team $record) => (bool) $record?->autoassign_rules)
                     ->disabled(fn(?Team $record, $context) => (bool) $record?->autoassign_rules && $context == 'edit')
@@ -104,6 +112,13 @@ class TeamResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->label('Teamnaam'),
+
+                TextColumn::make('campus.name')
+                    ->label('Campus')
+                    ->sortable()
+                    ->searchable()
+                    ->placeholder('-'),
+
                 TextColumn::make('users_count')
                     ->label('Aantal gebruikers')
                     ->counts('users'),
@@ -148,7 +163,13 @@ class TeamResource extends Resource
 
                 ])
             ])
-            ->filters([])
+            ->filters([
+                SelectFilter::make('campus_id')
+                    ->label('Campus')
+                    ->relationship('campus', 'name')
+                    ->searchable()
+                    ->preload(),
+            ])
             ->recordClasses(fn(Model $record) => match (true) {
                 default => $record->classname,
             })
@@ -182,5 +203,4 @@ class TeamResource extends Resource
     }
 
     public static function getTableQuery(): Builder {}
-
 }

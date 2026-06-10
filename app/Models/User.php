@@ -123,7 +123,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
     {
         $this->last_login_at = now();
         $this->last_seen_at = now();
-        $this->last_logout_at = null;
 
         return $this;
     }

@@ -14,6 +14,8 @@ enum EventEnum: string
     case Announcement = 'announcement';
     case UserLoggedIn = 'user_logged_in';
     case UserLoggedOut = 'user_logged_out';
+    case UserSelectedDevice  = 'user_selected_device';
+    case UserSwitchedDevice  = 'user_switched_device';
 
     public function getLabel(): ?string
     {
@@ -28,6 +30,8 @@ enum EventEnum: string
             self::Announcement => 'Aankondiging',
             self::UserLoggedIn => 'ingelogd',
             self::UserLoggedOut => 'Uitgelogd',
+            self::UserSelectedDevice => 'Toestel geselecteerd',
+            self::UserSwitchedDevice => 'Toestel gewisseld',
         };
     }
 }

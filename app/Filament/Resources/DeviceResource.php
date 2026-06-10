@@ -23,6 +23,7 @@ class DeviceResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Toestellen';
 
+
     public static function form(Form $form): Form
     {
         return $form
@@ -31,27 +32,34 @@ class DeviceResource extends Resource
                     ->label('Identificator')
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpanFull(),
 
                 Forms\Components\Textarea::make('description')
                     ->label('Beschrijving')
                     ->rows(3)
                     ->columnSpanFull(),
 
-                Forms\Components\Select::make('type')
-                    ->label('Type toestel')
-                    ->options([
-                        'gsm' => 'GSM',
-                        'poetskar' => 'Poetskar',
-                    ])
-                    ->required()
-                    ->native(false),
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\Select::make('type')
+                            ->label('Type toestel')
+                            ->options([
+                                'gsm' => 'GSM',
+                                'poetskar' => 'Poetskar',
+                            ])
+                            ->required()
+                            ->native(false),
 
-                Forms\Components\Checkbox::make('is_registered')
-                    ->label('Geregistreerd'),
-
+                        Forms\Components\Toggle::make('is_registered')
+                            ->label('Geregistreerd')
+                            ->helperText('Duid aan of dit toestel geregistreerd is.')
+                            ->inline(false)
+                            ->default(true),
+                    ]),
             ]);
     }
+
 
     public static function table(Table $table): Table
     {
