@@ -33,6 +33,7 @@ Route::group(['middleware' => ['guest', HandleInertiaRequests::class]], function
 Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function () {
     Route::get('/select-device', [DeviceSelectionController::class, 'index'])->name('device-selection.index');
     Route::post('/select-device', [DeviceSelectionController::class, 'store'])->name('device-selection.store');
+    Route::post('/select-device/switch', [DeviceSelectionController::class, 'switch'])->name('device-selection.switch');
 
     Route::group(['middleware' => ['device.selected']], function () {
         // Dashboard
