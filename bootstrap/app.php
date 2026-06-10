@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Inertia\Inertia;
 use App\Http\Middleware\ChainAccessControl;
+use App\Http\Middleware\EnsureDeviceSelected;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'ip.whitelist' => ChainAccessControl::class,
+            'device.selected' => EnsureDeviceSelected::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
