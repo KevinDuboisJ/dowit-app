@@ -29,26 +29,38 @@ class DeviceSelectionController extends Controller
                 ->orderBy('identifier')
                 ->get(['id', 'identifier', 'description', 'type', 'campus_id']),
             'selectedDeviceId' => session(DeviceSelectionService::SESSION_KEY),
-            'isSwitching' => $request->boolean('switch'),
+            'isSwitching' => session()->boolean(DeviceSelectionService::SWITCHING_SESSION_KEY),
         ]);
+    }
+
+    public function switch(Request $request): RedirectResponse
+    {
+        if (! $this->deviceSelectionService->isRequiredFor($request->user())) {
+            return redirect()->intended(route('dashboard.index'));
+        }
+
+        session()->put(DeviceSelectionService::SWITCHING_SESSION_KEY, true);
+
+        return redirect()->route('device-selection.index');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'device_id' => ['required', 'integer', 'exists:devices,id'],
-            'switch' => ['nullable', 'boolean'],
         ]);
 
         $device = Device::query()
             ->registered()
             ->findOrFail($validated['device_id']);
 
-        $event = $request->boolean('switch')
+        $event = session()->boolean(DeviceSelectionService::SWITCHING_SESSION_KEY)
             ? EventEnum::UserSwitchedDevice
             : EventEnum::UserSelectedDevice;
 
         $this->deviceSelectionService->selectDevice($request->user(), $device, $event);
+
+        session()->forget(DeviceSelectionService::SWITCHING_SESSION_KEY);
 
         return redirect()->intended(route('dashboard.index'));
     }
