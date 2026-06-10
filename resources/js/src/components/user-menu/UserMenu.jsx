@@ -1,5 +1,5 @@
 import React from 'react'
-import {Link} from '@inertiajs/react'
+import { Link } from '@inertiajs/react'
 import {
   Lucide,
   DropdownMenu,
@@ -10,9 +10,9 @@ import {
   DropdownMenuLabel
 } from '@/base-components'
 
-import {FontSizeSlider} from '@/components'
+import { FontSizeSlider } from '@/components'
 
-const UserMenu = ({user, fontSize, setFontSize}) => {
+const UserMenu = ({ user, fontSize, setFontSize }) => {
   return (
     <DropdownMenu className="fadeInRight z-[999] w-38">
       <DropdownMenuTrigger
@@ -72,6 +72,18 @@ const UserMenu = ({user, fontSize, setFontSize}) => {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
+        <DropdownMenuItem tag="div">
+          <Link
+            href="/select-device/switch"
+            method="post"
+            className="flex w-full font-normal text-sm text-gray-700 items-center"
+          >
+            <Lucide icon="ShoppingCart" className="w-4 h-4 mr-1" />
+            Poetskar wisselen
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link
             href="/logout"
@@ -81,7 +93,7 @@ const UserMenu = ({user, fontSize, setFontSize}) => {
             <Lucide icon="CircleArrowRight" className="w-4 h-4 mr-1" /> Uitloggen
           </Link>
         </DropdownMenuItem>
-                <DropdownMenuSeparator />
+        <DropdownMenuSeparator />
 
         <div className="px-2 py-1">
           <FontSizeSlider fontSize={fontSize} setFontSize={setFontSize} />{' '}
