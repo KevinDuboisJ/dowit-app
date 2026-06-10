@@ -11,7 +11,9 @@ createInertiaApp({
   
   resolve: async (name) => {
     const page = await resolvePageComponent(`./pages/${name}.jsx`, import.meta.glob('./pages/**/*.{js,jsx}'));
-    page.default.layout = name.startsWith('Login') ? undefined : (page => <Layout children={page} />)
+    const usesGuestLayout = name.startsWith('Login') || name.startsWith('SelectDevice')
+
+    page.default.layout = usesGuestLayout ? undefined : (page => <Layout children={page} />)
     return page;
   },
 

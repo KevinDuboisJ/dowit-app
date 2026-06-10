@@ -29,7 +29,7 @@ class DeviceSelectionController extends Controller
                 ->orderBy('identifier')
                 ->get(['id', 'identifier', 'description', 'type', 'campus_id']),
             'selectedDeviceId' => session(DeviceSelectionService::SESSION_KEY),
-            'isSwitching' => session()->boolean(DeviceSelectionService::SWITCHING_SESSION_KEY),
+            'isSwitching' => (bool) session(DeviceSelectionService::SWITCHING_SESSION_KEY, false),
         ]);
     }
 
@@ -54,7 +54,7 @@ class DeviceSelectionController extends Controller
             ->registered()
             ->findOrFail($validated['device_id']);
 
-        $event = session()->boolean(DeviceSelectionService::SWITCHING_SESSION_KEY)
+        $event = (bool) session(DeviceSelectionService::SWITCHING_SESSION_KEY, false)
             ? EventEnum::UserSwitchedDevice
             : EventEnum::UserSelectedDevice;
 
