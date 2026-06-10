@@ -5,11 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DeviceResource\Pages;
 use App\Models\Device;
 use Filament\Forms;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\SelectFilter;
 
 class DeviceResource extends Resource
 {
@@ -51,6 +53,13 @@ class DeviceResource extends Resource
                             ->required()
                             ->native(false),
 
+                        Select::make('campus_id')
+                            ->label('Campus')
+                            ->relationship('campus', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+
                         Forms\Components\Toggle::make('is_registered')
                             ->label('Geregistreerd')
                             ->helperText('Duid aan of dit toestel geregistreerd is.')
@@ -70,6 +79,12 @@ class DeviceResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('campus.name')
+                    ->label('Campus')
+                    ->sortable()
+                    ->searchable()
+                    ->placeholder('-'),
+
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
                     ->badge()
@@ -82,7 +97,6 @@ class DeviceResource extends Resource
                 Tables\Columns\TextColumn::make('description')
                     ->label('Beschrijving')
                     ->limit(50),
-
 
                 Tables\Columns\TextColumn::make('last_used_by')
                     ->label('Laatst gebruikt door')
@@ -127,6 +141,11 @@ class DeviceResource extends Resource
                             default => null,
                         };
                     }),
+                SelectFilter::make('campus_id')
+                    ->label('Campus')
+                    ->relationship('campus', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->defaultSort('identifier')
             ->actions([

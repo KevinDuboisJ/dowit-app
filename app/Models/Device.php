@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\EventEnum;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Device extends Model
 {
@@ -35,6 +36,11 @@ class Device extends Model
             'device_id' => $this->id,
             'event' => $event->value,
         ]);
+    }
+
+    public function campus(): BelongsTo
+    {
+        return $this->belongsTo(Campus::class);
     }
 
     public function LastUsedBy()
