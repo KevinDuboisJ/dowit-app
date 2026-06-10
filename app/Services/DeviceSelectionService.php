@@ -11,6 +11,7 @@ use App\Models\User;
 class DeviceSelectionService
 {
     public const SESSION_KEY = 'selected_device_id';
+    public const SWITCHING_SESSION_KEY = 'is_switching_device';
 
     public function isRequiredFor(User $user): bool
     {
