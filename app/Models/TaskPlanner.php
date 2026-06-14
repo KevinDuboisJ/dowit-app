@@ -11,19 +11,21 @@ use App\Enums\ApplyOnHoliday;
 use App\Enums\TaskPlannerAction;
 use Illuminate\Support\Facades\Cache;
 use App\Casts\Interval;
+use App\Enums\TeamRole;
 use App\Models\PATIENTLIST\Visit;
-use App\Traits\HasTeams;
 use App\Traits\HasCreator;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use App\Services\TaskPlannerService;
-use App\Traits\HasJsonAssignees;
 use App\Traits\HasAccessScope;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\Team;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class TaskPlanner extends Model
 {
-    use SoftDeletes, HasCreator, HasTeams, HasJsonAssignees, HasAccessScope;
+    use SoftDeletes, HasCreator, HasAccessScope;
 
     protected $casts = [
         'frequency' => TaskPlannerFrequency::class,
@@ -75,6 +77,33 @@ class TaskPlanner extends Model
         });
     }
 
+    public function ownerTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Team::class,
+            'task_planner_team',
+            'task_planner_id',
+            'team_id'
+        )
+            ->withPivotValue('role', TeamRole::Owner->value)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+
+    public function executionTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Team::class,
+            'task_planner_team',
+            'task_planner_id',
+            'team_id'
+        )
+            ->withPivotValue('role', TeamRole::Execution->value)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
     public function campus()
     {
         return $this->belongsTo(Campus::class);
@@ -120,9 +149,23 @@ class TaskPlanner extends Model
         return $this->belongsTo(Visit::class);
     }
 
+    public function scopeOwnedByUserTeams(Builder $query, User $user): Builder
+    {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->whereIn('owner_team_id', $user->getTeamIds());
+    }
+
     public function scopeByActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function teamRelationPath(): string
+    {
+        return 'ownerTeams';
     }
 
     public function getNextRunDate(Carbon|CarbonImmutable|null $next_run_at = null, ?string $frequency = null, array|string|null $interval = null, bool $catchUpToToday = true): Carbon|CarbonImmutable

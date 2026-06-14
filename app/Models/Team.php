@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TeamRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -56,9 +57,30 @@ class Team extends Model
         return $this->hasMany(TaskType::class);
     }
 
-    public function tasks()
+    public function executableTasks(): BelongsToMany
     {
-        return $this->belongsToMany(Task::class, 'task_team');
+        return $this->belongsToMany(
+            Task::class,
+            'task_team',
+            'team_id',
+            'task_id'
+        )
+            ->wherePivot('role', TeamRole::Execution->value)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function visibleTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Task::class,
+            'task_team',
+            'team_id',
+            'task_id'
+        )
+            ->wherePivot('role', TeamRole::Visibility->value)
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function taskAssignmentRules()

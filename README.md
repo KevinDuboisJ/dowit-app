@@ -1,3 +1,82 @@
+TODO:
+
+SET SQL_SAFE_UPDATES = 0;
+
+ALTER TABLE task_planner_team
+ADD role ENUM('owner', 'execution') NOT NULL DEFAULT 'execution' AFTER team_id;
+
+ALTER TABLE task_planner_team
+ADD UNIQUE KEY task_planner_team_task_planner_id_team_id_role_unique (
+    task_planner_id,
+    team_id,
+    role
+);
+
+ALTER TABLE task_planner_team
+DROP INDEX task_planner_team_task_planner_id_team_id_unique;
+
+ALTER TABLE task_planner_team
+ADD KEY task_planner_team_team_id_role_planner_id_index (
+    team_id,
+    role,
+    task_planner_id
+);
+
+ALTER TABLE task_planner_team
+ADD KEY task_planner_team_planner_id_role_index (
+    task_planner_id,
+    role
+);
+
+INSERT IGNORE INTO task_planner_team (
+    task_planner_id,
+    team_id,
+    role,
+    created_at,
+    updated_at
+)
+SELECT
+    x.task_planner_id,
+    x.team_id,
+    'owner',
+    NOW(),
+    NOW()
+FROM (
+    SELECT 
+        task_planner_id,
+        MIN(team_id) AS team_id
+    FROM task_planner_team
+    WHERE role = 'execution'
+    GROUP BY task_planner_id
+    HAVING COUNT(*) = 1
+) x
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM task_planner_team owner_tpt
+    WHERE owner_tpt.task_planner_id = x.task_planner_id
+      AND owner_tpt.role = 'owner'
+);
+
+
+ALTER TABLE task_assignment_rules
+ADD type ENUM('execution', 'visibility') NOT NULL DEFAULT 'execution' AFTER description;
+
+ALTER TABLE task_team
+ADD role ENUM('execution', 'visibility') NOT NULL DEFAULT 'execution' AFTER team_id;
+
+ALTER TABLE task_team
+ADD UNIQUE KEY task_team_task_id_team_id_role_unique (task_id, team_id, role);
+
+ALTER TABLE task_team
+ADD KEY task_team_team_id_role_task_id_index (team_id, role, task_id);
+
+ALTER TABLE task_team
+ADD KEY task_team_task_id_role_index (task_id, role);
+
+ALTER TABLE task_planner_team
+ADD role ENUM('owner', 'execution') NOT NULL DEFAULT 'execution' AFTER team_id;
+-----------------------------------
+
 what if the is a team that needs to make both a task for aanvraag schoonmaak CA en CD do i keep them separtaed, the weird is that it says for example CA but
 still they also have to choose a campus. while it clearly in the subtask it says "anvraag schoonmaak CA"
 
@@ -112,6 +191,8 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 16. Ask Natascha how to handle the updates of the tasks. Currently if a user asking teams is also the execution team then it can update it. Task id 18819 is an example of this
 17. geen taken gevonden met dze filters on aanvragende taken when it is empty. seems weird, it shouldnt say filter
 19. Liliane Lambrichts lambrli check patient rol stoel doesnt show in history task created comment
+2. When removing rules in teams for aumatic assignation the aantaal users is not being updated
+3. when a suggested team in taskplannerresource is deleted, it show a bullet icon before the red hypen
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//

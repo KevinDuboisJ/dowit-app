@@ -45,12 +45,33 @@ class BroadcastEvent implements ShouldBroadcastNow
         $channels = [];
 
         if ($this->model instanceof Task) {
+            $this->model->loadMissing([
+                'executionTeams:id',
+                'visibilityTeams:id',
+                'assignees:id',
+                'creator:id',
+            ]);
+
             $channels = array_merge(
-                $this->model->teams->map(fn($team) => new PrivateChannel("team.{$team->id}"))->toArray(),
-                $this->model->taskType->requestingTeams->map(fn($team) => new PrivateChannel("team.{$team->id}"))->toArray(),
-                $this->model->assignees->map(fn($user) => new PrivateChannel("user.{$user->id}"))->toArray(),
-                $this->model->creator ? [new PrivateChannel("user.{$this->model->creator->id}")] : [],
-                !empty($this->extraKeys['usersToUnassign']) ? array_map(fn($userId) => new PrivateChannel("user.{$userId}"), $this->extraKeys['usersToUnassign']) : [] // Broadcast to users that were unassigned to remove the task from their list
+                $this->model->executionTeams
+                    ->map(fn($team) => new PrivateChannel("team.{$team->id}"))
+                    ->toArray(),
+
+                $this->model->visibilityTeams
+                    ->map(fn($team) => new PrivateChannel("team.{$team->id}"))
+                    ->toArray(),
+
+                $this->model->assignees
+                    ->map(fn($user) => new PrivateChannel("user.{$user->id}"))
+                    ->toArray(),
+
+                $this->model->creator
+                    ? [new PrivateChannel("user.{$this->model->creator->id}")]
+                    : [],
+
+                ! empty($this->extraKeys['usersToUnassign'])
+                    ? array_map(fn($userId) => new PrivateChannel("user.{$userId}"), $this->extraKeys['usersToUnassign'])
+                    : []
             );
         }
 
@@ -60,15 +81,18 @@ class BroadcastEvent implements ShouldBroadcastNow
                     $channels[] = new PrivateChannel("user.{$userId}");
                 }
             }
-            if ($this->model->recipient_teams) {
 
+            if ($this->model->recipient_teams) {
                 foreach ($this->model->recipient_teams as $teamId) {
                     $channels[] = new PrivateChannel("team.{$teamId}");
                 }
             }
         }
 
-        return $channels;
+        return collect($channels)
+            ->unique(fn($channel) => (string) $channel)
+            ->values()
+            ->all();
     }
 
     public function broadcastWith()

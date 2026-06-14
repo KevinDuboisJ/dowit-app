@@ -19,6 +19,7 @@ use App\Enums\TaskPlannerAction;
 use App\Enums\DaysOfWeek;
 use App\Enums\TaskStatusEnum;
 use App\Enums\TaskTypeEnum;
+use App\Enums\TeamRole;
 use App\Filament\Components\PatientAutocomplete;
 use App\Models\Space;
 use Illuminate\Support\Carbon;
@@ -33,7 +34,6 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Section;
 use App\Models\User;
 use App\Models\Asset;
-use App\Models\Chain;
 use App\Models\PATIENTLIST\Visit;
 use Filament\Forms\Components\Grid;
 use App\Services\TaskAssignmentService;
@@ -41,14 +41,12 @@ use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Group;
 use App\Traits\HasFilamentTeamFields;
 use App\Models\Team;
-use App\Services\PatientService;
 use Illuminate\Support\Arr;
 use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Coolsam\Flatpickr\Forms\Components\Flatpickr;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Tables\Actions\ReplicateAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
@@ -59,6 +57,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\TaskType;
 
 class TaskPlannerResource extends Resource
 {
@@ -80,20 +79,58 @@ class TaskPlannerResource extends Resource
         return $form->schema([
 
             Section::make([
-
                 Select::make('task_type_id')
                     ->label('Taaktype')
-                    ->relationship('taskType', 'name')
+                    ->relationship(
+                        name: 'taskType',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: function (Builder $query, Get $get): Builder {
+
+                            $user = Auth::user();
+
+                            if ($user->isSuperAdmin()) return $query;
+
+                            return $query->byAvailableToTeams($user->getTeamIds());
+                        }
+                    )
                     ->required()
+                    ->disabled(fn(Get $get): bool => blank($get('ownerTeams')))
+                    ->helperText(
+                        fn(Get $get): ?string =>
+                        blank($get('ownerTeams'))
+                            ? 'Kies eerst een eigenaarsteam.'
+                            : null
+                    )
                     ->live()
+                    ->rule(function (Get $get) {
+                        return function (string $attribute, mixed $value, \Closure $fail) use ($get) {
+
+                            $user = Auth::user();
+
+                            if (! $value) {
+                                return;
+                            }
+
+                            $isAllowed = TaskType::query()
+                                ->whereKey($value)
+                                ->byAvailableToTeams($user->getTeamIds())
+                                ->exists() || $user->isSuperAdmin();
+
+                            if (! $isAllowed) {
+                                $fail('Het gekozen eigenaarsteam mag dit taaktype niet aanvragen.');
+                            }
+                        };
+                    })
                     ->afterStateUpdated(function (Select $component, Set $set, ?string $state, Get $get) {
-                        $taskType = $component->getSelectedRecord(); // TaskType model or null (no extra query)
+                        $taskType = $component->getSelectedRecord();
+
                         if (! $taskType) {
                             return;
                         }
+
                         $set('name', $taskType->name);
 
-                        if (!TaskTypeEnum::tryFrom((int) $state)?->isPatientTransport()) {
+                        if (! TaskTypeEnum::tryFrom((int) $state)?->isPatientTransport()) {
                             $set('visit_id', null);
                         }
                     }),
@@ -441,65 +478,54 @@ class TaskPlannerResource extends Resource
                                     ->default(false)
                                     ->extraAttributes(['class' => 'custom-checkbox-label']),
 
-                                Select::make('teams')
-                                    ->label('Teams')
-                                    ->relationship(name: 'teams', titleAttribute: 'name',)
-                                    // when the form is hydrated (create or edit), compute IDs
+                                Select::make('executionTeams')
+                                    ->label('Uitvoerende teams')
+                                    ->relationship(name: 'executionTeams', titleAttribute: 'name')
+                                    ->multiple()
                                     ->hidden(function (Set $set, Get $get, $livewire) {
                                         $arrOfTeamIds = self::computeSuggestedIds($get, $livewire);
-                                        $set('teams', $arrOfTeamIds);
+                                        $set('executionTeams', $arrOfTeamIds);
+
                                         return false;
                                     })
-                                    ->validationAttribute('Teams')
+                                    ->validationAttribute('Uitvoerende teams')
                                     ->requiredWithout('assignments.users')
-                                    ->validationMessages(['required_without' => 'Een taaktoewijzingsregel is vereist wanneer er geen medewerkers zijn geselecteerd'])
+                                    ->validationMessages([
+                                        'required_without' => 'Een taaktoewijzingsregel is vereist wanneer er geen medewerkers zijn geselecteerd',
+                                    ])
                                     ->multiple()
                                     ->extraAttributes(['class' => 'hidden'])
                                     ->hint(
                                         new HtmlString(view('filament.components.hint-icon', [
                                             'tooltip' => 'Toont de teams waaraan deze taakplanner een taak toewijst, op basis van de huidige toewijzingsregels<br><br>
-                                            <span class="text-green-600">Groen</span> = toegevoegd<br><span class="text-red-600 mr-1">Rood</span> = verwijderd<br>
-                                            <span class="text-gray-500 mr-2">Grijs</span> = ongewijzigd',
+            <span class="text-green-600">Groen</span> = toegevoegd<br><span class="text-red-600 mr-1">Rood</span> = verwijderd<br>
+            <span class="text-gray-500 mr-2">Grijs</span> = ongewijzigd',
                                         ])->render())
                                     )
                                     ->view('filament.components.teams', function (Get $get, $livewire) {
-                                        // Suggested IDs based on current form state
-                                        $suggested = $get('teams') ?? [];
+                                        $suggested = $get('executionTeams') ?? [];
 
-                                        // Existing team IDs on the record
-                                        $existing  = $livewire?->record?->teams()->byTeamsUserBelongsTo()->pluck('teams.id')->toArray() ?? [];
+                                        $existing = $livewire?->record?->executionTeams()
+                                            ->byTeamsUserBelongsTo()
+                                            ->pluck('teams.id')
+                                            ->toArray() ?? [];
 
-                                        // Calculate diff
-                                        $toAdd     = array_diff($suggested, $existing);
-                                        $toRemove  = array_diff($existing,  $suggested);
+                                        $toAdd = array_diff($suggested, $existing);
+                                        $toRemove = array_diff($existing, $suggested);
                                         $unchanged = array_intersect($existing, $suggested);
 
-                                        // Batch fetch all names in one go
                                         $allIds = array_unique(array_merge($toAdd, $toRemove, $unchanged));
-                                        $names  = Team::whereIn('id', $allIds)->pluck('name', 'id')->all();
+                                        $names = Team::whereIn('id', $allIds)->pluck('name', 'id')->all();
 
                                         return [
                                             'suggested' => $suggested,
-                                            'existing'  => $existing,
-                                            'toAdd'     => $toAdd,
-                                            'toRemove'  => $toRemove,
+                                            'existing' => $existing,
+                                            'toAdd' => $toAdd,
+                                            'toRemove' => $toRemove,
                                             'unchanged' => $unchanged,
-                                            'names'     => $names,
+                                            'names' => $names,
                                         ];
                                     }),
-
-
-                                // \Filament\Forms\Components\Actions::make([
-                                //     \Filament\Forms\Components\Actions\Action::make('createRule')
-                                //         ->label('Team toevoegen')
-                                //         ->icon('heroicon-m-plus')
-                                //         ->modalHeading('Voeg een regel toe')
-                                //         ->modalSubmitActionLabel('Opslaan')
-                                //         ->form(function (Form $form) {
-                                //             $form->fill();
-                                //             return TaskAssignmentRuleResource::form($form);
-                                //         })
-                                // ]),
 
                             ]),
 
@@ -507,6 +533,54 @@ class TaskPlannerResource extends Resource
                             ->schema([
                                 Section::make('')
                                     ->schema([
+
+                                        Select::make('ownerTeams')
+                                            ->label('Eigenaarsteam')
+                                            ->relationship(
+                                                name: 'ownerTeams',
+                                                titleAttribute: 'name',
+                                                modifyQueryUsing: function (Builder $query): Builder {
+                                                    $user = Auth::user();
+
+                                                    return $query
+                                                        ->when(! $user?->isSuperAdmin(), function (Builder $query) use ($user) {
+                                                            $query->whereIn(
+                                                                'teams.id',
+                                                                $user?->teams()->pluck('teams.id')->toArray() ?? []
+                                                            );
+                                                        })
+                                                        ->orderBy('name');
+                                                }
+                                            )
+                                            ->multiple()
+                                            ->pivotData([
+                                                'role' => TeamRole::Owner->value,
+                                            ])
+                                            ->preload()
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(function (Set $set, Get $get, ?array $state) {
+                                                $taskTypeId = $get('task_type_id');
+                                                $user = Auth::user();
+
+                                                $ownerTeamId = filled($state) ? (int) $state[0] : null;
+
+                                                if (! $taskTypeId || ! $ownerTeamId) {
+                                                    $set('task_type_id', null);
+                                                    return;
+                                                }
+
+                                                $isStillAllowed = TaskType::query()
+                                                    ->whereKey($taskTypeId)
+                                                    ->byAvailableToTeams([$ownerTeamId])
+                                                    ->exists() || $user?->isSuperAdmin();
+
+                                                if (! $isStillAllowed) {
+                                                    $set('task_type_id', null);
+                                                    $set('name', null);
+                                                }
+                                            }),
+
                                         Toggle::make('is_active')
                                             ->label('Actief')
                                             ->default(true),
@@ -539,10 +613,10 @@ class TaskPlannerResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('teams.id')
-                    ->label('Teams/Medewerkers')
+                TextColumn::make('executionTeams.id')
+                    ->label('Toewijzingen')
                     ->getStateUsing(function ($record) {
-                        $teamNames = $record->teams->pluck('name')->toArray();
+                        $teamNames = $record->executionTeams->pluck('name')->toArray();
 
                         $assignments = is_string($record->assignments)
                             ? json_decode($record->assignments, true)
@@ -623,8 +697,14 @@ class TaskPlannerResource extends Resource
             ])
 
             ->filters([
-                SelectFilter::make('teams')
-                    ->relationship('teams', 'name', fn($query) => $query->whereIn('teams.id', Auth::user()->teams->pluck('id'))),
+
+                SelectFilter::make('executionTeams')
+                    ->label('Uitvoerend team')
+                    ->relationship(
+                        'executionTeams',
+                        'name',
+                        fn($query) => $query->whereIn('teams.id', Auth::user()->teams->pluck('id'))
+                    ),
 
                 Filter::make('next_run_at')
                     ->label('Ingepland voor')
@@ -818,7 +898,8 @@ class TaskPlannerResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
-                'teams',
+                'ownerTeams',
+                'executionTeams',
                 'taskType',
                 'visit.bed.room',
                 'visit.patient',
@@ -862,7 +943,7 @@ class TaskPlannerResource extends Resource
                     ->map(fn($id) => ['id' => (int) $id])
             );
 
-        return TaskAssignmentService::getAssignmentRuleTeamsByTaskMatchAndTeams($task)
+        return TaskAssignmentService::getExecutionTeamsByTaskMatch($task)
             ->byTeamsUserBelongsTo()
             ->pluck('id')
             ->toArray();

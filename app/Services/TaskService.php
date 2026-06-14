@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\TaskPriorityEnum;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -12,8 +11,6 @@ use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
 use App\Enums\TaskStatusEnum;
 use App\Models\Tag;
-use App\Models\TaskStatus;
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 
@@ -49,7 +46,17 @@ class TaskService
       //Sync side stuff (tags, assignees, teams)
       $task->syncTags($data['tags'] ?? []);
       $task->syncAssignees($data['assignees'] ?? []);
-      $task->syncTeams($data['teamsMatchingAssignment'] ?? []);
+      $task->syncExecutionTeams($data['teamsMatchingAssignment'] ?? []);
+
+      // Needed because applicant visibility rules can depend on tags
+      $task->load('tags');
+
+      // Visibility for “aangevraagde taken”
+      $task->syncVisibilityTeams(
+        TaskAssignmentService::getVisibilityTeamsByTaskMatch($task)
+          ->pluck('id')
+          ->toArray()
+      );
 
       $userId =  Auth::id() ?? config('app.system_user_id');
 
@@ -67,7 +74,7 @@ class TaskService
         DB::connection('patientlist')->commit();
       }
 
-      // eager
+      // Eager load final state after all syncs
       return $task->load(Task::getRelationships());
     } catch (\Throwable $e) {
 
@@ -116,7 +123,7 @@ class TaskService
       }
 
       // Handle task completion timestamp
-      if($task->status_id === TaskStatusEnum::Completed->value) {
+      if ($task->status_id === TaskStatusEnum::Completed->value) {
         $task->update(['completed_at' => now()]);
       } else {
         $task->update(['completed_at' => null]);
@@ -129,6 +136,13 @@ class TaskService
     PatientService::handleFinalCleanTask($task);
 
     $task->load(Task::getRelationships());
+
+    $task->syncVisibilityTeams(
+      TaskAssignmentService::getVisibilityTeamsByTaskMatch($task)
+        ->pluck('id')
+        ->toArray()
+    );
+
     Cache::put("task_{$task->id}", $task, now()->addMinutes(3));
     broadcast(new BroadcastEvent($task, 'task_updated', 'dashboard', $data));
 
@@ -150,6 +164,7 @@ class TaskService
       ]);
     }
   }
+
 
   public function trackTaskMetaDataChanges(Task $task, array $data): ?array
   {
@@ -293,11 +308,12 @@ class TaskService
       'visit' => fn($q) => $q->with(['patient', 'bed.room']),
       'tags',
       'status',
-      'taskType' => fn($q) => $q->with(['assets', 'teams', 'requestingTeams']),
+      'taskType' => fn($q) => $q->with(['assets', 'availableToTeams']),
       'space',
       'spaceTo',
       'assignees',
-      'teams' => fn($q) => $q->select('teams.id', 'teams.name'),
+      'executionTeams' => fn($q) => $q->select('teams.id', 'teams.name'),
+      'visibilityTeams' => fn($q) => $q->select('teams.id', 'teams.name'),
     ];
 
     $filters = $request->input('filters', []);
@@ -306,6 +322,7 @@ class TaskService
     $perPage = min((int) $request->input('perPage', 100), 200);
 
     $user = Auth::user();
+    $teamIds = $user->getTeamIds();
 
     $query = Task::query()
       ->with($relationships)
@@ -314,9 +331,9 @@ class TaskService
 
     // Base scope depending on selected mode
     if ($view === 'requested-tasks') {
-      $query->byRequestedTasks($user);
+      $query->byVisibilityTeams($teamIds);
     } else {
-      $query->byTasksToExecute($user);
+      $query->byExecutionTeams($teamIds);
     }
 
     if ($hasFilters) {

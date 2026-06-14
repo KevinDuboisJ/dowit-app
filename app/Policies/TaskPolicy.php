@@ -39,7 +39,7 @@ class TaskPolicy
         $isAssignee = $task->assignees->contains('id', $user->id);
         $isAdmin = $user->isAdmin();
 
-        $isRequestingTeam = $task->taskType?->requestingTeams
+        $isRequestingTeam = $task->taskType?->availableToTeams
             ?->pluck('id')
             ->intersect($teamIds)
             ->isNotEmpty() ?? false;
@@ -51,7 +51,7 @@ class TaskPolicy
     {
         $teamIds = $user->getTeamIds();
 
-        return $task->taskType?->teams
+        return $task->executionTeams
             ?->pluck('id')
             ->intersect($teamIds)
             ->isNotEmpty() ?? false;

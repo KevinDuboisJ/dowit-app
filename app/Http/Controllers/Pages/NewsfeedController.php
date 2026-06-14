@@ -21,7 +21,8 @@ class NewsfeedController extends Controller
     $newsfeed = Comment::query()
       ->with([
         'creator' => fn($q) => $q->withoutGlobalScopes(),
-        'task.taskType' => fn($q) => $q->with(['assets', 'teams', 'requestingTeams']),
+        'task.executionTeams',
+        'task.taskType' => fn($q) => $q->with(['assets', 'availableToTeams']),
         'task.assignees',
         'status:id,name',
       ])

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Contracts\HasRequestingTeamsScopeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,12 +10,14 @@ use App\Models\Space;
 use App\Traits\HasCreator;
 use App\Traits\HasAccessScope;
 use App\Traits\HasTeams;
+use App\Enums\TaskAssignmentRuleType;
 
-class TaskAssignmentRule extends Model implements HasRequestingTeamsScopeInterface
+class TaskAssignmentRule extends Model
 {
-    use SoftDeletes, HasCreator, HasTeams, HasAccessScope;
+    use SoftDeletes, HasCreator, HasTeams;
 
     protected $casts = [
+        'type' => TaskAssignmentRuleType::class,
         'campuses' => 'array',
         'task_types' => 'array',
         'tags' => 'array',
@@ -47,6 +48,11 @@ class TaskAssignmentRule extends Model implements HasRequestingTeamsScopeInterfa
     public function tags()
     {
         return $this->belongsTo(Tag::class, 'tags');
+    }
+
+    public function scopeByType(Builder $query, TaskAssignmentRuleType $type): Builder
+    {
+        return $query->where('type', $type->value);
     }
 
     public function scopeByTaskMatch(Builder $query, Task $task): Builder
@@ -89,24 +95,5 @@ class TaskAssignmentRule extends Model implements HasRequestingTeamsScopeInterfa
         });
 
         return $query;
-    }
-
-    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
-    {
-        // 1) Get task type IDs that have requestingTeams in user's teams
-        $taskTypeIds = TaskType::whereHas('requestingTeams', function (Builder $q) use ($teamIds) {
-            $q->whereKey($teamIds);
-        })->pluck('id');
-
-        if ($taskTypeIds->isEmpty()) {
-            return $query->whereRaw('0 = 1');
-        }
-
-        // 2) Filter rules where JSON column task_types contains any of those ids
-        return $query->where(function (Builder $q) use ($taskTypeIds) {
-            foreach ($taskTypeIds as $taskTypeId) {
-                $q->orWhereJsonContains('task_types', ['id' => $taskTypeId]);
-            }
-        });
     }
 }

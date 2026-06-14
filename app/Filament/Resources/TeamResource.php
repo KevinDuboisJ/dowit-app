@@ -46,8 +46,7 @@ class TeamResource extends Resource
                     ->label('Campus')
                     ->relationship('campus', 'name')
                     ->searchable()
-                    ->preload()
-                    ->required(),
+                    ->preload(),
 
                 Checkbox::make('show_rules')
                     ->formatStateUsing(fn(?Team $record) => (bool) $record?->autoassign_rules)
@@ -112,7 +111,7 @@ class TeamResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->label('Teamnaam'),
-
+                
                 TextColumn::make('campus.name')
                     ->label('Campus')
                     ->sortable()
@@ -121,7 +120,9 @@ class TeamResource extends Resource
 
                 TextColumn::make('users_count')
                     ->label('Aantal gebruikers')
-                    ->counts('users'),
+                    ->counts([
+                        'users as users_count' => fn($query) => $query->active(),
+                    ]),
 
                 IconColumn::make('autoassign_rules')
                     ->label('Automatische toewijzing')

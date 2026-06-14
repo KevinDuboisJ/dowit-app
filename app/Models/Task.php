@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Contracts\HasRequestingTeamsScopeInterface;
+use App\Contracts\HasVisibilityTeamsScopeInterface;
 use App\Enums\TaskPriorityEnum;
 use App\Models\Team;
 use App\Models\PATIENTLIST\BedVisit;
@@ -12,18 +12,19 @@ use App\Models\TaskType;
 use App\Models\Space;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Auth;
-use App\Traits\HasTeams;
 use App\Traits\HasCreator;
 use App\Enums\TaskStatusEnum;
+use App\Enums\TeamRole;
 use App\Services\ChainService;
 use App\Traits\HasAssignees;
 use App\Traits\HasAccessScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Task extends Model implements HasRequestingTeamsScopeInterface
+class Task extends Model implements HasVisibilityTeamsScopeInterface
 {
-    use HasAssignees, HasCreator, HasTeams, HasAccessScope;
+    use HasAssignees, HasCreator, HasAccessScope;
 
     protected $with = ['taskType'];
     protected $appends = ['capabilities', 'is_active', 'start_date_time_with_offset'];
@@ -133,9 +134,35 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
         return $this->belongsTo(BedVisit::class);
     }
 
-    public function teams()
+    public function teamRelationPath(): string
     {
-        return $this->belongsToMany(Team::class, 'task_team');
+        return 'executionTeams';
+    }
+
+    public function executionTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Team::class,
+            'task_team',
+            'task_id',
+            'team_id'
+        )
+            ->wherePivot('role', TeamRole::Execution->value)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function visibilityTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Team::class,
+            'task_team',
+            'task_id',
+            'team_id'
+        )
+            ->wherePivot('role', TeamRole::Visibility->value)
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function tags()
@@ -180,44 +207,33 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
         // Otherwise, restrict to teams the user belongs to
         $teamIds = $user->getTeamIds();
 
-        return $query->whereHas('teams', function ($teamQuery) use ($teamIds) {
+        return $query->whereHas('executionTeams', function ($teamQuery) use ($teamIds) {
             $teamQuery->whereIn('teams.id', $teamIds);
         });
     }
 
-    public function scopeByTasksToExecute($query, User $user)
+    public function scopeByExecutionTeams($query, array $teamIds)
     {
-        $teamIds = $user->getTeamIds();
+        $user = Auth::user();
 
         return $query->where(function ($q) use ($user, $teamIds) {
             $q->whereHas('assignees', fn($sub) => $sub->whereKey($user->id))
-                ->orWhereHas('teams', fn($sub) => $sub->whereIn('teams.id', $teamIds));
+                ->orWhereHas('executionTeams', fn($sub) => $sub->whereIn('teams.id', $teamIds));
         });
     }
 
-    public function scopeByRequestedTasks(Builder $query, User $user): Builder
+    public function scopeByVisibilityTeams(Builder $query, array $teamIds): Builder
     {
-        $teamIds = $user->getTeamIds();
-
+        $user = Auth::user();
+        
         return $query->where(function (Builder $q) use ($user, $teamIds) {
-            $q->whereHas('creator', fn(Builder $sub) => $sub->whereKey($user->id))
-                ->orWhere(function (Builder $sub) use ($teamIds) {
-                    $sub->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {
-                        $q->whereIn('teams.id', $teamIds);
-                    })
-                        ->whereDoesntHave('taskType.teams', function (Builder $q) use ($teamIds) {
-                            $q->whereIn('teams.id', $teamIds);
-                        });
+            $q->where('created_by', $user->id)
+                ->orWhereHas('visibilityTeams', function (Builder $sub) use ($teamIds) {
+                    $sub->whereIn('teams.id', $teamIds);
                 });
         });
     }
 
-    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
-    {
-        return $query->whereHas('taskType.requestingTeams', function (Builder $q) use ($teamIds) {
-            $q->whereIn('teams.id', $teamIds);
-        });
-    }
 
     public function activate()
     {
@@ -234,12 +250,22 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
         $this->tags()->sync($tags);
     }
 
-    public function syncTeams(array $teams): void
+    public function syncExecutionTeams(array $teamIds): void
     {
-        if (!empty($teams))
-            $this->teams()->sync($teams);
-        else
-            $this->teams()->attach(config('app.system_team_id'));
+        $teamIds = ! empty($teamIds)
+            ? $teamIds
+            : [config('app.system_team_id')];
+
+        $this->executionTeams()->syncWithPivotValues($teamIds, [
+            'role' => TeamRole::Execution->value,
+        ]);
+    }
+
+    public function syncVisibilityTeams(array $teamIds): void
+    {
+        $this->visibilityTeams()->syncWithPivotValues($teamIds, [
+            'role' => TeamRole::Visibility->value,
+        ]);
     }
 
     public static function getRelationships()
@@ -251,7 +277,8 @@ class Task extends Model implements HasRequestingTeamsScopeInterface
             'taskType' => fn($query) => $query->with(['assets']),
             'space',
             'assignees',
-            'teams' => fn($query) => $query->select('teams.id', 'teams.name'),
+            'executionTeams' => fn($query) => $query->select('teams.id', 'teams.name'),
+            'visibilityTeams' => fn($query) => $query->select('teams.id', 'teams.name'),
         ];
     }
 }
