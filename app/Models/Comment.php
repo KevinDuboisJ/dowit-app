@@ -107,7 +107,7 @@ class Comment extends Model
     // User teams is in one of the task's teams
     public function scopeByTaskTeams(Builder $query, array $teamIds): Builder
     {
-        return $query->whereHas('task.teams', function (Builder $teamQuery) use ($teamIds) {
+        return $query->whereHas('task.executionTeams', function (Builder $teamQuery) use ($teamIds) {
             $teamQuery->whereIn('teams.id', $teamIds);
         });
     }

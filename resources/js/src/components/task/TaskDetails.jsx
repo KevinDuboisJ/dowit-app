@@ -184,7 +184,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
               />
             }
             label="Teams:"
-            value={<TeamTag user={user} teams={task?.teams} />}
+            value={<TeamTag user={user} teams={task?.execution_teams} />}
           />
 
           {task.capabilities.can_update && (

@@ -34,7 +34,7 @@ class TaskPlannerService
     $now = now()->second(0);
 
     $planners = Cache::remember(self::CACHE_KEY, $this->getCacheExpiration(), function () {
-      return TaskPlanner::with(['teams', 'tags', 'visit', 'taskType'])
+      return TaskPlanner::with(['executionTeams', 'tags', 'visit', 'taskType'])
         ->select('task_planners.*')
         ->join('task_types', 'task_planners.task_type_id', '=', 'task_types.id')
         // ->whereDate('next_run_at', today())   // optional: Add this if you want to limit to only today's planners
@@ -126,7 +126,7 @@ class TaskPlannerService
           ],
           'tags' => $taskPlanner->tags->pluck('id')->toArray(),
           'assignees' => $taskPlanner->assignments['users'] ?? [],
-          'teamsMatchingAssignment' => $taskPlanner->teams->pluck('id')->toArray(),
+          'teamsMatchingAssignment' => $taskPlanner->executionTeams->pluck('id')->toArray(),
         ];
 
         $taskService = new TaskService();
@@ -175,7 +175,7 @@ class TaskPlannerService
     $taskPlanner->updateNextRunDate();
     return TaskPlannerEvaluationResultEnum::Rescheduled;
   }
-  
+
   public function applyExecutionRules(TaskPlanner $taskPlanner): TaskPlannerEvaluationResultEnum
   {
     if ($taskPlanner->visit_id && $taskPlanner->visit?->bed_id === null && $taskPlanner->visit?->discharged_at === null) {
@@ -266,20 +266,5 @@ class TaskPlannerService
 
     // If no taskPlanner, cache for a long period (e.g., 1 hour)
     return 3600;
-  }
-
-  /**
-   * Sync the TaskPlanner’s teams from a pre-computed array of IDs.
-   *
-   * @param  TaskPlanner  $planner
-   * @param  int[]        $teamIds
-   */
-  public function syncAssignedTeams(TaskPlanner $planner, array $teamIds): void
-  {
-    // Only sync the IDs the user could actually assign
-    $allowed = Auth::user()->teams->pluck('id')->all();
-    $toSync  = array_intersect($teamIds, $allowed);
-
-    $planner->teams()->sync($toSync);
   }
 }

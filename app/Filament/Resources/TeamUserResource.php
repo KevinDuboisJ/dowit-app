@@ -56,10 +56,10 @@ class TeamUserResource extends Resource
             ]);
     }
 
-
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn(Builder $query) => $query->active())
             ->columns([
                 TextColumn::make('firstname')
                     ->label('Voornaam')
@@ -85,7 +85,7 @@ class TeamUserResource extends Resource
                     ->label('Teams')
                     ->limit(30) // Truncate display after 20 characters
                     ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state),
-                    
+
                 TextColumn::make('last_login_at')
                     ->label('Laatste aanmelding')
                     ->datetime('d/m/Y H:m:s')

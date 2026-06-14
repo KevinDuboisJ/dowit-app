@@ -2,9 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\TaskConfigurator;
+use App\Enums\TaskAssignmentRuleType;
 use App\Filament\Resources\TaskAssignmentRuleResource\Pages;
-use App\Filament\Resources\TaskAssignmentRuleResource\RelationManagers;
 use App\Models\TaskAssignmentRule;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
@@ -15,12 +14,10 @@ use App\Models\Space;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use App\Models\TaskType;
-use Filament\Tables\Columns\ViewColumn;
-use Filament\Tables\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use App\Traits\HasFilamentTeamFields;
 use Illuminate\Database\Eloquent\Model;
-use Filament\Forms\Get;
+use Illuminate\Support\Facades\Auth;
 
 class TaskAssignmentRuleResource extends Resource
 {
@@ -31,6 +28,11 @@ class TaskAssignmentRuleResource extends Resource
     protected static ?string $navigationGroup = 'Taakconfigurator';
     protected static ?int $navigationSort = 3;
     protected static array $staticOptions;
+
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->isSuperAdmin();
+    }
 
     public static function GetTheform(Form $form): Form
     {
@@ -49,15 +51,24 @@ class TaskAssignmentRuleResource extends Resource
                     ->rows(1)
                     ->columnSpanFull(),
 
+
+                Select::make('type')
+                    ->label('Type')
+                    ->options(TaskAssignmentRuleType::class)
+                    ->default(TaskAssignmentRuleType::Execution)
+                    ->required()
+                    ->native(false),
+
+
                 Section::make([
                     Select::make('teams')
-                        ->label('Teams')
+                        ->label('Teams waarop deze regel van toepassing is')
                         ->relationship(
                             name: 'teams',
                             titleAttribute: 'name',
-                            modifyQueryUsing: fn($query) => $query->byTeamsUserBelongsTo()
                         )
                         ->multiple()
+                        ->preload()
                         ->required(function (?Model $record, $state) {
 
                             if (!$record && empty($state)) {
@@ -160,7 +171,12 @@ class TaskAssignmentRuleResource extends Resource
                 TextColumn::make('description')
                     ->label('Omschrijving')
                     ->sortable(),
-                    
+
+                TextColumn::make('type')
+                    ->label('Type')
+                    ->formatStateUsing(fn($state) => $state instanceof TaskAssignmentRuleType ? $state->getLabel() : $state)
+                    ->badge(),
+
                 TextColumn::make('teams.name')
                     ->label('Teams')
                     ->formatStateUsing(fn($state, $record) => $record->teams->pluck('name')->join(', '))
@@ -182,7 +198,7 @@ class TaskAssignmentRuleResource extends Resource
                 TextColumn::make('task_types')
                     ->formatStateUsing(function ($state) {
                         if (!is_array($state)) {
-                          
+
                             return $state;
                         }
                         // If it's a single object with a "name" key

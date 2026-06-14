@@ -6,7 +6,6 @@ use App\Filament\Resources\TaskTypeResource\Pages;
 use App\Models\TaskType;
 use App\Traits\HasFilamentTeamFields;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -14,10 +13,10 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\IconColumn as TablesIconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Guava\FilamentIconPicker\Forms\IconPicker;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 
 class TaskTypeResource extends Resource
@@ -34,21 +33,21 @@ class TaskTypeResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->isSuperAdmin();
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Group::make()
                     ->schema([
-                        HasFilamentTeamFields::belongsToTeamsField(
-                            label: 'Uitvoerende teams',
-                            tooltip: 'Teams die dit type taken kunnen aanvragen en uitvoeren'
-                        ),
-
                         Select::make('requesting_teams')
                             ->label('Aanvragende teams')
                             ->multiple()
-                            ->relationship('requestingTeams', 'name')
+                            ->relationship('availableToTeams', 'name')
                             ->preload()
                             ->searchable()
                             ->hint(
@@ -127,12 +126,7 @@ class TaskTypeResource extends Resource
                     ->label('Naam')
                     ->width('300px'),
 
-                TextColumn::make('teams.name')
-                    ->label('Teams')
-                    ->width('300px')
-                    ->listWithLineBreaks(),
-
-                TextColumn::make('requestingTeams.name')
+                TextColumn::make('availableToTeams.name')
                     ->label('Aanvragende teams')
                     ->width('300px')
                     ->listWithLineBreaks(),

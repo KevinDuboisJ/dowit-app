@@ -91,7 +91,7 @@ class DashboardController extends Controller
       'task_types' => Inertia::optional(function () use ($userTeamIds) {
         return TaskType::query()
           ->where('is_system', false)
-          ->whereHas('requestingTeams', function ($q) use ($userTeamIds) {
+          ->whereHas('availableToTeams', function ($q) use ($userTeamIds) {
             $q->whereIn('teams.id', $userTeamIds);
           })
           ->get()
@@ -119,7 +119,7 @@ class DashboardController extends Controller
             ->map(fn($id) => ['id' => (int) $id])
         );
 
-        return TaskAssignmentService::getAssignmentRuleTeamsByTaskMatchAndTeams($task)->get();
+        return TaskAssignmentService::getExecutionTeamsByTaskMatch($task)->get();
       }),
 
       'announcements' => Comment::with('creator')

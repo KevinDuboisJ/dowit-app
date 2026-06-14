@@ -98,8 +98,8 @@ class ChainService
             'locker_id' => Arr::get($params, 'locker_id'),
         ]);
 
-        $teamIds = $chain->teams->pluck('id')->toArray();
-        $task->teams()->sync($teamIds);
+        $teamIds = $chain->teams()->pluck('teams.id')->toArray();
+        $task->syncExecutionTeams($teamIds);
 
         broadcast(new BroadcastEvent($task, 'task_created', 'ChainService'));
     }

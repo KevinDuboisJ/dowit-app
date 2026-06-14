@@ -33,7 +33,7 @@ class TaskController extends Controller
                     ->toArray();
 
                 // Sync the teams with the task.
-                $task->teams()->sync($teamIds);
+                $task->syncExecutionTeams($teamIds);
 
                 return $task;
             });

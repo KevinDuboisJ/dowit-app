@@ -4,11 +4,10 @@ namespace App\Policies;
 
 use App\Models\TaskPlanner;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 class TaskPlannerPolicy
 {
-     /**
+    /**
      * Run before any other check: if this returns non-null, that result is used.
      */
     public function before(User $user, string $ability)
@@ -33,11 +32,15 @@ class TaskPlannerPolicy
 
     public function update(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAtLeastOneTeam($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator() || $taskPlanner->isAssignedTo(Auth::user());
+        return $taskPlanner->ownerTeams()
+            ->whereIn('teams.id', $user->getTeamIds())
+            ->exists() || $taskPlanner->isCreator();
     }
 
     public function delete(User $user, TaskPlanner $taskPlanner): bool
     {
-        return $user->userBelongsToAllTeams($taskPlanner->teams->pluck('id')->toArray()) || $taskPlanner->isCreator() || $taskPlanner->isAssignedTo(Auth::user());
+        return $taskPlanner->ownerTeams()
+            ->whereIn('teams.id', $user->getTeamIds())
+            ->exists() || $taskPlanner->isCreator();
     }
 }

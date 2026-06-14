@@ -1,3 +1,5 @@
+
+
 what if the is a team that needs to make both a task for aanvraag schoonmaak CA en CD do i keep them separtaed, the weird is that it says for example CA but
 still they also have to choose a campus. while it clearly in the subtask it says "anvraag schoonmaak CA"
 
@@ -112,6 +114,15 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 16. Ask Natascha how to handle the updates of the tasks. Currently if a user asking teams is also the execution team then it can update it. Task id 18819 is an example of this
 17. geen taken gevonden met dze filters on aanvragende taken when it is empty. seems weird, it shouldnt say filter
 19. Liliane Lambrichts lambrli check patient rol stoel doesnt show in history task created comment
+2. When removing rules in teams for aumatic assignation the aantaal users is not being updated
+3. when a suggested team in taskplannerresource is deleted, it show a bullet icon before the red hypen
+4. syncExecutionTeams and syncVisibilityTeams must go togehter always? api v1 taskcontroller only does syncExecutionTeams
+5. el creador no puede ver el dueno del record si no esta en ese equipo. esto lo vi en el taskplanner
+6. Move api task creation to use assignment rules execution teams instead of using the chains field selection
+7. Dont allow users without team to logon. Show message to ask them to ask an admin to add them to a team.
+8. arais garcia gets white scteen when going to /adm instead of access error
+9. check if starten appears for availableToTeams in the aangevraagde taken.
+7. Sandra Kyeraa issue where she doesnt have accoubnt in dowit for one of the contract and the other she does have
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//

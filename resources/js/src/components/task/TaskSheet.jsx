@@ -567,8 +567,7 @@ const TeamsMatchingAssignmentRules = ({ control, setValue }) => {
     <div>
       <h2 className="text-sm font-medium">Teams</h2>
       <p className="text-sm text-slate-500">
-        Dit toont de teams waaraan deze taak zal worden toegewezen op basis van
-        de huidige taaktoewijzingsregels
+        Dit toont de teams waaraan deze taak wordt toegewezen volgens de huidige regels.
       </p>
 
       {teamsMatchingAssignmentRules.length > 0 ? (

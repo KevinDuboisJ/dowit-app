@@ -1,27 +1,38 @@
 <?php
 
+
 namespace App\Services;
 
-use App\Models\TaskAssignmentRule;
+use App\Enums\TaskAssignmentRuleType;
 use App\Models\Team;
 use App\Models\Task;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 class TaskAssignmentService
 {
-  /**
-   * Retrieve all Teams that match both the AssignmentRules for the given Task
-   *
-   * @param  Task   $task
-   * @param  int[]  $allowedTeamsScopeIds only include these teams
-   * @return Collection|\App\Models\Team[]
-   */
-  public static function getAssignmentRuleTeamsByTaskMatchAndTeams(Task $task)
-  {
-    return Team::whereHas('taskAssignmentRules', function ($query) use ($task) {
-      $query->byTaskMatch($task);
-    })
-      ->select('id', 'name')
-      ->distinct();
-  }
+    public static function getAssignmentRuleTeamsByTaskMatchAndTeams(Task $task)
+    {
+        return self::getExecutionTeamsByTaskMatch($task);
+    }
+
+    public static function getExecutionTeamsByTaskMatch(Task $task)
+    {
+        return self::getTeamsByTaskMatchAndType($task, TaskAssignmentRuleType::Execution);
+    }
+
+    public static function getVisibilityTeamsByTaskMatch(Task $task)
+    {
+        return self::getTeamsByTaskMatchAndType($task, TaskAssignmentRuleType::Visibility);
+    }
+
+    public static function getTeamsByTaskMatchAndType(Task $task, TaskAssignmentRuleType $type)
+    {
+        return Team::whereHas('taskAssignmentRules', function (Builder $query) use ($task, $type) {
+            $query
+                ->byType($type)
+                ->byTaskMatch($task);
+        })
+            ->select('id', 'name')
+            ->distinct();
+    }
 }

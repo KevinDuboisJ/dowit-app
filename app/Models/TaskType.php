@@ -2,20 +2,17 @@
 
 namespace App\Models;
 
-use App\Contracts\HasRequestingTeamsScopeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Asset;
-use App\Traits\HasTeams;
 use App\Traits\HasCreator;
-use App\Traits\HasAccessScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TaskType extends Model implements HasRequestingTeamsScopeInterface
+class TaskType extends Model
 {
-    use HasFactory, HasCreator, HasTeams, HasAccessScope;
+    use HasFactory, HasCreator;
 
     protected $fillable = ['name', 'team_id'];
 
@@ -29,14 +26,14 @@ class TaskType extends Model implements HasRequestingTeamsScopeInterface
         return $this->belongsToMany(Asset::class);
     }
 
-    public function requestingTeams(): BelongsToMany
+    public function availableToTeams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'task_type_requesting_team');
     }
 
-    public function scopeByRequestingTeams(Builder $query, array $teamIds): Builder
+    public function scopeByAvailableToTeams(Builder $query, array $teamIds): Builder
     {
-        return $query->whereHas('requestingTeams', function (Builder $q) use ($teamIds) {
+        return $query->whereHas('availableToTeams', function (Builder $q) use ($teamIds) {
             $q->whereIn('teams.id', $teamIds);
         });
     }

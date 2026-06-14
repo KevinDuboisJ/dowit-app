@@ -65,6 +65,11 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         return $this->belongsToMany(Task::class);
     }
 
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     // Scope users by teams or default to the authenticated user's teams
     public function scopeByTeams(Builder $query, ?array $teamIds = null): Builder
     {
@@ -126,7 +131,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
 
         return $this;
     }
-    
+
     public function setLastLogout()
     {
         $this->last_logout_at = now();
