@@ -119,10 +119,9 @@ Bij een verandering van bed kan het gebeuren dat de patiënt op dat moment geen 
 4. syncExecutionTeams and syncVisibilityTeams must go togehter always? api v1 taskcontroller only does syncExecutionTeams
 5. el creador no puede ver el dueno del record si no esta en ese equipo. esto lo vi en el taskplanner
 6. Move api task creation to use assignment rules execution teams instead of using the chains field selection
-7. Dont allow users without team to logon. Show message to ask them to ask an admin to add them to a team.
 8. arais garcia gets white scteen when going to /adm instead of access error
 9. check if starten appears for availableToTeams in the aangevraagde taken.
-7. Sandra Kyeraa issue where she doesnt have accoubnt in dowit for one of the contract and the other she does have
+7. Sandra Kyeraa issue where she doesnt have accoubnt in dowit for one of the contract and the other she does have.
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//

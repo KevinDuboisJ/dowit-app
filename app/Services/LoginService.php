@@ -50,6 +50,12 @@ class LoginService implements UserAuthenticator
       throw new AuthenticationException('Je hebt geen toegangsprofiel');
     }
 
+    if (! $user->teams()->exists()) {
+      throw new AuthenticationException(
+        'Je bent nog niet gekoppeld aan een team. Vraag een admin om je toe te voegen aan een team.'
+      );
+    }
+
     session(['roles' => $roles]);
 
     if (!$this->isImpersonated()) {

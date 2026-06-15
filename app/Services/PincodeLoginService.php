@@ -40,6 +40,13 @@ class PincodeLoginService implements UserAuthenticator
       throw new AuthenticationException('Je hebt geen toegangsprofiel');
     }
 
+    if (! $user->teams()->exists()) {
+      throw new AuthenticationException(
+        'Je bent nog niet gekoppeld aan een team. Vraag een administrator om je toe te voegen aan een team.'
+      );
+    }
+
+
     $user->setLastLogin();
     $user->save();
 

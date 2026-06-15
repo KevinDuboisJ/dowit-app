@@ -47,7 +47,6 @@ class LoginController extends Controller
         try {
             $validated = $authenticator->validate($request);
             $authenticator->authenticate($validated['username'], $validated['password']);
-            
         } catch (ModelNotFoundException $e) {
             throw ValidationException::withMessages([
                 'wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker',
@@ -65,7 +64,7 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-        
+
         $user->setLastLogout();
 
         $user->save();
