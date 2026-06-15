@@ -35,7 +35,6 @@
                     <tr class="border-b border-gray-200 dark:border-gray-700">
                         <th class="px-4 py-3 text-left font-medium">Datum</th>
                         <th class="px-4 py-3 text-left font-medium">Event</th>
-                        <th class="px-4 py-3 text-left font-medium">Commentaar</th>
                     </tr>
                 </thead>
 
@@ -60,10 +59,6 @@
                                 @else
                                     {{ $event }}
                                 @endif
-                            </td>
-
-                            <td class="px-4 py-3 break-words">
-                                {{ $log->content ?? '-' }}
                             </td>
                         </tr>
                     @endforeach

@@ -10,14 +10,13 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use App\Traits\HasTeams;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\Filter;
-use App\Models\Comment;
 use App\Enums\eventEnum;
+use App\Models\DeviceUserLog;
 use Filament\Support\Enums\MaxWidth;
 
 class UserResource extends Resource
@@ -128,8 +127,8 @@ class UserResource extends Resource
                         ->modalSubmitAction(false)
                         ->modalCancelActionLabel('Sluiten')
                         ->modalContent(function (User $record) {
-                            $logs = Comment::query()
-                                ->where('created_by', $record->id)
+                            $logs = DeviceUserLog::query()
+                                ->where('user_id', $record->id)
                                 ->whereIn('event', [
                                     EventEnum::UserLoggedIn->value,
                                     EventEnum::UserLoggedOut->value,

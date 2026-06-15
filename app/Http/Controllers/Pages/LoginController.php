@@ -70,12 +70,6 @@ class LoginController extends Controller
 
         $user->save();
 
-        Comment::create([
-            'created_by' => $user->id,
-            'event' => EventEnum::UserLoggedOut->value,
-            'content' => 'Gebruiker heeft zich uitgelogd',
-        ]);
-
         $device = Device::resolveFromHostname();
         $device->setLastUsed($user)->save();
         $device->logUserUsage($user, EventEnum::UserLoggedOut);
