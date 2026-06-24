@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, usePage } from '@inertiajs/react'
+import {Link} from '@inertiajs/react'
 import {
   Lucide,
   DropdownMenu,
@@ -13,9 +13,6 @@ import {
 import {FontSizeSlider} from '@/components'
 
 const UserMenu = ({user, fontSize, setFontSize}) => {
-  const { currentDevice } = usePage().props
-  const deviceName = currentDevice?.description || currentDevice?.identifier || 'Geen poetskar geselecteerd'
-
   return (
     <DropdownMenu className="fadeInRight z-[999] w-38">
       <DropdownMenuTrigger
@@ -61,21 +58,6 @@ const UserMenu = ({user, fontSize, setFontSize}) => {
               </div>
             ))}
         </DropdownMenuLabel>
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem tag="div">
-          <Link
-            href="/select-device/switch"
-            method="post"
-            className="flex w-full font-normal text-sm text-gray-700 items-center gap-2"
-          >
-            <Lucide icon="ShoppingCart" className="w-4 h-4 shrink-0" />
-            <span className="flex flex-col leading-tight">
-              <span className="font-medium text-gray-700">{deviceName}</span>
-              <span className="text-xs text-gray-500 font-light">Poetskar wisselen</span>
-            </span>
-          </Link>
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem tag="div">
