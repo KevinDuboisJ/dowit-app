@@ -51,16 +51,6 @@ class Device extends Model
         return preg_replace('/\.monica\.be$/', '', gethostbyaddr($_SERVER['REMOTE_ADDR']));
     }
 
-    public function logUserUsage(User $user, EventEnum $event): void
-    {
-        DeviceUserLog::create([
-            'identifier' => $this->identifier,
-            'user_id' => $user->id,
-            'device_id' => $this->id,
-            'event' => $event,
-        ]);
-    }
-
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class);

@@ -30,8 +30,8 @@ enum EventEnum: string
             self::Announcement => 'Aankondiging',
             self::UserLoggedIn => 'ingelogd',
             self::UserLoggedOut => 'Uitgelogd',
-            self::UserSelectedDevice => 'Toestel geselecteerd',
-            self::UserSwitchedDevice => 'Toestel gewisseld',
+            self::UserSelectedDevice => 'Werkmiddel geselecteerd',
+            self::UserSwitchedDevice => 'Werkmiddel gewisseld',
         };
     }
 }

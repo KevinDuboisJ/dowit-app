@@ -56,7 +56,9 @@ class ChainResource extends Resource
     {
         return $table->columns([
             TextColumn::make('identifier')->label('Identificatie')
-                ->description(fn(Chain $record): ?string => $record->description),
+                ->description(fn(Chain $record): ?string => $record->description)
+                ->searchable(),
+                
             TextColumn::make('actions')
                 ->label('Acties')
                 ->formatStateUsing(function (Model $record) {

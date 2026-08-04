@@ -26,7 +26,7 @@ export const SideMenu = React.memo(
           <div className="side-nav__header flex items-center">
             <a href="/" className="fadeInRight z-50 flex items-center">
               <img
-                alt="Spacem²"
+                alt="Dowit"
                 className="side-nav__header__logo"
                 src={Logo}
                 width="100px"

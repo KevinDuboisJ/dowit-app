@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\UserResource;
+use App\Services\DeviceSelectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
@@ -15,6 +17,12 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+
+    public function __construct(
+        private DeviceSelectionService $deviceSelectionService
+    ) {}
+
 
     /**
      * Determines the current asset version.
@@ -37,8 +45,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request)
     {
+        $user = Auth::user()?->loadMissing('teams:id,name');
+
+        if ($user) {
+            $userResource = new UserResource($user);
+            $userResource->append([
+                'devices' => [
+                    'cleaningCart' => $this->deviceSelectionService->getLastCleaningCartSelection($user),
+                ],
+            ]);
+            $user = $userResource->resolve();
+        }
+
         return array_merge(parent::share($request), [
-            'user' => Auth::check() ? Auth::user()->loadMissing('teams:id,name') : null,
+            'user' => $user,
             'flash' => [
                 'message' => fn() => $request->session()->get('message'),
             ],

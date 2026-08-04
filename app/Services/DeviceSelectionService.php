@@ -7,6 +7,7 @@ use App\Enums\TeamEnum;
 use App\Models\Device;
 use App\Models\DeviceUserLog;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 class DeviceSelectionService
 {
@@ -15,9 +16,9 @@ class DeviceSelectionService
 
     public function isRequiredFor(User $user): bool
     {
-        return $user->teams()
-            ->whereIn('teams.id', [TeamEnum::SchoonmaakCA->value, TeamEnum::SchoonmaakCD->value])
-            ->exists();
+        return $user
+            ->belongsToTeam(TeamEnum::SchoonmaakCA->value)
+            && $user->isRegularUser();
     }
 
     public function hasSelectedDeviceInSession(): bool
@@ -25,13 +26,15 @@ class DeviceSelectionService
         return session()->has(self::SESSION_KEY);
     }
 
-    public function restoreTodaySelection(User $user): ?Device
+    public function getLastCleaningCartSelection(User $user): ?Device
     {
-        $log = DeviceUserLog::query()
+        $log =  DeviceUserLog::query()
             ->where('user_id', $user->id)
-            ->where('event', EventEnum::UserSelectedDevice)
             ->whereDate('created_at', today())
             ->whereNotNull('device_id')
+            ->whereHas('device', function ($query) {
+                $query->where('type', 'poetskar');
+            })
             ->latest()
             ->first();
 
@@ -39,16 +42,22 @@ class DeviceSelectionService
             return null;
         }
 
-        session()->put(self::SESSION_KEY, $log->device_id);
-
         return $log->device;
     }
 
     public function selectDevice(User $user, Device $device, EventEnum $event = EventEnum::UserSelectedDevice): void
     {
         $device->setLastUsed($user)->save();
-        $device->logUserUsage($user, $event);
+        DeviceUserLog::log($device, $user, $event);
 
         session()->put(self::SESSION_KEY, $device->id);
+    }
+
+    public static function clearSelection(): void
+    {
+        session()->forget([
+            self::SESSION_KEY,
+            self::SWITCHING_SESSION_KEY,
+        ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Contracts\UserAuthenticator;
 use App\Enums\EventEnum;
 use App\Models\Comment;
 use App\Models\Device;
+use App\Models\DeviceUserLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\AuthenticationException;
@@ -15,6 +16,7 @@ use App\Traits\HasImpersonation;
 use App\Models\EDB\Role as EDBRole;
 use App\Services\LdapService;
 use App\Models\Role;
+use Exception;
 
 class LoginService implements UserAuthenticator
 {
@@ -47,7 +49,11 @@ class LoginService implements UserAuthenticator
       ->toArray();
 
     if (empty($roles)) {
-      throw new AuthenticationException('Je hebt geen toegangsprofiel');
+      throw new AuthenticationException('Je hebt geen toegangsprofiel. Gelieve dit te laten aanpassen door een beheerder');
+    }
+
+    if ($user->teams->isEmpty()) {
+      throw new Exception('Je bent niet toegewezen aan een team. Gelieve dit te laten aanpassen door een beheerder');
     }
 
     if (! $user->teams()->exists()) {
@@ -70,10 +76,8 @@ class LoginService implements UserAuthenticator
 
       $device = Device::resolveFromHostname();
       $device->setLastUsed($user)->save();
-      $device->logUserUsage($user, EventEnum::UserLoggedIn);
+      DeviceUserLog::log($device, $user, EventEnum::UserLoggedIn);
     }
-
-
 
     Auth::login($user);
     return $user;

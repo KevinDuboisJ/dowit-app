@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Contracts\UserAuthenticator;
 use App\Enums\EventEnum;
 use App\Models\Device;
+use App\Models\DeviceUserLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Auth\AuthenticationException;
@@ -54,7 +55,7 @@ class PincodeLoginService implements UserAuthenticator
 
     $device = Device::resolveFromHostname();
     $device->setLastUsed($user)->save();
-    $device->logUserUsage($user, EventEnum::UserLoggedIn);
+    DeviceUserLog::log($device, $user, EventEnum::UserLoggedIn);
 
     Auth::login($user);
     return $user;

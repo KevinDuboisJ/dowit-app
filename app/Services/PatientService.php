@@ -117,12 +117,23 @@ class PatientService
     $department = $context['departments']->get($data['department_number']);
 
     if (!$department) {
-      $department = Department::create([
+      $department = new Department([
         'number' => $data['department_number'],
       ]);
-
-      $context['departments'][$data['department_number']] = $department;
     }
+
+    if (!empty($data['department_name'])) {
+      $department->name = $data['department_name'];
+    }
+
+    if ($department->isDirty()) {
+      $department->save();
+    }
+
+    $context['departments']->put(
+      $department->number,
+      $department
+    );
 
     $roomKey = self::getRoomKey($data['campus_id'], $data['room_number']);
     $room = $context['rooms']->get($roomKey);
@@ -188,9 +199,11 @@ class PatientService
     ]);
 
     if ($visit->isDirty()) {
+
       $visit->save();
 
-      if ($prevBedId && $prevBedId !== $bed->id) {
+      // If the patient has moved to a different bed, update the patient transport task to the new space_id
+      if ($prevBedId && (int) $prevBedId !== (int) $bed->id) {
         $patientTransportTaskTypes = [
           TaskTypeEnum::PatientTransportInBed->value,
           TaskTypeEnum::PatientTransportInWheelchair->value,
@@ -201,18 +214,13 @@ class PatientService
 
         $spaceId = self::resolveSpaceIdFromRoom($room, $visit->number);
 
-        if ($prevBedId && $prevBedId !== $bed->id) {
-
-          $spaceId = self::resolveSpaceIdFromRoom($room, $visit->number);
-
-          Task::where('visit_id', $visit->id)
-            ->whereIn('task_type_id', $patientTransportTaskTypes)
-            ->where('status_id', '!=', TaskStatusEnum::Completed->value)
-            ->update([
-              'space_id' => $spaceId,
-              'updated_at' => now(),
-            ]);
-        }
+        Task::where('visit_id', $visit->id)
+          ->whereIn('task_type_id', $patientTransportTaskTypes)
+          ->whereIn('status_id', TaskStatusEnum::activeStatuses())
+          ->update([
+            'space_id' => $spaceId,
+            'updated_at' => now(),
+          ]);
       }
     }
 
@@ -287,12 +295,29 @@ class PatientService
     }
   }
 
+  private static function getVisitQuery(string $visitId): string
+  {
+    return "
+      SELECT TOP (1000) [visit_id]
+      ,[visit_type]
+      ,[pat_id]
+      ,[campus_id]
+      ,[ward_id]
+      ,[room_id]
+      ,[bed_id]
+      ,[ward_adm_id]
+      FROM [OAZP].[dbo].[adt_visit]
+      where visit_id = '{$visitId}'
+    ";
+  }
+
   private static function getOccupiedRoomsQuery(): string
   {
     return "
       SELECT TOP (1000)
       CAST(bg.CAMPUS_ID AS INT) AS campus_id,
       bg.WARD_ID       AS department_number,
+	    wd.WARD_DESCR    AS department_name,
       bg.ROOM_ID       AS room_number,
       bg.BED_ID        AS bed_number,
       bg.VISIT_ID      AS visit_number,
@@ -305,6 +330,12 @@ class PatientService
       CAST(av.dis_date AS DATETIME) + CAST(av.dis_time AS DATETIME) AS discharged_at 
       FROM OAZP.dbo.BEDGRID AS bg
       LEFT JOIN adt_visit AS av ON bg.VISIT_ID = av.visit_id
+      OUTER APPLY (
+        SELECT TOP 1 *
+        FROM ward_descr wd
+        WHERE wd.ward_id = bg.WARD_ID
+        ORDER BY wd.from_date DESC
+      ) wd
       WHERE
       (
         PATINDEX('%[^0-9]%', bg.ROOM_ID) = 0
@@ -391,10 +422,14 @@ class PatientService
 
       $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500'], true);
 
-      if (
-        in_array($departmentNumber, $allowedDepartments, true)
-        && !$skipThisBed
-      ) {
+      $visitQuery = DB::connection('oazis')->select(self::getVisitQuery($bedVisit->visit->number))[0] ?? null;
+
+      if (in_array($departmentNumber, $allowedDepartments, true)) {
+
+        if (in_array($visitQuery->ward_id, ['1223', '1627']) || $skipThisBed) {
+          logger("Skipping bed visit {$bedVisit->visit->number} for room {$bedVisit->bed->room->number} due to department or room exclusion, this is the ward_id: {$visitQuery->ward_id}");
+          continue;
+        }
 
         $taskTypeId = match (true) {
           in_array($departmentNumber, $allowedDepartmentsCA, true) => TaskTypeEnum::EndOfStayCleaningCA->value,

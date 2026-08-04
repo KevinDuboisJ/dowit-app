@@ -26,13 +26,42 @@ const UserMenu = ({ user, fontSize, setFontSize }) => {
             src={user?.image_path}
           />
         </div>
+
         <div className="ml-3 leading-tight">
           <div className="text-sm text-white font-medium">
             {user.firstname} {user.lastname}
           </div>
+
+          {user?.devices?.cleaningCart?.identifier && (
+            <div className="flex items-center leading-none gap-1 text-xs text-left text-white/70 md:hidden ">
+              <Lucide icon="ShoppingCart" className="w-4 h-4" />
+              <span>{user.devices.cleaningCart.identifier}</span>
+            </div>
+          )}
         </div>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent sideOffset={5} align="start">
+        {user?.devices?.cleaningCart && (
+          <>
+            <DropdownMenuItem tag="div">
+              <Link
+                href="/select-device/switch"
+                method="post"
+                className="flex w-full font-normal text-sm text-gray-700 items-center gap-2"
+              >
+                <Lucide icon="RefreshCw" className="w-4 h-4 shrink-0" />
+
+                <span className="flex flex-col leading-tight">
+                  {user.devices.cleaningCart?.identifier ??
+                    'Geen poetskar geselecteerd'}
+                </span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         <DropdownMenuLabel>
           <span className="text-sm font-normal text-gray-700">Teams</span>
           {user.teams.length > 0 ? (
@@ -72,25 +101,15 @@ const UserMenu = ({ user, fontSize, setFontSize }) => {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem tag="div">
-          <Link
-            href="/select-device/switch"
-            method="post"
-            className="flex w-full font-normal text-sm text-gray-700 items-center"
-          >
-            <Lucide icon="ShoppingCart" className="w-4 h-4 mr-1" />
-            Poetskar wisselen
-          </Link>
-        </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link
             href="/logout"
             method="post"
             className="flex w-full text-sm text-gray-700 items-center"
           >
-            <Lucide icon="CircleArrowRight" className="w-4 h-4 mr-1" /> Uitloggen
+            <Lucide icon="CircleArrowRight" className="w-4 h-4 mr-1" />{' '}
+            Uitloggen
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

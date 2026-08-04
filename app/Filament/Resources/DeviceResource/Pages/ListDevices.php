@@ -14,8 +14,8 @@ class ListDevices extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Toestel toevoegen')
-                ->modalHeading('Toestel toevoegen')
+                ->label('Werkmiddel toevoegen')
+                ->modalHeading('Werkmiddel toevoegen')
                 ->createAnother(false),
         ];
     }

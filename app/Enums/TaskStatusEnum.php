@@ -27,6 +27,10 @@ enum TaskStatusEnum: int implements HasLabel
         self::Added->value,
         self::InProgress->value,
         self::Waiting->value,
+        self::FollowUpViaEmail->value,
+        self::WaitingForDelivery->value,
+        self::Postponed->value,
+        self::Paused->value,
     ];
 
     public static function activeStatuses(): array

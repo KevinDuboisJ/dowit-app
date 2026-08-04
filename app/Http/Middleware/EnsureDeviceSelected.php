@@ -25,10 +25,6 @@ class EnsureDeviceSelected
             return $next($request);
         }
 
-        if ($this->deviceSelectionService->restoreTodaySelection($user)) {
-            return $next($request);
-        }
-
         if (! $request->routeIs('device-selection.*')) {
             $request->session()->put('url.intended', $request->fullUrl());
 

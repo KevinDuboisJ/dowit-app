@@ -218,8 +218,7 @@ export const AnnouncementForm = ({ editing, onCreated, onSaved }) => {
               </Popover>
 
               <FormDescription>
-                Datum wordt gebruikt om te bepalen wanneer de mededeling
-                zichtbaar zal zijn
+               De datums bepalen wanneer de mededeling zichtbaar is. Zonder einddatum blijft deze standaard 7 dagen zichtbaar.
               </FormDescription>
               <FormMessage />
             </FormItem>

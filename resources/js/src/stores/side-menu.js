@@ -68,6 +68,7 @@ const sideMenu = {
 }
 
 const userHasPathAccess = (user, menu) => {
+  console.log(user)
   const menuRoleSet = new Set(menu?.roles ?? [])
   const menuTeamSet = new Set(menu?.teams ?? [])
 

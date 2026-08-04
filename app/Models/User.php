@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -78,7 +77,6 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         return $query
             ->whereHas('teams', fn($q) => $q->whereIn('teams.id', $teamIds));
     }
-
 
     public function scopeExcludeSystemUser($query)
     {
@@ -210,10 +208,18 @@ class User extends Authenticatable implements FilamentUser, HasName, HasAvatar
         return $this->hasRole(self::ROLE_ADMIN);
     }
 
-    // Check if the user belongs to a specific team
-    public function belongsToTeam($teamId)
+    public function isRegularUser()
     {
-        return $this->teams->contains('id', $teamId);
+        return ! $this->hasRole(self::ROLE_ADMIN) && !$this->hasRole(self::ROLE_SUPER_ADMIN);
+    }
+
+    // Check if the user belongs to a specific teams
+    public function belongsToTeam(mixed $teamIds)
+    {
+        return $this->teams
+            ->pluck('id')
+            ->intersect(Arr::wrap($teamIds))
+            ->isNotEmpty();
     }
 
     public function scopeDefaultTeam(Builder $query): Team

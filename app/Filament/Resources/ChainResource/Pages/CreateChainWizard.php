@@ -42,6 +42,7 @@ class CreateChainWizard extends Page implements HasForms
     public ?string $description = null;
     public ?string $trigger_type = null;
     public ?int $trigger_task_type_id = null;
+    public ?array $trigger_conditions = [];
     public ?string $action = null;
     public ?array $actions = null;
     public ?array $ip_whitelist = null;
@@ -100,6 +101,7 @@ class CreateChainWizard extends Page implements HasForms
 
                                         if ($state !== EventEnum::TaskCompleted->value) {
                                             $set('trigger_task_type_id', null);
+                                            $set('trigger_conditions.campus_id', null);
                                         }
                                     })
                                     ->columnSpan(1),
@@ -110,6 +112,19 @@ class CreateChainWizard extends Page implements HasForms
                                     ->searchable()
                                     ->visible(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value)
                                     ->required(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value),
+                                Select::make('trigger_conditions.campus_id')
+
+                                    ->label('Triggercampus')
+                                    ->options(fn() => Campus::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->visible(
+                                        fn(Get $get): bool =>
+                                        $get('trigger_type') === EventEnum::TaskCompleted->value
+                                    )
+                                    ->required(
+                                        fn(Get $get): bool =>
+                                        $get('trigger_type') === EventEnum::TaskCompleted->value
+                                    ),
 
                                 Select::make('action')
                                     ->label('Actie')
@@ -308,6 +323,17 @@ class CreateChainWizard extends Page implements HasForms
                                         ->content(fn(Get $get): string => TaskType::find($get('trigger_task_type_id'))?->name ?? '')
                                         ->visible(fn(Get $get): bool => $get('trigger_type') === EventEnum::TaskCompleted->value),
 
+                                    Placeholder::make('trigger_campus')
+                                        ->label('Triggercampus')
+                                        ->content(
+                                            fn(Get $get): string =>
+                                            Campus::find($get('trigger_conditions.campus_id'))?->name ?? ''
+                                        )
+                                        ->visible(
+                                            fn(Get $get): bool =>
+                                            $get('trigger_type') === EventEnum::TaskCompleted->value
+                                        ),
+
                                     Placeholder::make('action')
                                         ->label('Actie')
                                         ->content(fn(Get $get): string => $get('action')
@@ -458,6 +484,9 @@ class CreateChainWizard extends Page implements HasForms
     public function save(): void
     {
         $data = $this->form->getState();
+        $data['trigger_conditions'] = $this->normalizeTriggerConditions(
+            $data['trigger_conditions'] ?? null
+        );
         $teamIds = $data['teams'] ?? [];
         unset($data['teams']);
 
@@ -486,11 +515,11 @@ class CreateChainWizard extends Page implements HasForms
 
     protected function normalizeTriggerConditions(?array $conditions): array
     {
-        return [
-            'task' => [
-                'only_with_locker' => (bool) data_get($conditions, 'task.only_with_locker', false),
-            ],
-        ];
+        $campusId = data_get($conditions, 'campus_id');
+
+        return filled($campusId)
+            ? ['campus_id' => (int) $campusId]
+            : [];
     }
 
     protected function getFormModel(): string

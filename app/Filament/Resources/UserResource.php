@@ -119,7 +119,7 @@ class UserResource extends Resource
                         }),
 
                     Tables\Actions\Action::make('loginLogs')
-                        ->label('Login logs')
+                        ->label('Logs')
                         ->icon('heroicon-o-clock')
                         ->color('gray')
                         ->modalHeading(fn(User $record) => 'Login logs van ' . $record->firstname . ' ' . $record->lastname)

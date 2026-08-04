@@ -22,7 +22,6 @@ class ChainService
             return;
         }
 
-        // trigger_conditions has not been implemented in the UI yet.
         if (! self::matches($chain->trigger_conditions ?? [], $context)) {
             return;
         }

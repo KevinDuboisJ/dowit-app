@@ -311,7 +311,7 @@ class TaskService
       'taskType' => fn($q) => $q->with(['assets', 'availableToTeams']),
       'space',
       'spaceTo',
-      'assignees',
+      'assignees' => fn($q) => $q->withoutGlobalScopes(),
       'executionTeams' => fn($q) => $q->select('teams.id', 'teams.name'),
       'visibilityTeams' => fn($q) => $q->select('teams.id', 'teams.name'),
     ];
@@ -332,6 +332,11 @@ class TaskService
     // Base scope depending on selected mode
     if ($view === 'requested-tasks') {
       $query->byVisibilityTeams($teamIds);
+      $query
+        ->withExists([
+          'creator as created_by_me' => fn($q) => $q->whereKey(Auth::id()),
+        ])
+        ->orderByDesc('created_by_me');
     } else {
       $query->byExecutionTeams($teamIds);
     }

@@ -12,7 +12,7 @@ const Login = ({ users }) => {
   const { flash, errors } = usePage().props
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-console.log(errors)
+
   function handleSubmit(e) {
     e.preventDefault()
     router.post(

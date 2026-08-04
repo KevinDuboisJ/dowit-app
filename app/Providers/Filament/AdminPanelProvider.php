@@ -5,11 +5,9 @@ namespace App\Providers\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -18,7 +16,6 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Support\Enums\MaxWidth;
-use Filament\FontProviders\GoogleFontProvider;
 use App\Filament\Pages\Dashboard;
 use App\Http\Middleware\InertiaExternalRedirect;
 use Filament\Facades\Filament;
@@ -29,7 +26,6 @@ use Filament\Support\Assets\Js;
 use Illuminate\Support\Facades\Vite;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 
 class AdminPanelProvider extends PanelProvider
@@ -63,6 +59,12 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => '#008F92',
                 'gray' => Color::Slate,
             ])
+            ->topbar(false)
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn(): string => view('filament.components.sidebar-user-menu')->render(),
+            )
+            ->sidebarWidth('16rem')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\\Filament\\Clusters')
@@ -89,12 +91,12 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-             ->userMenuItems([
-            'logout' => MenuItem::make()
-                ->label('Afmelden')
-                ->icon('heroicon-o-arrow-left-on-rectangle')
-                ->url('/logout'),
-        ])
+            ->userMenuItems([
+                'logout' => MenuItem::make()
+                    ->label('Afmelden')
+                    ->icon('heroicon-o-arrow-left-on-rectangle')
+                    ->url('/logout'),
+            ])
             ->spa()
             ->brandLogo(asset('images/logo.png'))
             ->brandLogoHeight('3.7rem')

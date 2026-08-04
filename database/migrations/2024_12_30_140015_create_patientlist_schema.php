@@ -52,6 +52,7 @@ class CreatePatientListSchema extends Migration
         Schema::connection('patientlist')->create('departments', function ($table) {
             $table->id();
             $table->string('number');
+            $table->string('name');
             $table->timestamps();
         });
 

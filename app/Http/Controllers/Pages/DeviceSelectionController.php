@@ -26,6 +26,7 @@ class DeviceSelectionController extends Controller
         return Inertia::render('SelectDevice', [
             'devices' => Device::query()
                 ->registered()
+                ->where('type', 'poetskar')
                 ->orderBy('identifier')
                 ->get(['id', 'identifier', 'description', 'type', 'campus_id']),
             'selectedDeviceId' => session(DeviceSelectionService::SESSION_KEY),
@@ -46,6 +47,7 @@ class DeviceSelectionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+   
         $validated = $request->validate([
             'device_id' => ['required', 'integer', 'exists:devices,id'],
         ]);

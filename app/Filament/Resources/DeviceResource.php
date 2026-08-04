@@ -4,11 +4,14 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DeviceResource\Pages;
 use App\Models\Device;
+use App\Models\DeviceUserLog;
 use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\SelectFilter;
@@ -19,11 +22,11 @@ class DeviceResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-device-phone-mobile';
 
-    protected static ?string $navigationLabel = 'Toestellen';
+    protected static ?string $navigationLabel = 'Werkmiddelen';
 
-    protected static ?string $modelLabel = 'Toestel';
+    protected static ?string $modelLabel = 'Werkmiddel';
 
-    protected static ?string $pluralModelLabel = 'Toestellen';
+    protected static ?string $pluralModelLabel = 'Werkmiddelen';
 
 
     public static function form(Form $form): Form
@@ -45,7 +48,7 @@ class DeviceResource extends Resource
                 Forms\Components\Grid::make(2)
                     ->schema([
                         Forms\Components\Select::make('type')
-                            ->label('Type toestel')
+                            ->label('Type werkmiddel')
                             ->options([
                                 'gsm' => 'GSM',
                                 'poetskar' => 'Poetskar',
@@ -62,7 +65,7 @@ class DeviceResource extends Resource
 
                         Forms\Components\Toggle::make('is_registered')
                             ->label('Geregistreerd')
-                            ->helperText('Duid aan of dit toestel geregistreerd is.')
+                            ->helperText('Duid aan of dit werkmiddel geregistreerd is.')
                             ->inline(false)
                             ->default(true),
                     ]),
@@ -98,21 +101,21 @@ class DeviceResource extends Resource
                     ->label('Beschrijving')
                     ->limit(50),
 
-                Tables\Columns\TextColumn::make('last_used_by')
-                    ->label('Laatst gebruikt door')
-                    ->formatStateUsing(function ($state, Device $record): string {
-                        $user = $record->lastUsedBy;
+                // Tables\Columns\TextColumn::make('last_used_by')
+                //     ->label('Laatst gebruikt door')
+                //     ->formatStateUsing(function ($state, Device $record): string {
+                //         $user = $record->lastUsedBy;
 
-                        return $user
-                            ? trim("{$user->firstname} {$user->lastname}")
-                            : '-';
-                    }),
+                //         return $user
+                //             ? trim("{$user->firstname} {$user->lastname}")
+                //             : '-';
+                //     }),
 
 
-                Tables\Columns\TextColumn::make('last_used_at')
-                    ->label('Laatst gebruikt op')
-                    ->dateTime('d/m/Y H:i')
-                    ->placeholder('-'),
+                // Tables\Columns\TextColumn::make('last_used_at')
+                //     ->label('Laatst gebruikt op')
+                //     ->dateTime('d/m/Y H:i')
+                //     ->placeholder('-'),
             ])
 
             ->filters([
@@ -149,12 +152,41 @@ class DeviceResource extends Resource
             ])
             ->defaultSort('identifier')
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('Bewerken')
-                    ->modalHeading('Toestel bewerken'),
+                ActionGroup::make([
+                    Tables\Actions\Action::make('logs')
+                        ->label('Logs')
+                        ->icon('heroicon-o-clock')
+                        ->color('gray')
+                        ->modalHeading(fn(Device $record) => 'Logs van ' . $record->identifier)
+                        ->modalWidth(MaxWidth::FourExtraLarge)
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Sluiten')
+                        ->modalContent(function (Device $record) {
+                            $logs = DeviceUserLog::query()
+                                ->with('user')
+                                ->where('device_id', $record->id)
+                                ->latest()
+                                ->limit(100)
+                                ->get();
 
-                Tables\Actions\DeleteAction::make()
-                    ->label('Verwijderen'),
+                            return view('filament.components.device-logs', [
+                                'logs' => $logs,
+                                'device' => $record,
+                            ]);
+                        }),
+
+                    Tables\Actions\EditAction::make()
+                        ->label('Bewerken')
+                        ->icon('heroicon-o-pencil-square')
+                        ->modalHeading('Werkmiddel bewerken'),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Verwijderen')
+                        ->icon('heroicon-o-trash'),
+                ])
+                    ->label('Acties')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->color('gray'),
             ])
 
             ->modifyQueryUsing(

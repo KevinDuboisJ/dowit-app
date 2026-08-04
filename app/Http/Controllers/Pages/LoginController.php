@@ -10,11 +10,14 @@ use App\Contracts\UserAuthenticator;
 use App\Enums\EventEnum;
 use App\Models\Comment;
 use App\Models\Device;
+use App\Models\DeviceUserLog;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\User;
+use App\Services\DeviceSelectionService;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class LoginController extends Controller
 {
@@ -51,13 +54,14 @@ class LoginController extends Controller
             throw ValidationException::withMessages([
                 'wrongCredentials' => 'Er bestaat geen Dowit account voor deze gebruiker',
             ]);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+           
             $errors = method_exists($e, 'errors') ? $e->errors() : null;
             throw ValidationException::withMessages([
                 'wrongCredentials' => $errors ? [collect($errors)->flatten()->first()] : $e->getMessage(),
             ]);
         }
-
+        
         return Inertia::location(Session::get('url.intended', '/'));
     }
 
@@ -71,7 +75,7 @@ class LoginController extends Controller
 
         $device = Device::resolveFromHostname();
         $device->setLastUsed($user)->save();
-        $device->logUserUsage($user, EventEnum::UserLoggedOut);
+        DeviceUserLog::log($device, $user, EventEnum::UserLoggedOut);
 
         Auth::logout();
 

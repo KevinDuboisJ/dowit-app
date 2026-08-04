@@ -15,6 +15,7 @@ use App\Traits\HasCreator;
 use App\Traits\HasTeams;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class Comment extends Model
@@ -52,6 +53,10 @@ class Comment extends Model
             $isOnlySelfAssigned = count($addedAssignees) === 1 && data_get($addedAssignees, '0.id') === $comment->created_by;
 
             if ($comment->start_date) {
+                if (empty($comment->end_date)) {
+                    $comment->end_date = Carbon::parse($comment->start_date)->addWeek();
+                }
+
                 return $comment->event = EventEnum::Announcement;
             }
 
@@ -78,7 +83,6 @@ class Comment extends Model
             if ($comment->status_id === TaskStatusEnum::Completed->value) {
                 return $comment->event = EventEnum::TaskCompleted;
             }
-            
         });
     }
 

@@ -17,6 +17,18 @@
     height: auto; /* Maintain aspect ratio */
 }
 
+.fi-main {
+    @apply lg:!px-4;
+}
+
+.fi-sidebar-nav {
+    @apply pr-0;
+}
+
+.fi-topbar .fi-user-menu {
+    display: none;
+}
+
 .fi-ta-row.team-level-2 .fi-ta-text-item-label {
   @apply indent-6;
 }
@@ -281,4 +293,346 @@ section {
 
 .fi-ta-filters > *:first-child {
     @apply hidden
+}
+
+.fi-breadcrumbs {
+    @apply my-2;
+}
+
+.fi-sidebar-nav {
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* =========================================================
+   FILAMENT V3 — MODERN SOFT-GRAY SIDEBAR
+   ========================================================= */
+
+:root {
+    --sidebar-bg: rgb(241, 241, 241);
+    --sidebar-border: #e2e6ea;
+
+    --sidebar-text: #42526a;
+    --sidebar-text-muted: #7b8798;
+    --sidebar-icon: #8ea0b6;
+
+    --sidebar-hover-bg: #e9edf1;
+    --sidebar-hover-text: #26384d;
+
+    --sidebar-active-bg: rgb(0 139 139 / 0.07);
+    --sidebar-active-hover-bg: rgb(0 139 139 / 0.1);
+    --sidebar-active-text: #007f7f;
+    --sidebar-active-icon: #008b8b;
+    --sidebar-active-border: rgb(0 139 139 / 0.35);
+
+    --sidebar-radius: 0.65rem;
+}
+
+/* =========================================================
+   LOGO / HEADER
+   ========================================================= */
+
+.fi-sidebar-header {
+    margin-bottom:1rem;
+}
+
+
+/* =========================================================
+   SIDEBAR CONTAINER
+   ========================================================= */
+
+.fi-sidebar {
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--sidebar-border);
+
+    box-shadow:
+        1px 0 0 rgb(15 23 42 / 0.02),
+        4px 0 14px rgb(15 23 42 / 0.025);
+}
+
+
+
+
+/* =========================================================
+   SIDEBAR NAVIGATION
+   ========================================================= */
+
+.fi-sidebar-nav {
+    padding-top: 0.5rem;
+    padding-right: 0.75rem;
+    padding-bottom: 1.5rem;
+    padding-left: 0.75rem;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* =========================================================
+   NAVIGATION GROUPS
+   ========================================================= */
+
+
+.fi-sidebar-group-button {
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+.fi-sidebar-group-button:hover {
+    background-color: rgb(15 23 42 / 0.035);
+}
+
+.fi-sidebar-group-label {
+    color: var(--sidebar-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    letter-spacing: 0.01em;
+}
+
+.fi-sidebar-group-collapse-button {
+    color: #94a3b8;
+
+    transition:
+        color 150ms ease,
+        transform 180ms ease;
+}
+
+.fi-sidebar-group-button:hover .fi-sidebar-group-collapse-button {
+    color: #64748b;
+}
+
+
+/* =========================================================
+   NAVIGATION ITEMS
+   ========================================================= */
+
+.fi-sidebar-item {
+    margin-top: 0.10rem;
+}
+
+.fi-sidebar-item-button {
+    position: relative;
+    padding: 0.50rem 0.7rem;
+
+    border: 1px solid transparent;
+    border-radius: var(--sidebar-radius);
+
+    color: var(--sidebar-text);
+    background-color: transparent;
+
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.fi-sidebar-item-button:hover {
+    color: var(--sidebar-hover-text);
+    background-color: var(--sidebar-hover-bg);
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+.fi-sidebar-item-label {
+    color: inherit;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.2rem;
+}
+
+.fi-sidebar-item:not(.fi-sidebar-item-active)
+    > .fi-sidebar-item-button:hover, [data-sidebar-user-menu]:hover {
+    background-color: rgba(0, 139, 139, 0.05) !important;
+
+}
+
+
+/* =========================================================
+   ICONS
+   ========================================================= */
+
+.fi-sidebar-item-icon {
+    width: 1.3rem;
+    height: 1.3rem;
+    flex-shrink: 0;
+
+    color: var(--sidebar-icon);
+
+    transition:
+        color 150ms ease,
+        transform 150ms ease;
+}
+
+.fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+    color: #647b98;
+    transform: scale(1.03);
+}
+
+
+/* =========================================================
+   ACTIVE / SELECTED ITEM
+   ========================================================= */
+
+.fi-sidebar-item-active > .fi-sidebar-item-button {
+    color: var(--sidebar-active-text);
+    background-color: var(--sidebar-active-bg);
+
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+.fi-sidebar-item-active > .fi-sidebar-item-button:hover {
+    color: var(--sidebar-active-text);
+    background-color: var(--sidebar-active-hover-bg);
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-label {
+    color: var(--sidebar-active-text);
+    font-weight: 600;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-icon {
+    color: var(--sidebar-active-icon);
+}
+
+
+/* Small active indicator on the left */
+.fi-sidebar-item-active > .fi-sidebar-item-button::before {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    left: -0.75rem;
+
+    width: 2px;
+    height: 1.15rem;
+
+    border-radius: 9999px;
+    background-color: var(--sidebar-active-border);
+
+    transform: translateY(-50%);
+}
+
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.fi-sidebar-item .fi-badge {
+    min-width: 1.3rem;
+    height: 1.3rem;
+    padding-inline: 0.35rem;
+
+    border-radius: 9999px;
+
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   NESTED ITEMS
+   ========================================================= */
+
+.fi-sidebar-item-grouped-border {
+    border-color: #dbe2ea;
+}
+
+.fi-sidebar-item-grouped {
+    margin-left: 0.35rem;
+}
+
+
+/* =========================================================
+   SIDEBAR FOOTER / USER MENU
+   ========================================================= */
+
+.fi-sidebar-footer {
+    padding: 0.75rem;
+
+    border-top: 1px solid var(--sidebar-border);
+    background-color: rgb(255 255 255 / 0.25);
+}
+
+[data-sidebar-user-menu] {
+    min-height: 3rem;
+    padding: 0.5rem 0.65rem;
+
+    border: 1px solid transparent;
+    border-radius: var(--sidebar-radius);
+
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+[data-sidebar-user-menu]:hover {
+    background-color: rgb(255 255 255 / 0.7);
+    border-color: rgb(148 163 184 / 0.18);
+
+    box-shadow:
+        0 1px 2px rgb(15 23 42 / 0.03),
+        0 3px 10px rgb(15 23 42 / 0.03);
+}
+
+
+/* =========================================================
+   FOCUS STATES
+   ========================================================= */
+
+.fi-sidebar-item-button:focus-visible,
+.fi-sidebar-group-button:focus-visible {
+    outline: 2px solid rgb(0 139 139 / 0.3);
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+
+.dark {
+    --sidebar-bg: #111827;
+    --sidebar-border: #253044;
+
+    --sidebar-text: #cbd5e1;
+    --sidebar-text-muted: #7f8da3;
+    --sidebar-icon: #71829b;
+
+    --sidebar-hover-bg: #1b2638;
+    --sidebar-hover-text: #f1f5f9;
+
+    --sidebar-active-bg: rgb(45 212 191 / 0.1);
+    --sidebar-active-hover-bg: rgb(45 212 191 / 0.14);
+    --sidebar-active-text: #2dd4bf;
+    --sidebar-active-icon: #2dd4bf;
+    --sidebar-active-border: rgb(45 212 191 / 0.5);
+}
+
+.dark .fi-sidebar {
+    background: var(--sidebar-bg);
+    border-right-color: var(--sidebar-border);
+}
+
+.dark .fi-sidebar-footer {
+    background-color: rgb(255 255 255 / 0.02);
 }
