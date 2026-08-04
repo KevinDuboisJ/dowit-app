@@ -14,7 +14,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use App\Traits\HasTeams;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\Filter;
 use App\Enums\eventEnum;
 use App\Models\DeviceUserLog;
 use Filament\Support\Enums\MaxWidth;
@@ -105,9 +104,14 @@ class UserResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                Filter::make('inactive')
-                    ->label('Inactieve gebruikers')
-                    ->query(fn(Builder $query): Builder => $query->where('is_active', false)),
+                Tables\Filters\SelectFilter::make('is_active')
+                    ->label('Status')
+                    ->options([
+                        '1' => 'Actieve gebruikers',
+                        '0' => 'Inactieve gebruikers',
+                    ])
+                    ->default('1')
+                    ->native(false),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
