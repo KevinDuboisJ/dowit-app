@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { cn } from '@/utils'
 import { __ } from '@/stores'
-import { usePage } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { format } from 'date-fns'
 import { Calendar } from '@/components'
 import {
@@ -31,9 +31,14 @@ const fmt = dateStr => {
 /* ─────────────────────────────────────────
    FilterSection — labelled section with Reset
 ───────────────────────────────────────── */
-const FilterSection = ({ label, onReset, children }) => (
-  <div className="py-4 border-b border-slate-100 last:border-b-0">
-    <div className="flex items-center justify-between mb-3">
+const FilterSection = ({ label, onReset, children, compact = true }) => (
+  <div
+    className={cn(
+      compact ? 'py-2' : 'py-3',
+      'border-b border-slate-100 last:border-b-0'
+    )}
+  >
+    <div className={cn('flex items-center justify-between', compact ? 'mb-1.5' : 'mb-2')}>
       <span className="text-sm font-semibold text-slate-700">{label}</span>
       <button
         type="button"
@@ -216,7 +221,7 @@ const FilterDrawer = ({ open, onClose, onApply, onReset, children }) => {
 ───────────────────────────────────────── */
 export const FilterBar = ({ filters = {} }) => {
   const { url } = usePage()
-  const { user, statuses } = usePage().props
+  const { user, statuses, taskTeamScope, task_types: taskTypes } = usePage().props
   const filtersRef = filters.get()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const didMountRef = useRef(false)
@@ -234,17 +239,19 @@ export const FilterBar = ({ filters = {} }) => {
   }, [pathname])
 
   // Local draft state (only committed on Apply)
-  const [assignedTo, setAssignedTo] = useState(
-    filtersRef.assignedTo?.value || ''
-  )
   const [statusName, setStatusName] = useState(
     filtersRef.status_id?.value || ''
   )
   const [teamId, setTeamId] = useState(filtersRef.team_id?.value || '')
+  const [taskTypeId, setTaskTypeId] = useState(filtersRef.task_type_id?.value || '')
   const [dateRange, setDateRange] = useState(
     filtersRef.dateRange?.value ?? null
   )
   const [keyword, setKeyword] = useState(filtersRef.keyword?.value || '')
+  const [includeInactive, setIncludeInactive] = useState(true)
+  const [includeInactiveApplied, setIncludeInactiveApplied] = useState(
+    [true, 'true', 1, '1'].includes(filtersRef.showInactive?.value)
+  )
   const [onlyAssignedToMe, setOnlyAssignedToMe] = useState(
     filtersRef.onlyAssignedToMe?.value ?? false
   )
@@ -263,25 +270,38 @@ export const FilterBar = ({ filters = {} }) => {
     [user?.teams, teamId]
   )
 
+  const selectedTaskType = useMemo(
+    () => taskTypes?.[taskTypeId],
+    [taskTypes, taskTypeId]
+  )
+
+  const selectedTaskScopeTeam = useMemo(
+    () => taskTeamScope?.teams?.find(team => String(team.id) === String(taskTeamScope.selectedTeamId)),
+    [taskTeamScope]
+  )
+
   const activeCount = useMemo(() => {
     const hasDate = !!(dateRange?.from || dateRange?.to)
     return [
-      assignedTo,
       statusName,
       teamId,
       hasDate,
+      taskTypeId,
       keyword,
+      includeInactiveApplied,
       onlyAssignedToMe
     ].filter(Boolean).length
-  }, [assignedTo, statusName, teamId, dateRange, keyword, onlyAssignedToMe])
+  }, [statusName, teamId, taskTypeId, dateRange, keyword, includeInactiveApplied, onlyAssignedToMe])
 
   const handleApply = () => {
-    sync('assignedTo', assignedTo)
     sync('status_id', statusName)
     sync('team_id', teamId)
     sync('dateRange', dateRange)
     sync('keyword', keyword)
+    sync('task_type_id', taskTypeId)
     sync('onlyAssignedToMe', onlyAssignedToMe)
+    sync('showInactive', includeInactive)
+    setIncludeInactiveApplied(includeInactive)
 
     filters.apply()
     setDrawerOpen(false)
@@ -293,14 +313,26 @@ export const FilterBar = ({ filters = {} }) => {
   }
 
   const handleResetAll = () => {
-    setAssignedTo('')
     setStatusName('')
     setTeamId('')
     setDateRange(null)
     setKeyword('')
+    setTaskTypeId('')
     setOnlyAssignedToMe(false)
+    setIncludeInactive(true)
+    setIncludeInactiveApplied(false)
     filters.reset()
   }
+
+  const handleTaskTeamScopeChange = teamId => {
+    router.post('/tasks/team-scope', { team_id: teamId }, {
+      preserveScroll: true,
+      preserveState: true,
+      only: ['tasks', 'taskTeamScope']
+    })
+  }
+
+
 
   const chipBase = cn(
     'inline-flex items-center gap-1.5 h-7 pl-3 pr-2 rounded-lg text-xs font-medium',
@@ -377,20 +409,6 @@ export const FilterBar = ({ filters = {} }) => {
         {/* Active filter chips */}
         {activeCount > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-[2px]">
-            {assignedTo && (
-              <span className={chipBase}>
-                {assignedTo}
-                <button
-                  onClick={() => {
-                    setAssignedTo('')
-                    handleRemoveApply('assignedTo')
-                  }}
-                  className="hover:text-slate-900 ml-0.5"
-                >
-                  <Heroicon icon="XMark" className="w-3 h-3" />
-                </button>
-              </span>
-            )}
 
             {selectedStatus && (
               <span className={chipBase}>
@@ -414,6 +432,21 @@ export const FilterBar = ({ filters = {} }) => {
                   onClick={() => {
                     setTeamId('')
                     handleRemoveApply('team_id')
+                  }}
+                  className="hover:text-slate-900 ml-0.5"
+                >
+                  <Heroicon icon="XMark" className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {selectedTaskType && (
+              <span className={chipBase}>
+                {selectedTaskType.name}
+                <button
+                  onClick={() => {
+                    setTaskTypeId('')
+                    handleRemoveApply('task_type_id')
                   }}
                   className="hover:text-slate-900 ml-0.5"
                 >
@@ -454,6 +487,23 @@ export const FilterBar = ({ filters = {} }) => {
               </span>
             )}
 
+
+            {includeInactiveApplied && (
+              <span className={chipBase}>
+                Toon inactieve
+                <button
+                  onClick={() => {
+                    setIncludeInactive(false)
+                    setIncludeInactiveApplied(false)
+                    sync('showInactive', false)
+                    filters.apply()
+                  }}
+                  className="hover:text-slate-900 ml-0.5"
+                >
+                  <Heroicon icon="XMark" className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {onlyAssignedToMe && (
               <span className={chipBase}>
                 Alleen aan mij toegewezen
@@ -469,6 +519,52 @@ export const FilterBar = ({ filters = {} }) => {
               </span>
             )}
           </div>
+        )}
+
+        {taskTeamScope?.teams?.length > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={selectedTaskScopeTeam ? `Taakteam: ${selectedTaskScopeTeam.name}` : 'Taakteam: alle teams'}
+                aria-label="Teamweergave voor taken wijzigen"
+                className={cn(
+                  'ml-auto inline-flex h-8 shrink-0 items-center rounded-xl border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40',
+                  selectedTaskScopeTeam
+                    ? 'max-w-56 gap-2 border-indigo-300 bg-indigo-50 px-3 text-indigo-700 hover:bg-indigo-100'
+                    : 'w-8 justify-center border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                )}
+              >
+                <Heroicon icon="UserGroup" className="h-4 w-4" />
+                {selectedTaskScopeTeam && (
+                  <span className="truncate">{selectedTaskScopeTeam.name}</span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                className="flex cursor-pointer items-center justify-between"
+                onSelect={() => handleTaskTeamScopeChange(null)}
+              >
+                <span>Alle teams</span>
+                {!selectedTaskScopeTeam && <Heroicon icon="Check" className="h-4 w-4" />}
+              </DropdownMenuItem>
+
+              {taskTeamScope.teams.map(team => (
+                <DropdownMenuItem
+                  key={team.id}
+                  className="flex cursor-pointer items-center justify-between"
+                  onSelect={() => handleTaskTeamScopeChange(team.id)}
+                >
+                  <span className="truncate">{team.name}</span>
+                  {String(taskTeamScope.selectedTeamId) === String(team.id) && (
+                    <Heroicon icon="Check" className="h-4 w-4" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
@@ -515,60 +611,10 @@ export const FilterBar = ({ filters = {} }) => {
               type="text"
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
-              placeholder="Zoek op taaknaam of beschrijving…"
-              className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-teal-400"
+              placeholder="Zoek in taken"
+              className="w-full h-9 pl-9 pr-3 text-sm rounded-lg border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-teal-400"
             />
           </div>
-        </FilterSection>
-
-        {/* ── Toegewezen ── */}
-        <FilterSection
-          label="Toegewezen"
-          onReset={() => {
-            setAssignedTo('')
-            setOnlyAssignedToMe(false)
-          }}
-        >
-          <label className="flex items-center justify-between gap-3 select-none">
-            <span className="text-sm text-slate-700 font-medium">
-              Alleen aan mij toegewezen
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setOnlyAssignedToMe(v => !v)}
-              className={cn(
-                'relative w-11 h-6 rounded-full transition-colors border',
-                onlyAssignedToMe
-                  ? 'bg-indigo-500 border-indigo-500'
-                  : 'bg-slate-200 border-slate-200'
-              )}
-              aria-pressed={onlyAssignedToMe}
-            >
-              <span
-                className={cn(
-                  'absolute top-1/2 -left-0.5 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  onlyAssignedToMe && 'translate-x-6'
-                )}
-              />
-            </button>
-          </label>
-
-          {!onlyAssignedToMe && (
-            <div className="relative mt-3">
-              <Heroicon
-                icon="MagnifyingGlass"
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-              />
-              <input
-                type="text"
-                value={assignedTo}
-                onChange={e => setAssignedTo(e.target.value)}
-                placeholder="Zoeken op naam…"
-                className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-teal-400"
-              />
-            </div>
-          )}
         </FilterSection>
 
         {/* ── Team ── */}
@@ -577,7 +623,7 @@ export const FilterBar = ({ filters = {} }) => {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center justify-between h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400/40 transition-colors"
+                className="w-full flex items-center justify-between h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400/40 transition-colors"
               >
                 <span className="truncate">
                   {selectedTeam?.name ?? 'Teams'}
@@ -605,13 +651,47 @@ export const FilterBar = ({ filters = {} }) => {
           </DropdownMenu>
         </FilterSection>
 
+        {/* Task type */}
+        <FilterSection label="Taaktype" onReset={() => setTaskTypeId('')}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400/40 transition-colors"
+              >
+                <span className="truncate">
+                  {selectedTaskType?.name ?? 'Alle taaktypes'}
+                </span>
+                <Heroicon
+                  icon="ChevronDown"
+                  className="w-4 h-4 text-slate-400"
+                />
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-[320px]">
+              <DropdownMenuItem onSelect={() => setTaskTypeId('')}>
+                Alle taaktypes
+              </DropdownMenuItem>
+              {Object.values(taskTypes ?? {}).map(taskType => (
+                <DropdownMenuItem
+                  key={taskType.value}
+                  onSelect={() => setTaskTypeId(String(taskType.value))}
+                >
+                  {taskType.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </FilterSection>
+
         {/* ── Status ── */}
         <FilterSection label="Status" onReset={() => setStatusName('')}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center justify-between h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400/40 transition-colors"
+                className="w-full flex items-center justify-between h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400/40 transition-colors"
               >
                 <span className="flex items-center min-w-0 truncate">
                   {selectedStatus ? (
@@ -645,6 +725,65 @@ export const FilterBar = ({ filters = {} }) => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        </FilterSection>
+
+        <FilterSection
+          label="Opties"
+          compact={false}
+          onReset={() => {
+            setIncludeInactive(true)
+            setOnlyAssignedToMe(false)
+          }}
+        >
+          <div className="space-y-4">
+            <label className="flex items-center justify-between gap-3 select-none">
+              <span className="text-sm text-slate-700 font-medium">
+                Toon inactieve
+              </span>
+              <button
+                type="button"
+                onClick={() => setIncludeInactive(value => !value)}
+                className={cn(
+                  'relative w-11 h-6 rounded-full transition-colors border',
+                  includeInactive
+                    ? 'bg-indigo-500 border-indigo-500'
+                    : 'bg-slate-200 border-slate-200'
+                )}
+                aria-pressed={includeInactive}
+              >
+                <span
+                  className={cn(
+                    'absolute top-1/2 -left-0.5 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    includeInactive && 'translate-x-6'
+                  )}
+                />
+              </button>
+            </label>
+
+            <label className="flex items-center justify-between gap-3 select-none">
+              <span className="text-sm text-slate-700 font-medium">
+                Alleen aan mij toegewezen
+              </span>
+              <button
+                type="button"
+                onClick={() => setOnlyAssignedToMe(value => !value)}
+                className={cn(
+                  'relative w-11 h-6 rounded-full transition-colors border',
+                  onlyAssignedToMe
+                    ? 'bg-indigo-500 border-indigo-500'
+                    : 'bg-slate-200 border-slate-200'
+                )}
+                aria-pressed={onlyAssignedToMe}
+              >
+                <span
+                  className={cn(
+                    'absolute top-1/2 -left-0.5 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    onlyAssignedToMe && 'translate-x-6'
+                  )}
+                />
+              </button>
+            </label>
+          </div>
         </FilterSection>
       </FilterDrawer>
     </>

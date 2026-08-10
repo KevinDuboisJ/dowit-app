@@ -17,7 +17,10 @@ class DeviceSelectionService
     public function isRequiredFor(User $user): bool
     {
         return $user
-            ->belongsToTeam(TeamEnum::SchoonmaakCA->value)
+            ->belongsToTeam([
+                TeamEnum::SchoonmaakCA->value,
+                TeamEnum::SchoonmaakCD->value,
+            ])
             && $user->isRegularUser();
     }
 

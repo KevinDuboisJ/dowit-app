@@ -42,6 +42,9 @@ Route::group(['middleware' => ['auth', HandleInertiaRequests::class]], function 
 
         Route::match(['get', 'post'], '/requested-tasks', [DashboardController::class, 'requestedTasks'])
             ->name('dashboard.requested-tasks');
+        Route::post('/tasks/team-scope', [DashboardController::class, 'updateTaskTeamScope'])
+            ->name('dashboard.task-team-scope');
+
 
         // Tasks
         Route::get('/tasks/{id}', [TaskController::class, 'find'])->name('task.find');

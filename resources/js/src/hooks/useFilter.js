@@ -58,13 +58,19 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
   }
 
   const getActiveFilters = useCallback(() => {
-    return Object.values(filtersRef.current).filter(f =>
-      isActiveValue(f?.value)
-    )
+    return Object.entries(filtersRef.current)
+      .filter(([key, filter]) =>
+        Object.prototype.hasOwnProperty.call(defaultValues, key)
+        && isActiveValue(filter?.value)
+      )
+      .map(([, filter]) => filter)
   }, [])
 
   const hasActiveFilters = useCallback(() => {
-    return Object.values(filtersRef.current).some(f => isActiveValue(f?.value))
+    return Object.entries(filtersRef.current).some(([key, filter]) =>
+      Object.prototype.hasOwnProperty.call(defaultValues, key)
+      && isActiveValue(filter?.value)
+    )
   }, [])
 
   const getPerPageFromUrl = () => {
@@ -80,11 +86,26 @@ export const useFilter = ({ defaultValues, options = defaultOptions }) => {
   const apply = ({ page, perPage } = {}) => {
     const resolvedPerPage = perPage ?? getPerPageFromUrl()
     const currentPath = getCurrentPath()
+    const activeFilters = getActiveFilters()
+    const data = {}
+
+    if (activeFilters.length > 0) {
+      data.filters = activeFilters
+    }
+
+    if (page !== undefined) {
+      data.page = page
+    }
+
+    if (resolvedPerPage !== undefined) {
+      data.perPage = resolvedPerPage
+    }
+
 
     setLoading(true)
     router.get(
       currentPath,
-      { filters: getActiveFilters(), page, perPage: resolvedPerPage },
+      data,
       {
         only: ['tasks'],
         queryStringArrayFormat: 'indices',
@@ -149,7 +170,7 @@ export const getFiltersFromUrlParams = (url, filters = {}) => {
   })
 
   Object.values(filterMapping).forEach(f => {
-    if (!f.field) return
+    if (!f.field || !Object.prototype.hasOwnProperty.call(filters, f.field)) return
 
     filters[f.field] = {
       field: f.field,

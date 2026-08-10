@@ -16,6 +16,45 @@ use Illuminate\Http\Request;
 
 class TaskService
 {
+  public const TASK_TEAM_SCOPE_SESSION_KEY = 'task_team_scope_id';
+
+  public function canUseTaskTeamScope(User $user): bool
+  {
+    return $user->isAdmin() || $user->isSuperAdmin();
+  }
+
+  public function getSelectedTaskTeamId(User $user): ?int
+  {
+    if (!$this->canUseTaskTeamScope($user)) {
+      return null;
+    }
+
+    $teamId = (int) session(self::TASK_TEAM_SCOPE_SESSION_KEY, 0);
+
+    if ($teamId === 0) {
+      return null;
+    }
+
+    if (!$user->teams->contains('id', $teamId)) {
+      session()->forget(self::TASK_TEAM_SCOPE_SESSION_KEY);
+
+      return null;
+    }
+
+    return $teamId;
+  }
+
+  public function setSelectedTaskTeamId(?int $teamId): void
+  {
+    if ($teamId === null) {
+      session()->forget(self::TASK_TEAM_SCOPE_SESSION_KEY);
+
+      return;
+    }
+
+    session()->put(self::TASK_TEAM_SCOPE_SESSION_KEY, $teamId);
+  }
+
   public function create(array $data): Task
   {
     try {
@@ -323,6 +362,9 @@ class TaskService
 
     $user = Auth::user();
     $teamIds = $user->getTeamIds();
+    $selectedTaskTeamId = $view === 'tasks'
+      ? $this->getSelectedTaskTeamId($user)
+      : null;
 
     $query = Task::query()
       ->with($relationships)
@@ -338,14 +380,26 @@ class TaskService
         ])
         ->orderByDesc('created_by_me');
     } else {
-      $query->byExecutionTeams($teamIds);
+      if ($selectedTaskTeamId !== null) {
+        $query->whereHas(
+          'executionTeams',
+          fn($teamQuery) => $teamQuery->where('teams.id', $selectedTaskTeamId)
+        );
+      } else {
+        $query->byExecutionTeams($teamIds);
+      }
     }
 
     if ($hasFilters) {
       $this->applyFilters($query, $filters, $hasFilterByStatus, $request);
     }
 
-    if (!$hasFilterByStatus && !$hasFilters) {
+    $showInactive = collect($filters)->contains(function ($filter) {
+      return ($filter['field'] ?? null) === 'showInactive'
+        && filter_var($filter['value'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    });
+
+    if (!$hasFilterByStatus && !$showInactive) {
       $query->byActive();
     }
 
@@ -374,10 +428,23 @@ class TaskService
     $query
       ->withExists([
         'assignees as assigned_to_me' => fn($q) => $q->whereKey(Auth::id()),
+        'tags as has_tags'
       ])
       ->orderByDesc('assigned_to_me')
       ->orderByDesc(DB::raw('COALESCE(tasks.help_requested, 0)'))
-      ->orderByDesc(DB::raw('tasks.task_type_id = 5 OR tasks.task_type_id = 15'))
+      ->orderByDesc('has_tags')
+      ->orderByDesc(DB::raw(
+        '(tasks.task_type_id = 5 OR tasks.task_type_id = 15)
+         AND tasks.status_id = ' . TaskStatusEnum::Added->value
+      ))
+      ->orderByRaw(
+        'CASE
+            WHEN tasks.task_type_id IN (5, 15)
+             AND tasks.status_id = ?
+            THEN tasks.start_date_time
+         END ASC',
+        [TaskStatusEnum::Added->value]
+    )
       ->orderBy('tasks.status_id')
       ->orderByDesc('tasks.start_date_time');
 
@@ -419,29 +486,24 @@ class TaskService
 
       if ($field === null) continue;
 
-      // ---- keyword (task name or description)
+      // ---- keyword (task name, description, or assignee name)
       if ($field === 'keyword' && filled($value)) {
         $pattern = $like($type, (string) $value);
 
         $query->where(function ($subQuery) use ($pattern) {
           $subQuery
             ->where('tasks.name', 'like', $pattern)
-            ->orWhere('tasks.description', 'like', $pattern);
+            ->orWhere('tasks.description', 'like', $pattern)
+            ->orWhereHas('assignees', function ($assigneeQuery) use ($pattern) {
+              $assigneeQuery->where(function ($nameQuery) use ($pattern) {
+                $nameQuery
+                  ->where('users.firstname', 'like', $pattern)
+                  ->orWhere('users.lastname', 'like', $pattern)
+                  ->orWhereRaw("CONCAT(users.firstname, ' ', users.lastname) LIKE ?", $pattern);
+              });
+            });
         });
 
-        continue;
-      }
-
-      // ---- assignedTo (name search)
-      if ($field === 'assignedTo' && filled($value)) {
-        $pattern = $like($type, (string) $value);
-
-        $query->whereHas('assignees', function ($subQuery) use ($pattern) {
-          $subQuery->where(function ($q) use ($pattern) {
-            $q->where('firstname', 'like', $pattern)
-              ->orWhere('lastname', 'like', $pattern);
-          });
-        });
         continue;
       }
 
@@ -465,6 +527,12 @@ class TaskService
         continue;
       }
 
+      // ---- task_type_id
+      if ($field === 'task_type_id' && filled($value)) {
+        $query->where('tasks.task_type_id', '=', (int) $value);
+        continue;
+      }
+
       // ---- onlyAssignedToMe (boolean)
       if ($field === 'onlyAssignedToMe') {
         // Handle "true"/true/1
@@ -474,6 +542,14 @@ class TaskService
           if ($userId) {
             $query->whereHas('assignees', fn($q) => $q->where('users.id', '=', $userId));
           }
+        }
+        continue;
+      }
+
+      // ---- activeOnly (boolean)
+      if ($field === 'activeOnly') {
+        if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+          $query->byActive();
         }
         continue;
       }

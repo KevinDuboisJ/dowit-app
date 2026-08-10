@@ -18,15 +18,16 @@ import {
 const Dashboard = ({ tasks }) => {
   const { filters } = useFilter({
     defaultValues: {
-      assignedTo: { field: 'assignedTo', type: 'contains', value: '' },
       status_id: { field: 'status_id', type: 'equals', value: '' }, // you store status "name" string
       team_id: { field: 'team_id', type: 'equals', value: '' },
+      task_type_id: { field: 'task_type_id', type: 'equals', value: '' },
       dateRange: {
         field: 'dateRange',
         type: 'between',
         value: { from: null, to: null }
       },
       keyword: { field: 'keyword', type: 'contains', value: '' },
+      showInactive: { field: 'showInactive', type: 'equals', value: false },
       onlyAssignedToMe: {
         field: 'onlyAssignedToMe',
         type: 'equals',

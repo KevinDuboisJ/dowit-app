@@ -33,6 +33,28 @@ class DashboardController extends Controller
   {
     return $this->renderDashboard($request, $taskService, 'requested-tasks');
   }
+  public function updateTaskTeamScope(Request $request, TaskService $taskService)
+  {
+    $user = $request->user();
+    abort_unless($user && $taskService->canUseTaskTeamScope($user), 403);
+
+    $validated = $request->validate([
+      'team_id' => ['nullable', 'integer'],
+    ]);
+
+    $teamId = isset($validated['team_id']) ? (int) $validated['team_id'] : null;
+
+    if ($teamId !== null) {
+      abort_unless(in_array($teamId, $user->getTeamIds(), true), 403);
+    }
+
+    $taskService->setSelectedTaskTeamId($teamId);
+
+    return back();
+  }
+
+
+
 
   private function renderDashboard(Request $request, TaskService $taskService, string $view)
   {
@@ -42,6 +64,16 @@ class DashboardController extends Controller
 
     return Inertia::render('Dashboard', [
       'tasks' => fn() => $taskService->fetchAndCombineTasks($request, $view),
+      'taskTeamScope' => $view === 'tasks' && $taskService->canUseTaskTeamScope($user)
+        ? [
+          'selectedTeamId' => $taskService->getSelectedTaskTeamId($user),
+          'teams' => $user->teams
+            ->map(fn($team) => ['id' => $team->id, 'name' => $team->name])
+            ->values(),
+        ]
+        : null,
+
+
 
       'settings' => fn() => $settings,
 
@@ -88,7 +120,7 @@ class DashboardController extends Controller
           });
       }),
 
-      'task_types' => Inertia::optional(function () use ($userTeamIds) {
+      'task_types' => function () use ($userTeamIds) {
         return TaskType::query()
           ->where('is_system', false)
           ->whereHas('availableToTeams', function ($q) use ($userTeamIds) {
@@ -102,7 +134,7 @@ class DashboardController extends Controller
               'isPatientTransport' => TaskTypeEnum::tryFrom($t->id)?->isPatientTransport(),
             ],
           ]);
-      }),
+      },
 
       'teamsMatchingAssignmentRules' => Inertia::optional(function () use ($request) {
 

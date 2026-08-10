@@ -18,11 +18,11 @@ class DeviceSelectionServiceTest extends TestCase
         $this->assertTrue(app(DeviceSelectionService::class)->isRequiredFor($user));
     }
 
-    public function test_device_selection_is_not_required_for_a_schoonmaak_cd_user(): void
+    public function test_device_selection_is_required_for_a_regular_schoonmaak_cd_user(): void
     {
         $user = $this->userForTeam(TeamEnum::SchoonmaakCD);
 
-        $this->assertFalse(app(DeviceSelectionService::class)->isRequiredFor($user));
+        $this->assertTrue(app(DeviceSelectionService::class)->isRequiredFor($user));
     }
 
     private function userForTeam(TeamEnum $team): User
