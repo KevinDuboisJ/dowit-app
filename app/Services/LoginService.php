@@ -64,6 +64,11 @@ class LoginService implements UserAuthenticator
 
     session(['roles' => $roles]);
 
+    session()->put(
+      DeviceSelectionService::IMPERSONATION_SESSION_KEY,
+      $this->isImpersonated()
+    );
+
     if (!$this->isImpersonated()) {
       // Record the timestamp of the user's last login attempt to monitor login activity.
       $user->setLastLogin();

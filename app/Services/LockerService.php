@@ -39,7 +39,6 @@ class LockerService
                     WHERE c3.cn_pe_id = pe_id
                     AND c3.cn_inactive = '0'
             )
-            LIMIT 1
         ";
 
         return DB::connection('formbuilder')->select($query);
@@ -71,8 +70,8 @@ class LockerService
             $task = $taskService->create([
                 'task' => [
                     'start_date_time' => now(),
-                    'name' => "Locker ontgrendelen",
-                    'description' => "$lockerNumber, $location($gender), $lockerType",
+                    'name' => "Locker {$lockerNumber} ontgrendelen",
+                    'description' => "{$row->pe_firstname} {$row->pe_lastname}, $location ($gender), $lockerType",
                     'locker_id' => $lockerId,
                     'status_id' => TaskStatusEnum::Added->value,
                     'campus_id' => $campusId,
@@ -165,7 +164,7 @@ class LockerService
                 ->whereNull('deleted_by')
                 ->update([
                     'deleted' => now(),
-                    'deleted_by' => 14,
+                    'deleted_by' => 14, //Helpdesk user id in formbuilder DB
                 ]);
 
             // Insert new row

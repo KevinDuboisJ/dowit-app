@@ -49,6 +49,6 @@ Schedule::call(function (PatientService $patientService) {
     $patientService->getOccupiedRooms(); 
 })->everyFiveMinutes();
 
-// Schedule::call(function (LockerService $lockerService, TaskService $taskService) { 
-//     $lockerService->handleUnlockTasks($taskService); 
-// })->everyMinute();
+Schedule::call(function (LockerService $lockerService, TaskService $taskService) { 
+    $lockerService->handleUnlockTasks($taskService); 
+})->everyTenMinutes();

@@ -7,6 +7,7 @@ use App\Models\Chain;
 use App\Models\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Events\BroadcastEvent;
 use Carbon\Carbon;
 
@@ -49,6 +50,7 @@ class ChainService
     public static function executeForCompletedTask(Task $task): void
     {
         $chains = Chain::query()
+            ->withoutGlobalScope('access_scope')
             ->where('is_active', true)
             ->where('trigger_type', 'task_completed')
             ->where('trigger_task_type_id', $task->task_type_id)
@@ -62,6 +64,7 @@ class ChainService
     public static function executeForApi(array $context = []): void
     {
         $chains = Chain::query()
+            ->withoutGlobalScope('access_scope')
             ->where('is_active', true)
             ->where('trigger_type', 'api')
             ->get();
@@ -161,11 +164,11 @@ class ChainService
 
     private static function resolveValue(mixed $value, string $field, mixed $context, bool $inheritMissing): mixed
     {
-        // if ($value !== self::KEEP_ORIGINAL) {
-        //     return $value;
-        // }
+        if ($field === 'name' && is_string($value)) {
+            return self::replaceTemplateVariables($value, $context);
+        }
 
-        if (!$inheritMissing || $value !== null) {
+        if (! $inheritMissing || $value !== null) {
             return $value;
         }
 
@@ -183,6 +186,24 @@ class ChainService
             'locker_id' => $context->locker_id,
             default => null,
         };
+    }
+
+    private static function replaceTemplateVariables(string $value, mixed $context): string
+    {
+        if (! str_contains($value, '{{lockerNumber}}')) {
+            return $value;
+        }
+
+        $lockerNumber = null;
+
+        if ($context instanceof Task && $context->locker_id) {
+            $lockerNumber = DB::connection('formbuilder')
+                ->table('locker')
+                ->where('lo_id', $context->locker_id)
+                ->value('lo_number');
+        }
+
+        return str_replace('{{lockerNumber}}', (string) ($lockerNumber ?? ''), $value);
     }
 
     protected static function matches(array $conditions, $context): bool

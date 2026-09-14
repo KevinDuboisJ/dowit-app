@@ -224,6 +224,7 @@ export const FilterBar = ({ filters = {} }) => {
   const { user, statuses, taskTeamScope, task_types: taskTypes } = usePage().props
   const filtersRef = filters.get()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [taskTeamScopeLoading, setTaskTeamScopeLoading] = useState(false)
   const didMountRef = useRef(false)
   const pathname = useMemo(() => {
     return url.split('?')[0]
@@ -328,7 +329,9 @@ export const FilterBar = ({ filters = {} }) => {
     router.post('/tasks/team-scope', { team_id: teamId }, {
       preserveScroll: true,
       preserveState: true,
-      only: ['tasks', 'taskTeamScope']
+      only: ['tasks', 'taskTeamScope'],
+      onStart: () => setTaskTeamScopeLoading(true),
+      onFinish: () => setTaskTeamScopeLoading(false)
     })
   }
 
@@ -526,7 +529,8 @@ export const FilterBar = ({ filters = {} }) => {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title={selectedTaskScopeTeam ? `Taakteam: ${selectedTaskScopeTeam.name}` : 'Taakteam: alle teams'}
+                disabled={taskTeamScopeLoading}
+                title={selectedTaskScopeTeam ? 'Taakteam: ' + selectedTaskScopeTeam.name : 'Taakteam: alle teams'}
                 aria-label="Teamweergave voor taken wijzigen"
                 className={cn(
                   'ml-auto inline-flex h-8 shrink-0 items-center rounded-xl border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/40',
@@ -535,7 +539,14 @@ export const FilterBar = ({ filters = {} }) => {
                     : 'w-8 justify-center border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 )}
               >
-                <Heroicon icon="UserGroup" className="h-4 w-4" />
+                {taskTeamScopeLoading ? (
+                  <svg aria-hidden="true" className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4Z" />
+                  </svg>
+                ) : (
+                  <Heroicon icon="UserGroup" className="h-4 w-4" />
+                )}
                 {selectedTaskScopeTeam && (
                   <span className="truncate">{selectedTaskScopeTeam.name}</span>
                 )}

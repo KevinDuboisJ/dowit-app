@@ -13,15 +13,18 @@ class DeviceSelectionService
 {
     public const SESSION_KEY = 'selected_device_id';
     public const SWITCHING_SESSION_KEY = 'is_switching_device';
+    public const IMPERSONATION_SESSION_KEY = 'is_impersonated';
 
     public function isRequiredFor(User $user): bool
     {
-        return $user
-            ->belongsToTeam([
-                TeamEnum::SchoonmaakCA->value,
-                TeamEnum::SchoonmaakCD->value,
-            ])
-            && $user->isRegularUser();
+        if (session()->get(self::IMPERSONATION_SESSION_KEY, false)) {
+            return false;
+        }
+
+        return $user->belongsToTeam([
+            TeamEnum::SchoonmaakCA->value,
+            TeamEnum::SchoonmaakCD->value,
+        ]) && $user->isRegularUser();
     }
 
     public function hasSelectedDeviceInSession(): bool

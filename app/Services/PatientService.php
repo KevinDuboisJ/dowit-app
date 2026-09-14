@@ -420,7 +420,7 @@ class PatientService
 
       $allowedDepartments = array_merge($allowedDepartmentsCA, $allowedDepartmentsCD);
 
-      $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500'], true);
+      $skipThisBed = in_array($bedVisit->bed->room->number, ['100', '500', '999'], true);
 
       $visitQuery = DB::connection('oazis')->select(self::getVisitQuery($bedVisit->visit->number))[0] ?? null;
 

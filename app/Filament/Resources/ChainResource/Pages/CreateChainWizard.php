@@ -30,6 +30,7 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use FilamentTiptapEditor\TiptapEditor;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\HtmlString;
 
 class CreateChainWizard extends Page implements HasForms
@@ -80,6 +81,7 @@ class CreateChainWizard extends Page implements HasForms
                                 TextInput::make('identifier')
                                     ->label('Identificatie')
                                     ->required()
+                                    ->unique(ignorable: fn () => $this->record)
                                     ->columnSpan(1),
 
                                 TextInput::make('description')
@@ -193,6 +195,7 @@ class CreateChainWizard extends Page implements HasForms
 
                                             TextInput::make('name')
                                                 ->label('Naam')
+                                                ->helperText('Gebruik {{lockerNumber}} om het lockernummer van de oorspronkelijke taak in de titel te tonen.')
                                                 ->nullable()
                                                 ->columnSpanFull()
                                                 ->dehydrateStateUsing(fn($state) => blank($state) ? null : $state),
@@ -496,11 +499,28 @@ class CreateChainWizard extends Page implements HasForms
             );
         }
 
-        if ($this->record?->exists) {
-            $chain = $this->record;
-            $chain->update($data);
-        } else {
-            $chain = Chain::create($data);
+        try {
+            if ($this->record?->exists) {
+                $chain = $this->record;
+                $chain->update($data);
+            } else {
+                $chain = Chain::create($data);
+            }
+        } catch (QueryException $exception) {
+            $isDuplicateIdentifier = (int) ($exception->errorInfo[1] ?? 0) === 1062
+                && str_contains($exception->getMessage(), 'chains_identifier_unique');
+
+            if (! $isDuplicateIdentifier) {
+                throw $exception;
+            }
+
+            Notification::make()
+                ->title('Identificatie al in gebruik')
+                ->body('Er bestaat al een chain met deze identificatie. Kies een andere identificatie.')
+                ->danger()
+                ->send();
+
+            return;
         }
 
         $chain->teams()->sync($teamIds);
