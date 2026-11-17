@@ -19,8 +19,8 @@ class TeamObserver
 
     public function updated(Team $team)
     {
-        // Only trigger sync for teams that have automatic assignment
-        if ($team->wasChanged('autoassign_rules') && $team->autoassign_rules !== null) {
+        // Reconcile membership even when the last rule has been removed.
+        if ($team->wasChanged('autoassign_rules')) {
             $teamService = new TeamService();
             $teamService->syncUsersToTeam($team, User::all());
         }
