@@ -36,7 +36,7 @@ export const AnnouncementList = ({ onEdit, onDeleted }) => {
     setDeletingId(id)
 
     router.delete(`/announcements/${id}`, {
-      only: ['ownAnnouncements'],
+      only: ['ownAnnouncements', 'announcements'],
       onSuccess: () => {
         toast.success('Mededeling verwijderd')
         onDeleted?.(id)

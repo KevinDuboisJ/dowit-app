@@ -17,6 +17,7 @@ class AnnouncementController extends Controller
   {
     try {
       $announcement->delete();
+      broadcast(new BroadcastEvent($announcement, 'announcement_deleted', 'dashboard-announce'));
       return redirect()->back();
     } catch (Exception $e) {
       logger($e);
@@ -26,7 +27,22 @@ class AnnouncementController extends Controller
   public function update(AnnouncementRequest $request, Announcement $announcement)
   {
     try {
+      $previousAnnouncement = clone $announcement;
       $announcement->update($request->prepareForDatabase());
+
+      $previousAnnouncement->recipient_users = array_values(array_diff(
+        $previousAnnouncement->recipient_users ?? [],
+        $announcement->recipient_users ?? []
+      ));
+      $previousAnnouncement->recipient_teams = array_values(array_diff(
+        $previousAnnouncement->recipient_teams ?? [],
+        $announcement->recipient_teams ?? []
+      ));
+
+      if ($previousAnnouncement->recipient_users || $previousAnnouncement->recipient_teams) {
+        broadcast(new BroadcastEvent($previousAnnouncement, 'announcement_updated', 'dashboard-announce'));
+      }
+      broadcast(new BroadcastEvent($announcement, 'announcement_updated', 'dashboard-announce'));
       return redirect()->back();
 
     } catch (Exception $e) {

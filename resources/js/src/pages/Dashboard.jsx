@@ -54,7 +54,7 @@ const Dashboard = ({ tasks }) => {
       inertiaResourceSync(['tasks'], {})
     }
 
-    if (newEvent.type === 'announcement_created') {
+    if (['announcement_created', 'announcement_updated', 'announcement_deleted'].includes(newEvent.type)) {
       inertiaResourceSync(['announcements'])
     }
   }, [newEvent])
