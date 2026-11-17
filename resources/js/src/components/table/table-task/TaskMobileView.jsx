@@ -1,4 +1,5 @@
 import { isValidElement, useEffect, useRef, useMemo } from 'react'
+import { cn } from '@/utils'
 import {
   AnnouncementFeed,
   PriorityText,
@@ -94,13 +95,13 @@ export const TaskMobileView = ({
     const plainText = description.replace(/<[^>]+>/g, '') // strip HTML tags
 
     return (
-      <div key={task.id} ref={lastItemRef} className="flex">
+      <div key={task.id} ref={lastItemRef} className={cn('flex', !task.is_active && 'bg-slate-200')}>
         <div
           style={{ backgroundColor: priority.color }}
-          className="shrink-0 shadow-[2px_0_3px_rgba(0,0,0,0.1)] w-[32px] transform transform transition duration-150 active:translate-x-1 cursor-pointer"
+          className={cn('shrink-0 shadow-[2px_0_3px_rgba(0,0,0,0.1)] w-[32px] transform transition duration-150 active:translate-x-1 cursor-pointer', !task.is_active && 'opacity-60')}
           onClick={() => setSheetState({ open: true, taskId: task.id })}
         ></div>
-        <div className="flex-1 min-w-0 bg-white border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm px-3 py-3 rounded-tl-none rounded-bl-none leading-4">
+        <div className={cn('flex-1 min-w-0 border border-grey-400 border-x-0 shadow-sm rounded-tr-sm rounded-br-sm px-3 py-3 rounded-tl-none rounded-bl-none leading-4', task.is_active ? 'bg-white' : '[&>*]:opacity-60')}>
           <div className="flex items-center justify-between">
             {/* LEFT */}
             <div className="flex flex-wrap items-center min-w-0">

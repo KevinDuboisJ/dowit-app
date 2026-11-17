@@ -57,6 +57,7 @@ class UpdateTaskRequest extends FormRequest
                 'required',
                 'date',
             ],
+            'concurrency_token' => ['nullable', 'string', 'size:64'],
         ];
     }
 

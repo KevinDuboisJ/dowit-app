@@ -27,7 +27,7 @@ class Task extends Model implements HasVisibilityTeamsScopeInterface
     use HasAssignees, HasCreator, HasAccessScope;
 
     protected $with = ['taskType'];
-    protected $appends = ['capabilities', 'is_active', 'start_date_time_with_offset'];
+    protected $appends = ['capabilities', 'is_active', 'start_date_time_with_offset', 'concurrency_token'];
 
     protected $casts = [
         'help_requested' => 'boolean', // Cast tinyint(1) to boolean
@@ -75,6 +75,32 @@ class Task extends Model implements HasVisibilityTeamsScopeInterface
                 'isAssignedToCurrentUser' => $this->assignees->contains(Auth::user()),
             ],
         );
+    }
+
+    public function calculateConcurrencyToken(bool $useDisplayedRelations = false): string
+    {
+        if ($useDisplayedRelations) {
+            // The token must describe the same snapshot as the lists sent to the browser.
+            $assignees = $this->assignees->modelKeys();
+            $tags = $this->tags->modelKeys();
+        } else {
+            $assignees = $this->getConnection()->table('task_user')->where('task_id', $this->getKey())->pluck('user_id')->all();
+            $tags = $this->getConnection()->table('tag_task')->where('task_id', $this->getKey())->pluck('tag_id')->all();
+        }
+
+        $assignees = collect($assignees)->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $tags = collect($tags)->map(fn ($id) => (int) $id)->sort()->values()->all();
+
+        return hash('sha256', json_encode([
+            $this->getKey(), $this->status_id, $this->getRawOriginal('priority'),
+            (bool) $this->help_requested, $this->getRawOriginal('updated_at'),
+            $assignees, $tags,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    protected function concurrencyToken(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->calculateConcurrencyToken(true));
     }
 
     protected function isActive(): Attribute
@@ -235,9 +261,17 @@ class Task extends Model implements HasVisibilityTeamsScopeInterface
     }
 
 
-    public function activate()
+    public function activate(): bool
     {
-        $this->update(['status_id' => TaskStatusEnum::Added]);
+        $updated = static::query()->whereKey($this->getKey())
+            ->where('status_id', TaskStatusEnum::Scheduled->value)
+            ->update(['status_id' => TaskStatusEnum::Added->value]);
+
+        if ($updated) {
+            $this->refresh();
+        }
+
+        return (bool) $updated;
     }
 
     public function isScheduled()

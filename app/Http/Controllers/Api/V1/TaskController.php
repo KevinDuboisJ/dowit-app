@@ -8,6 +8,7 @@ use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Events\BroadcastEvent;
+use App\Services\TaskAssignmentService;
 
 class TaskController extends Controller
 {
@@ -34,6 +35,7 @@ class TaskController extends Controller
 
                 // Sync the teams with the task.
                 $task->syncExecutionTeams($teamIds);
+                TaskAssignmentService::syncVisibilityTeams($task);
 
                 return $task;
             });

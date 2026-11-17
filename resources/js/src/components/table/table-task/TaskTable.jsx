@@ -131,7 +131,7 @@ export const TaskTable = React.memo(({ data, setSheetState, handleTaskUpdate, se
                 return (
                   <React.Fragment key={row.id}>
                     {/* Group Header Row */}
-                    <TableRow className="bg-gray-200 text-sm text-primary">
+                    <TableRow className="bg-gray-200 hover:bg-gray-200 text-sm text-primary">
                       <TableCell className="px-4 py-2" colSpan="100%">
                         <div className="flex items-center ">
                           <button
@@ -167,7 +167,7 @@ export const TaskTable = React.memo(({ data, setSheetState, handleTaskUpdate, se
                           <TableRow
                             key={subRow.id}
                             className={cn({
-                              'bg-zinc-50 opacity-40': false,
+                              '!bg-slate-200 hover:!bg-slate-300': !subRow.original.is_active,
                               'table-row ': true,
                               'table-row-even': index % 2 === 0
                             })}
@@ -193,10 +193,12 @@ export const TaskTable = React.memo(({ data, setSheetState, handleTaskUpdate, se
                                         : undefined
                                     }
                                   >
-                                    {flexRender(
-                                      cell.column.columnDef.cell,
-                                      cell.getContext()
-                                    )}
+                                    <div className={!subRow.original.is_active ? 'opacity-60' : undefined}>
+                                      {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext()
+                                      )}
+                                    </div>
                                   </TableCell>
                                 )
                               )

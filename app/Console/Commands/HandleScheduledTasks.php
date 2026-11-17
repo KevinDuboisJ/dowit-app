@@ -20,8 +20,9 @@ class HandleScheduledTasks extends Command
 
             if (!$plannedTasks->isEmpty()) {
                 foreach ($plannedTasks as $task) {
-                    $task->activate();
-                    broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
+                    if ($task->activate()) {
+                        broadcast(new BroadcastEvent($task, 'task_created', 'TaskPlannerService'));
+                    }
                 }
             }
         } catch (\Throwable $e) {

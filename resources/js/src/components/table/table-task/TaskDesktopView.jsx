@@ -93,6 +93,7 @@ export const TaskDesktopView = ({
             {filters.hasActive() || isRequestedTab ? (
               <TaskTableOnFilter
                 data={data}
+                hasActiveFilters={filters.hasActive()}
                 setSheetState={setSheetState}
                 handleTaskUpdate={handleTaskUpdate}
               />

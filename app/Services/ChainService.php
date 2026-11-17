@@ -88,20 +88,25 @@ class ChainService
 
     protected static function handleCreateTask(Chain $chain, $context, array $params): void
     {
-        $task = Task::create([
-            'name' => Arr::get($params, 'name'),
-            'start_date_time' => Carbon::now(),
-            'description' => tiptap_converter()->asHTML(Arr::get($params, 'description') ?? ''),
-            'task_type_id' => Arr::get($params, 'task_type_id'),
-            'campus_id' => Arr::get($params, 'campus_id'),
-            'space_id' => Arr::get($params, 'space_id'),
-            'space_to_id' => Arr::get($params, 'space_to_id'),
-            'status_id' => 1,
-            'locker_id' => Arr::get($params, 'locker_id'),
-        ]);
+        $task = DB::transaction(function () use ($chain, $params) {
+            $task = Task::create([
+                'name' => Arr::get($params, 'name'),
+                'start_date_time' => Carbon::now(),
+                'description' => tiptap_converter()->asHTML(Arr::get($params, 'description') ?? ''),
+                'task_type_id' => Arr::get($params, 'task_type_id'),
+                'campus_id' => Arr::get($params, 'campus_id'),
+                'space_id' => Arr::get($params, 'space_id'),
+                'space_to_id' => Arr::get($params, 'space_to_id'),
+                'status_id' => 1,
+                'locker_id' => Arr::get($params, 'locker_id'),
+            ]);
 
-        $teamIds = $chain->teams()->pluck('teams.id')->toArray();
-        $task->syncExecutionTeams($teamIds);
+            $teamIds = $chain->teams()->pluck('teams.id')->toArray();
+            $task->syncExecutionTeams($teamIds);
+            TaskAssignmentService::syncVisibilityTeams($task);
+
+            return $task;
+        });
 
         broadcast(new BroadcastEvent($task, 'task_created', 'ChainService'));
     }

@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import {
   Button,
   AlertDialog,
@@ -16,8 +16,9 @@ import {
 import { updateTask } from '@/hooks'
 
 export const TaskActionButton = ({ task, user, handleTaskUpdate }) => {
-  
-  if (!task.is_active || !task.capabilities.can_execute) {
+  const { url } = usePage()
+
+  if (url.split('?')[0] === '/requested-tasks' || !task.is_active || !task.capabilities.can_execute) {
     return null
   }
 

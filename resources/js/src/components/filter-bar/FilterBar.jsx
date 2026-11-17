@@ -249,7 +249,9 @@ export const FilterBar = ({ filters = {} }) => {
     filtersRef.dateRange?.value ?? null
   )
   const [keyword, setKeyword] = useState(filtersRef.keyword?.value || '')
-  const [includeInactive, setIncludeInactive] = useState(true)
+  const [includeInactive, setIncludeInactive] = useState(
+    [true, 'true', 1, '1'].includes(filtersRef.showInactive?.value)
+  )
   const [includeInactiveApplied, setIncludeInactiveApplied] = useState(
     [true, 'true', 1, '1'].includes(filtersRef.showInactive?.value)
   )
@@ -320,7 +322,7 @@ export const FilterBar = ({ filters = {} }) => {
     setKeyword('')
     setTaskTypeId('')
     setOnlyAssignedToMe(false)
-    setIncludeInactive(true)
+    setIncludeInactive(false)
     setIncludeInactiveApplied(false)
     filters.reset()
   }
@@ -584,7 +586,11 @@ export const FilterBar = ({ filters = {} }) => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onApply={handleApply}
-        onReset={handleResetAll}
+        onReset={() => {
+          handleResetAll()
+          filters.apply()
+          setDrawerOpen(false)
+        }}
       >
         {/* ── Datumbereik ── */}
         <FilterSection
@@ -742,7 +748,7 @@ export const FilterBar = ({ filters = {} }) => {
           label="Opties"
           compact={false}
           onReset={() => {
-            setIncludeInactive(true)
+            setIncludeInactive(false)
             setOnlyAssignedToMe(false)
           }}
         >

@@ -40,6 +40,7 @@ export function TaskForm({ task, setActiveTab }) {
     priority: task.priority,
     help_requested: task.help_requested,
     updated_at: task.updated_at,
+    concurrency_token: task.concurrency_token,
     comment: ''
   }
 
@@ -52,11 +53,18 @@ export function TaskForm({ task, setActiveTab }) {
     const cleanedComment =
       data.comment?.replace(/<(\w+)(\s[^>]*)?>\s*<\/\1>/g, '').trim() || ''
 
+    const assignees = Array.from(
+      new Set([
+        ...(data.assignees ?? []).map(u => u.id),
+        ...(data.usersToAssign ?? []).map(u => u.value)
+      ])
+    ).sort((a, b) => a - b)
+    const originalAssignees = defaultValues.assignees
+      .map(user => user.id)
+      .sort((a, b) => a - b)
+
     const hasChanges =
-      JSON.stringify(data.assignees ?? []) !==
-        JSON.stringify(defaultValues.assignees ?? []) ||
-      JSON.stringify(data.usersToAssign ?? []) !==
-        JSON.stringify(defaultValues.usersToAssign ?? []) ||
+      JSON.stringify(assignees) !== JSON.stringify(originalAssignees) ||
       JSON.stringify(data.tags ?? []) !==
         JSON.stringify(defaultValues.tags ?? []) ||
       data.status !== defaultValues.status ||
@@ -75,12 +83,7 @@ export function TaskForm({ task, setActiveTab }) {
     const payload = {
       ...data,
       comment: data?.comment.replace(/<(\w+)(\s[^>]*)?>\s*<\/\1>/g, ''), // Remove empty HTML tags, Richt text editor adds <p> when empty
-      assignees: Array.from(
-        new Set([
-          ...data.assignees.map(u => u.id),
-          ...data.usersToAssign.map(u => u.value)
-        ])
-      ),
+      assignees,
       tags: data.tags.map(i => i.value) || []
     }
 
@@ -119,7 +122,7 @@ export function TaskForm({ task, setActiveTab }) {
                     <FormControl>
                       {/* MultiSelect shows selected users based on IDs */}
                       <MultiSelect
-                        defaultValue={field.value}
+                        value={field.value ?? []}
                         placeholder="Wijs persoon toe"
                         maxSelection={5}
                         fetchOptions={fetchUsers}
@@ -220,7 +223,7 @@ export function TaskForm({ task, setActiveTab }) {
                       <FormControl>
                         <MultiSelect
                           staticOptions={tags}
-                          defaultValue={field.value}
+                          value={field.value ?? []}
                           onChange={field.onChange}
                           placeholder="Tags toevoegen"
                         />
@@ -322,6 +325,8 @@ const FormSchema = z.object({
   help_requested: z.boolean().optional(),
 
   updated_at: z.coerce.date(),
+
+  concurrency_token: z.string(),
 
   comment: z.string().optional()
 })

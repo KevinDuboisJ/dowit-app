@@ -25,6 +25,13 @@ class TaskAssignmentService
         return self::getTeamsByTaskMatchAndType($task, TaskAssignmentRuleType::Visibility);
     }
 
+    public static function syncVisibilityTeams(Task $task): void
+    {
+        // Tags may have been changed since the relation was last loaded.
+        $task->load('tags');
+        $task->syncVisibilityTeams(self::getVisibilityTeamsByTaskMatch($task)->pluck('id')->toArray());
+    }
+
     public static function getTeamsByTaskMatchAndType(Task $task, TaskAssignmentRuleType $type)
     {
         return Team::whereHas('taskAssignmentRules', function (Builder $query) use ($task, $type) {

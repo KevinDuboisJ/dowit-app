@@ -184,6 +184,8 @@ export const updateTask = (values, row, options = {}) => {
   router.post(
     `/task/${row.id}/update`,
     {
+      updated_at: row.updated_at,
+      concurrency_token: row.concurrency_token,
       ...values
     },
     {

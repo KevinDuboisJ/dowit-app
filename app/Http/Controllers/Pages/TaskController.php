@@ -13,6 +13,8 @@ use App\Models\Comment;
 use Illuminate\Support\Facades\Cache;
 use App\Services\TaskService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Auth\Access\AuthorizationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class TaskController extends Controller
 {
@@ -101,6 +103,8 @@ class TaskController extends Controller
 
       // For Inertia partial reload: the page that executed this method must provide `tasks` prop.
       return redirect()->back();
+    } catch (AuthorizationException | HttpExceptionInterface $e) {
+      throw $e;
     } catch (\Throwable $e) {
       logger()->error([
         'message' => 'Task update failed: ' . $e->getMessage(),
@@ -118,20 +122,14 @@ class TaskController extends Controller
   public function requestHelp(Request $request, Task $task, TaskService $taskService)
   {
     try {
-      $this->authorize('update', $task);
-
-      if (! $task->help_requested) {
-        $task = $task->forceFill(['help_requested' => true]);
-        $task->comments()->create([
-          'help_requested' => $task->isDirty('help_requested') ? $task->help_requested : null,
-          'metadata' => $taskService->trackTaskMetaDataChanges($task, ['help_requested' => true]),
-        ]);
-
-        $task->save();
-        broadcast(new BroadcastEvent($task, 'task_updated', 'dashboard'));
+      $data = $request->validate(['concurrency_token' => ['nullable', 'string', 'size:64']]);
+      if (!$taskService->requestHelp($task, $data['concurrency_token'] ?? null)) {
+        return back()->withErrors(['error' => 'Deze taak is ondertussen gewijzigd. Vernieuw de takenlijst en probeer opnieuw.']);
       }
 
       return redirect()->back();
+    } catch (AuthorizationException | HttpExceptionInterface $e) {
+      throw $e;
     } catch (\Exception $e) {
       logger()->error(
         [

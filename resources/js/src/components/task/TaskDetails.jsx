@@ -7,6 +7,7 @@ import fireAnimation from '@json/fire'
 import { cn } from '@/utils'
 import { usePage, router } from '@inertiajs/react'
 import axios from 'axios'
+import { toast } from 'sonner'
 import {
   Lucide,
   Heroicon,
@@ -23,7 +24,7 @@ import {
 import { getPriority, TaskActivity, AppIcon, PriorityText } from '@/components'
 
 export const TaskDetails = ({ task: selectedTask }) => {
-  const { user, settings, tasks } = usePage().props
+  const { props: { user, settings, tasks }, url } = usePage()
   const [comments, setComments] = useState([])
   const [loadingComments, setLoadingComments] = useState(true)
   const task = useMemo(
@@ -187,7 +188,7 @@ export const TaskDetails = ({ task: selectedTask }) => {
             value={<TeamTag user={user} teams={task?.execution_teams} />}
           />
 
-          {task.capabilities.can_update && (
+          {url.split('?')[0] !== '/requested-tasks' && task.capabilities.can_update && (
             <div className="flex items-center justify-end gap-2 w-full">
               <AskHelpButton task={task} disabled={task.help_requested} />
             </div>
@@ -282,15 +283,17 @@ const AskHelpButton = ({ task, disabled }) => {
 
     router.patch(
       `/task/${task.id}/request-help`,
-      { help_requested: true },
+      { help_requested: true, concurrency_token: task.concurrency_token },
       {
         preserveScroll: true,
         preserveState: true,
 
         only: ['tasks'],
-        onSuccess: ({ props }) => {
-          setLoading(false)
-        }
+        onError: errors => {
+          toast.error(Object.values(errors).flat().find(Boolean) ?? 'Er is een fout opgetreden. Probeer opnieuw.')
+          router.reload({ only: ['tasks'] })
+        },
+        onFinish: () => setLoading(false)
       }
     )
 

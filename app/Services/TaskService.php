@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Arr;
 use App\Events\BroadcastEvent;
 use Illuminate\Support\Facades\Cache;
@@ -87,15 +88,7 @@ class TaskService
       $task->syncAssignees($data['assignees'] ?? []);
       $task->syncExecutionTeams($data['teamsMatchingAssignment'] ?? []);
 
-      // Needed because applicant visibility rules can depend on tags
-      $task->load('tags');
-
-      // Visibility for “aangevraagde taken”
-      $task->syncVisibilityTeams(
-        TaskAssignmentService::getVisibilityTeamsByTaskMatch($task)
-          ->pluck('id')
-          ->toArray()
-      );
+      TaskAssignmentService::syncVisibilityTeams($task);
 
       $userId =  Auth::id() ?? config('app.system_user_id');
 
@@ -127,22 +120,72 @@ class TaskService
 
   public function updateTask(Task $task, array $data)
   {
-    // Compare the task's updated_at from the client with the database value. To detect whether the task was already modified.
-    if ($data['updated_at']->lt($task->updated_at)) {
-      return [
-        'conflict' => true,
-        'message' => 'Het bijwerken van de taak is mislukt omdat deze onlangs al is bijgewerkt',
-        'latestData' => $task->load(Task::getRelationships()),
-      ];
-    }
+    $result = DB::transaction(function () use (&$task, $data) {
+      // Serialize updates, including changes to the assignees pivot table.
+      $task = Task::query()->whereKey($task->getKey())->lockForUpdate()->firstOrFail();
+      $task->load(['assignees' => fn($query) => $query->withoutGlobalScopes()]);
 
-    DB::transaction(function () use ($task, $data) {
+      // The Starten action sends only the new status and the current user.
+      // Check the actual assignment under the lock: timestamps have only second precision.
+      $isStart = isset($data['assignees'], $data['status_id'])
+        && (int) $data['status_id'] === TaskStatusEnum::InProgress->value
+        && count($data['assignees']) === 1
+        && (int) $data['assignees'][0] === (int) Auth::id()
+        && !array_key_exists('help_requested', $data)
+        && !array_key_exists('tags', $data);
+
+      $isHelp = isset($data['assignees'], $data['status_id'], $data['help_requested'])
+          && (int) $data['status_id'] === TaskStatusEnum::InProgress->value
+          && $data['help_requested'] === false
+          && !array_key_exists('tags', $data)
+          && in_array((int) Auth::id(), array_map('intval', $data['assignees']), true);
+
+      $quickStatus = !array_key_exists('assignees', $data) && !array_key_exists('tags', $data)
+        && !array_key_exists('help_requested', $data) && !array_key_exists('comment', $data)
+        && isset($data['status_id'])
+        && in_array((int) $data['status_id'], [TaskStatusEnum::Completed->value, TaskStatusEnum::Rejected->value], true);
+
+      if ($isStart || $isHelp) {
+        Gate::authorize('execute', $task);
+      } else {
+        Gate::authorize('update', $task);
+      }
+
+      if ($quickStatus && (int) $data['status_id'] === TaskStatusEnum::Rejected->value) {
+        Gate::authorize('reject', $task);
+      }
+      if ($quickStatus && (int) $data['status_id'] === TaskStatusEnum::Completed->value
+        && !$task->assignees()->withoutGlobalScopes()->where('users.id', Auth::id())->exists()) {
+        abort(403);
+      }
+
+      $conflict = [
+        'conflict' => true,
+        'message' => 'Deze taak is ondertussen gewijzigd of al toegewezen. Vernieuw de takenlijst en probeer opnieuw.',
+      ];
+
+      if ($isHelp) {
+        if (!$task->help_requested || !TaskStatusEnum::isActiveStatus((int) $task->status_id)
+          || $task->assignees()->withoutGlobalScopes()->where('users.id', Auth::id())->exists()) {
+          return $conflict;
+        }
+
+        // Never replace the current assignment with a stale list from the browser.
+        $data['assignees'] = $task->assignees()->withoutGlobalScopes()->pluck('users.id')->push(Auth::id())->all();
+      }
+
+      if (($isStart && ((int) $task->status_id !== TaskStatusEnum::Added->value || $task->assignees()->withoutGlobalScopes()->exists()))
+        || ($quickStatus && !TaskStatusEnum::isActiveStatus((int) $task->status_id))
+        || (!$isStart && !$isHelp && isset($data['concurrency_token'])
+          && !hash_equals($task->calculateConcurrencyToken(), $data['concurrency_token']))
+        || (!$isStart && !$isHelp && empty($data['concurrency_token']))) {
+        return $conflict;
+      }
 
       $task->fill(Arr::only($data, [
         'status_id',
         'priority',
         'help_requested',
-        'updated_at',
       ]));
 
       $task->comments()->create([
@@ -161,6 +204,8 @@ class TaskService
         $task->syncTags($data['tags']);
       }
 
+      TaskAssignmentService::syncVisibilityTeams($task);
+
       // Handle task completion timestamp
       if ($task->status_id === TaskStatusEnum::Completed->value) {
         $task->update(['completed_at' => now()]);
@@ -170,18 +215,19 @@ class TaskService
 
       $this->handleAutoStatusReset($task, $data);
       $task->save();
+
+      return ['success' => true];
     });
+
+    if (isset($result['conflict'])) {
+      return $result;
+    }
 
     PatientService::handleFinalCleanTask($task);
 
     $task->load(Task::getRelationships());
 
-    $task->syncVisibilityTeams(
-      TaskAssignmentService::getVisibilityTeamsByTaskMatch($task)
-        ->pluck('id')
-        ->toArray()
-    );
-
+    Cache::forget("task:{$task->id}");
     Cache::put("task_{$task->id}", $task, now()->addMinutes(3));
     broadcast(new BroadcastEvent($task, 'task_updated', 'dashboard', $data));
 
@@ -189,6 +235,41 @@ class TaskService
       'success' => true,
       'task' => $task,
     ];
+  }
+
+  public function requestHelp(Task $task, ?string $token): bool
+  {
+    $conflict = false;
+    $task = DB::transaction(function () use ($task, $token, &$conflict) {
+      $task = Task::query()->whereKey($task->getKey())->lockForUpdate()->firstOrFail();
+      $task->load(['assignees' => fn($query) => $query->withoutGlobalScopes()]);
+      Gate::authorize('update', $task);
+
+      if (!$token || !hash_equals($task->calculateConcurrencyToken(), $token)) {
+        $conflict = true;
+        return null;
+      }
+
+      if ($task->help_requested || !TaskStatusEnum::isActiveStatus((int) $task->status_id)) {
+        return null;
+      }
+
+      $task->forceFill(['help_requested' => true]);
+      $task->comments()->create([
+        'help_requested' => true,
+        'metadata' => $this->trackTaskMetaDataChanges($task, ['help_requested' => true]),
+      ]);
+      $task->save();
+
+      return $task;
+    });
+
+    if ($task) {
+      Cache::forget("task:{$task->id}");
+      broadcast(new BroadcastEvent($task, 'task_updated', 'dashboard'));
+    }
+
+    return !$conflict;
   }
 
   private function handleAutoStatusReset(Task $task, array $data): void

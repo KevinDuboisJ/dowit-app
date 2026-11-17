@@ -16,6 +16,7 @@ import {
 
 export const TaskTableOnFilter = ({
   data,
+  hasActiveFilters,
   setSheetState,
   handleTaskUpdate
 }) => {
@@ -69,7 +70,7 @@ export const TaskTableOnFilter = ({
               <TableRow
                 key={row.id}
                 className={cn({
-                  'bg-zinc-50 opacity-40': false,
+                  '!bg-slate-200 hover:!bg-slate-300': !row.original.is_active,
                   'table-row': true,
                   'table-row-even': index % 2 === 0
                 })}
@@ -89,7 +90,9 @@ export const TaskTableOnFilter = ({
                         : undefined
                     }
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <div className={!row.original.is_active ? 'opacity-60' : undefined}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
                   </TableCell>
                 ))}
               </TableRow>
@@ -101,7 +104,9 @@ export const TaskTableOnFilter = ({
                   colSpan="100%"
                   className="py-10 text-center text-slate-500"
                 >
-                  Geen taken gevonden met deze filters.
+                  {hasActiveFilters
+                    ? 'Geen taken gevonden met deze filters.'
+                    : 'Geen taken gevonden.'}
                 </TableCell>
               </TableRow>
             )}
