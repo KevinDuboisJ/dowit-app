@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EventEnum;
+use App\Enums\CampusEnum;
 use App\Enums\TeamEnum;
 use App\Models\Device;
 use App\Models\DeviceUserLog;
@@ -30,6 +31,32 @@ class DeviceSelectionService
     public function hasSelectedDeviceInSession(): bool
     {
         return session()->has(self::SESSION_KEY);
+    }
+
+    /**
+     * Return the campuses where the user may select a cleaning cart.
+     */
+    public function getAllowedCampusIds(User $user): array
+    {
+        $campusIds = [];
+
+        if ($user->belongsToTeam(TeamEnum::SchoonmaakCA->value)) {
+            $campusIds[] = CampusEnum::CA->value;
+        }
+
+        if ($user->belongsToTeam(TeamEnum::SchoonmaakCD->value)) {
+            $campusIds[] = CampusEnum::CD->value;
+        }
+
+        return array_values(array_unique($campusIds));
+    }
+
+    public function getSelectableDevicesQuery(User $user)
+    {
+        return Device::query()
+            ->registered()
+            ->where('type', 'poetskar')
+            ->whereIn('campus_id', $this->getAllowedCampusIds($user));
     }
 
     public function getLastCleaningCartSelection(User $user): ?Device

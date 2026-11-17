@@ -163,7 +163,9 @@ class DeviceResource extends Resource
                         ->modalCancelActionLabel('Sluiten')
                         ->modalContent(function (Device $record) {
                             $logs = DeviceUserLog::query()
-                                ->with('user')
+                                ->with([
+                                    'user' => fn($query) => $query->withoutGlobalScopes(),
+                                ])
                                 ->where('device_id', $record->id)
                                 ->latest()
                                 ->limit(100)

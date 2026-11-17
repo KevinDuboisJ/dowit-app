@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Pages;
 
 use App\Enums\EventEnum;
 use App\Http\Controllers\Controller;
-use App\Models\Device;
 use App\Services\DeviceSelectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,9 +23,8 @@ class DeviceSelectionController extends Controller
         }
 
         return Inertia::render('SelectDevice', [
-            'devices' => Device::query()
-                ->registered()
-                ->where('type', 'poetskar')
+            'devices' => $this->deviceSelectionService
+                ->getSelectableDevicesQuery($request->user())
                 ->orderBy('identifier')
                 ->get(['id', 'identifier', 'description', 'type', 'campus_id']),
             'selectedDeviceId' => session(DeviceSelectionService::SESSION_KEY),
@@ -52,8 +50,8 @@ class DeviceSelectionController extends Controller
             'device_id' => ['required', 'integer', 'exists:devices,id'],
         ]);
 
-        $device = Device::query()
-            ->registered()
+        $device = $this->deviceSelectionService
+            ->getSelectableDevicesQuery($request->user())
             ->findOrFail($validated['device_id']);
 
         $event = (bool) session(DeviceSelectionService::SWITCHING_SESSION_KEY, false)
