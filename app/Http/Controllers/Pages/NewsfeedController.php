@@ -24,6 +24,7 @@ class NewsfeedController extends Controller
         'task.executionTeams',
         'task.taskType' => fn($q) => $q->with(['assets', 'availableToTeams']),
         'task.assignees',
+        'task.tags',
         'status:id,name',
       ])
       ->byTeams()
