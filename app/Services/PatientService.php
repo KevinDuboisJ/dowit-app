@@ -27,7 +27,20 @@ class PatientService
    */
   public static function getOccupiedRooms()
   {
+    $lockName = 'dowit_patient_sync_' . substr(hash('sha256', (string) config('database.connections.mysql.database')), 0, 32);
+    $lockAcquired = false;
     try {
+      // MySQL advisory locks are shared across scheduler instances and manual runs.
+      $lockResult = DB::connection('mysql')->selectOne('SELECT GET_LOCK(?, 0) AS acquired', [$lockName])->acquired;
+      if ($lockResult === null) {
+        throw new \RuntimeException('Unable to acquire the patient sync database lock.');
+      }
+      $lockAcquired = (int) $lockResult === 1;
+      if (!$lockAcquired) {
+        Log::info('Patient sync skipped because another run is still active.');
+        return;
+      }
+
       $now = Carbon::now();
       $resultsMap = [];
       $inserts = [];
@@ -89,6 +102,14 @@ class PatientService
         'line' => $e->getLine(),
         'trace' => $e->getTraceAsString(),
       ]);
+    } finally {
+      if ($lockAcquired) {
+        try {
+          DB::connection('mysql')->selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+        } catch (\Throwable $e) {
+          Log::error('Could not release patient sync lock', ['message' => $e->getMessage()]);
+        }
+      }
     }
   }
 
@@ -396,21 +417,6 @@ class PatientService
 
     $bedIds = $noLongerOccupied->pluck('bed_id')->unique();
 
-    DB::connection('patientlist')->table('bed_visits')
-      ->whereIn('bed_id', $bedIds)
-      ->update([
-        'vacated_at' => $now,
-        'updated_at' => $now,
-      ]);
-
-    DB::connection('patientlist')->table('beds')
-      ->whereIn('id', $bedIds)
-      ->update([
-        'occupied_at' => null,
-        'cleaned_at' => null,
-        'updated_at' => $now,
-      ]);
-
     foreach ($noLongerOccupied as $bedVisit) {
       $spaceId = self::resolveSpaceIdFromRoom($bedVisit->bed->room, $bedVisit->visit->number);
       $departmentNumber = $bedVisit->bed->room->department->number;
@@ -436,6 +442,13 @@ class PatientService
           in_array($departmentNumber, $allowedDepartmentsCD, true) => TaskTypeEnum::EndOfStayCleaningCD->value,
           default => null,
         };
+
+        // A previous run may have created the task before it could mark the visit as vacated.
+        if (Task::withoutGlobalScopes()->where('bed_visit_id', $bedVisit->id)
+          ->whereIn('task_type_id', [TaskTypeEnum::EndOfStayCleaningCA->value, TaskTypeEnum::EndOfStayCleaningCD->value])
+          ->exists()) {
+          continue;
+        }
 
         $data = [
           'task' => [
@@ -467,6 +480,16 @@ class PatientService
         broadcast(new BroadcastEvent($task, 'task_created', 'patient-service'));
       }
     }
+
+    // Leave visits pending if creating a task failed, so the next run can retry.
+    DB::connection('patientlist')->table('bed_visits')
+      ->whereIn('id', $noLongerOccupied->pluck('id'))
+      ->whereNull('vacated_at')
+      ->update(['vacated_at' => $now, 'updated_at' => $now]);
+
+    DB::connection('patientlist')->table('beds')
+      ->whereIn('id', $bedIds)
+      ->update(['occupied_at' => null, 'cleaned_at' => null, 'updated_at' => $now]);
   }
 
   private static function handleVisitsWithoutActiveBeds(): void
