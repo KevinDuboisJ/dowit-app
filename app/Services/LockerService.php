@@ -39,6 +39,8 @@ class LockerService
                     WHERE c3.cn_pe_id = pe_id
                     AND c3.cn_inactive = '0'
             )
+            AND c.cn_startdate < CURDATE()
+            AND c.cn_stopdate > '2026-09-14'
         ";
 
         return DB::connection('formbuilder')->select($query);

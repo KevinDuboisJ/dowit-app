@@ -51,4 +51,4 @@ Schedule::call(function (PatientService $patientService) {
 
 Schedule::call(function (LockerService $lockerService, TaskService $taskService) { 
     $lockerService->handleUnlockTasks($taskService); 
-})->everyTenMinutes();
+})->everyMinute();
