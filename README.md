@@ -1,17 +1,9 @@
 TODO's:
 
-1. A admin can se historiek tasks, add extra filter. && Task that are replaced or skipped are only for the admin views. it should also have another color grey and opacity lower to indicate it is not activated. should it use the is_activate?
-3. When an announcement is deleted the dashboard announcemenet feed doesnt pull the new state
-4. inifinite scroll not working on mobile for tasks
-5. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
-6. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
-7. geen taken gevonden met dze filters on aanvragende taken when it is empty. seems weird, it shouldnt say filter
-8. when a suggested team in taskplannerresource is deleted, it show a bullet icon before the red hypen
-9. syncExecutionTeams and syncVisibilityTeams must go togehter always? api v1 taskcontroller only does syncExecutionTeams
-10. check if starten appears for availableToTeams in the aangevraagde taken.
-11. Toegewezen in aangevraagde taken werkt niet.
-12. When removing all the rules on a team in the team resource. it doesnt update the memberscount
-13. Admin panel on mobile is not showing a hamburger to open the side menu. Also the header has no top-margin cause when it is on mobile the breadcrumb disapears
+1. inifinite scroll not working on mobile for tasks
+2. repasar la logica de patientservice y revisar si el hecho de que varios bed visit con occupied at con diferentes timestamps reciben el mismo vacated_at timestamp. Creo que deberian ser diferentes y tener el timestamp del momento en que realmente el patiente se fue.
+3. repasar la logica de patientservice y revisar como evitar errores en la sincronizacion de $noLongerOccupied porque una vez esta marque la habitacion como desocupada ya no se creara una tarea en caso de haber fallado algo en la creacion de la tarea
+4. when a suggested team in taskplannerresource is deleted, it show a bullet icon before the red hypen
 
 
 ---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//---//
