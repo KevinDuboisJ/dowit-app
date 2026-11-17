@@ -1,6 +1,6 @@
 // Tooltip.jsx
 import './_tooltip.css'
-import { useState, useRef, isValidElement, cloneElement } from 'react'
+import { useState, useRef, useEffect, isValidElement, cloneElement } from 'react'
 import {
   useFloating,
   offset,
@@ -27,9 +27,9 @@ export const Tooltip = ({
   const [open, setOpen] = useState(false)
   const arrowRef = useRef(null)
 
-  if (disabled) {
-    return children
-  }
+  useEffect(() => {
+    if (disabled) setOpen(false)
+  }, [disabled])
 
   const {
     x,
@@ -40,7 +40,7 @@ export const Tooltip = ({
     placement: finalPlacement,
     middlewareData
   } = useFloating({
-    open,
+    open: open && !disabled,
     onOpenChange: setOpen,
     placement,
     middleware: [
@@ -71,6 +71,10 @@ export const Tooltip = ({
     dismiss,
     role
   ])
+
+  if (disabled) {
+    return children
+  }
 
   const staticSide = {
     top: 'bottom',

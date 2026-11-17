@@ -89,9 +89,7 @@ class UserResource extends Resource
 
                 TextColumn::make('teams.name')
                     ->label('Teams')
-                    ->limit(30) // Truncate display after 20 characters
-                    ->tooltip(fn($state) => is_array($state) ? implode(', ', $state) : (string) $state)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->listWithLineBreaks(),
 
                 TextColumn::make('last_login_at')
                     ->label('Laatste aanmelding')

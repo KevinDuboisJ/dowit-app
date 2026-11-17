@@ -12,7 +12,6 @@ import Heroicon from './heroicon'
 
 export * from './loader'
 
-export * from './tab'
 
 export * from './preview-component'
 

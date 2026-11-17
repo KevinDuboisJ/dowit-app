@@ -58,7 +58,10 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => '#008F92',
                 'gray' => Color::Slate,
             ])
-            ->topbar(false)
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn(): string => view('filament.components.responsive-navigation-styles')->render(),
+            )
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_FOOTER,
                 fn(): string => view('filament.components.sidebar-user-menu')->render(),
